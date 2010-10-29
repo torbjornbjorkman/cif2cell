@@ -1,0 +1,99 @@
+Copyright 2010, Torbjorn Bjorkman
+
+CIF2CELL
+
+A tool to generate the geometrical setup for various electronic 
+structure codes from a CIF (Crystallographic Information 
+Framework) file. The code will generate the crystal structure for 
+the primitive cell or the conventional cell.
+
+CURRENTLY SUPPORTS
+
+               |  alloy  |
+code           | support |   output files
+---------------|---------|-----------------------------------
+VASP               no      POSCAR
+ABINIT             no      [compoundname].in
+Siesta             no      [compoundname].fdf
+CPMD               no      [compoundname].inp
+CASTEP             no      [compoundname].cell
+Crystal09          no      [compoundname].d12
+RSPt               no      symt.inp
+Fleur              no      inp_[compoundname]
+cellgen            no      cellgen.inp
+elk                no      GEOMETRY.OUT
+exciting           no      input.xml
+spacegroup         no      spacegroup.in
+ncol               no      [spacegroupname/compoundname].dat 
+                           for bstr.
+emto               yes     [spacegroupname/compoundname].dat 
+                           for kstr, bmdl, shape, kgrn and kfcd
+                           in separate directories.
+
+CONTENTS
+The distribution includes:
+* This README file.
+* The file LICENSE with the GPLv3 license.
+* The python files cif2cell, uctools.py and spacegroupdata.py
+* The directory cifs/ containing a set of example CIF files 
+  from COD, the Crystallography Open Database <http://www.crystallography.net>.
+
+
+INSTALLATION INSTRUCTIONS
+
+Prerequisites: The program requires Python 2.4 or higher and the
+               PyCIFRW python package. Note however that the output
+               may be slightly different (but physically equivalent) 
+	       with Python 2.4 than with later versions.
+
+To install, put the files cif2cell and uctools.py in the directory
+where you want the program installed. Make sure that the chosen
+directory is in your PATH, and you are ready. The two .py files
+can instead be put in your PYTHONPATH, if you so prefer. Installation 
+instructions for PyCIFRW can be found in the end of this file.
+
+
+RUNNING
+
+Run 'cif2cell -h' to get a listing of the different options.
+Example:
+cif2cell -p vasp -f Ni20Mn3P6.cif --vasp-cartesian-positions
+will generate a POSCAR file for VASP with the positions in cartesian format.
+
+
+LICENSE INFORMATION
+
+cif2cell is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+cif2cell is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with cif2cell.  If not, see <http://www.gnu.org/licenses/>.
+
+
+
+Happy computing!
+
+Torbjorn Bjorkman
+COMP, Aaalto University School ofScience and Technology, 
+Department of Applied Physics, 
+Espoo, Finland
+torbjorn@cc.hut.fi
+
+
+
+
+############### PyCIFRW instructions #################
+The program uses the library PyCIFRW, which must be installed in 
+your PYTHONPATH. It can be found in this directory or downloaded from
+<http://pycifrw.berlios.de>. To install the library in the 
+'whereyouwantit/lib/python[version]/site-packages' directory, first unpack the file PyCifRW-X.Y.tar.gz. 
+Then go into the directory
+PyCifRW-X.Y and type 
+python setup.py install --prefix=[wheryouwantit]
