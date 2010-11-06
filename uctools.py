@@ -53,6 +53,7 @@
 #
 # TODO:
 #   - More output formats (always...)
+#   - Improve exception handling
 #
 # KNOWN BUGS:
 #******************************************************************************************
@@ -61,6 +62,7 @@ import os
 import sys
 import string
 import CifFile
+from types import NoneType
 from math import sin,cos,pi,sqrt
 from spacegroupdata import *
 
@@ -74,8 +76,28 @@ four = 4.0
 third = 1/3
 half = one/two
 fourth = one/four
-
 occepsilon = 0.000001
+
+################################################################################################
+# Exception classes
+class SymmetryError(Exception):
+    def __init__(self, value):
+        self.value = value
+    def __str__(self):
+        return repr(self.value)
+
+class PositionError(Exception):
+    def __init__(self, value):
+        self.value = value
+    def __str__(self):
+        return repr(self.value)
+    
+class CellError(Exception):
+    def __init__(self, value):
+        self.value = value
+    def __str__(self):
+        return repr(self.value)
+    
 ################################################################################################
 class CrystalStructure:
     """
@@ -222,14 +244,14 @@ class CellData:
                                   [u, u, t]]
         elif self.crystal_system() == 'triclinic' or self.crystal_system() == 'default':
             angfac1 = (cos(alphar) - cos(betar)*cos(gammar))/sin(gammar)
-            angfac2 = (sin(gammar)**2 - cos(betar)**2 - cos(alphar)**2 
-                       + 2*cos(alphar)*cos(betar)*cos(gammar)).sqrt()/sin(gammar)
+            angfac2 = sqrt(sin(gammar)**2 - cos(betar)**2 - cos(alphar)**2 
+                       + 2*cos(alphar)*cos(betar)*cos(gammar))/sin(gammar)
             latticevectors = [[one, zero, zero], 
                               [self.boa*cos(gammar), self.boa*sin(gammar), zero], 
                               [self.coa*cos(betar), self.coa*angfac1, self.coa*angfac2]]
         else:
             print "Error : No support for "+self.crystal_system()+" crystal systems."
-            sys.exit(1)
+            sys.exit(3)
         return latticevectors
 
     # Define comparison functions
@@ -507,22 +529,33 @@ class CellData:
         # Found symbol but not number?
         if self.spacegroupnr == -1 and self.spacegroupsymbol != "":
             if self.spacegroupsymboltype == "(H-M)":
-                self.spacegroupnr = int(SpaceGroupData().HMtoSGnr[self.spacegroupsymbol])
+                try:
+                    self.spacegroupnr = int(SpaceGroupData().HMtoSGnr[self.spacegroupsymbol])
+                except:
+                    pass
         # Save spacegroup setting separately
-        if self.spacegroupsymbol == "":
+        if self.spacegroupsymbol == "" and self.spacegroupnr != -1:
             self.spacegroupsymbol = SpaceGroupData().HMSymbol[str(self.spacegroupnr)]
             self.spacegroupsymboltype = "(H-M)"
-        self.spacegroupsetting = self.spacegroupsymbol[0]
+        else:
+            pass
+        try:
+            self.spacegroupsetting = self.spacegroupsymbol[0]
+        except:
+            pass
         # Get symmetry equivalent positions (space group operations)
         try:
             eqsitedata = cifblock.GetLoop('_symmetry_equiv_pos_as_xyz')
             try:
                 eqsitestrs = eqsitedata.get('_symmetry_equiv_pos_as_xyz')
+                # funny exception which will occur if there is only one position and there is still a loop
+                if type(eqsitestrs).__name__ == 'str':
+                    eqsitestrs = [eqsitestrs]
                 self.eqsites = []
                 for i in range(len(eqsitestrs)):
                     self.eqsites.append(eqsitestrs[i].split(','))
                     for j in range(len(self.eqsites[i])):
-                        self.eqsites[i][j] = self.eqsites[i][j].strip()
+                        self.eqsites[i][j] = self.eqsites[i][j].strip().lower()
             except KeyError:
                 self.eqsites = []
         except KeyError:
@@ -537,13 +570,14 @@ class CellData:
             self.gamma  = float(removeerror(cifblock['_cell_angle_gamma']))
             self.coa = self.c / self.a
             self.boa = self.b / self.a
-        except KeyError:
+        except:
             self.a = 0
             self.b = 0
             self.c = 0
             self.alpha = 0
             self.beta = 0
             self.gamma = 0
+            raise CellError("Unable to read crystallographic parameters")
         # Get info on atom positions
         try:
             tmpdata = cifblock.GetLoop("_atom_site_type_symbol")
@@ -565,14 +599,14 @@ class CellData:
             sitexer = tmpdata.get('_atom_site_fract_x')
             siteyer = tmpdata.get('_atom_site_fract_y')
             sitezer = tmpdata.get('_atom_site_fract_z')
+            if type(sitexer) == NoneType or type(siteyer) == NoneType or type(sitezer) == NoneType:
+                raise PositionError("Irreducible positions not found.")
         except KeyError:
-            print "***Error reading atom positions."
-            sys.exit(1)
+            raise PositionError("Irreducible positions not found.")
         try:
             siteoccer = tmpdata.get('_atom_site_occupancy')
         except KeyError:
-            print "***Error reading atom site occupancies."
-            sys.exit(1)            
+            raise PositionError("Error reading site occupancies.")
         if siteoccer == None:
             if not self.quiet:
                 print "***Warning : Site occupancies not found, assuming all occupancies = 1."
@@ -586,13 +620,19 @@ class CellData:
             self.ineqsites.append([])
             # Remove error estimation from coordinates and store in sitedata[site][0]
             for j in sitexer[i], siteyer[i], sitezer[i]:
-                self.ineqsites[i].append(float(removeerror(j)))
+                try:
+                    self.ineqsites[i].append(float(removeerror(j)))
+                except:
+                    raise PositionError("Invalid atomic position value : "+j)
             # Improve precision 
             for k in range(3):
                 self.ineqsites[i][k] = improveprecision(self.ineqsites[i][k],self.coordepsilon)
             # dictionary of elements and occupancies
             k = elements[i]
-            v = float(removeerror(siteoccer[i]))
+            try:
+                v = float(removeerror(siteoccer[i]))
+            except ValueError:
+                v = 1.0
             self.occupations.append({ k : v })
 
 
@@ -660,21 +700,27 @@ class ReferenceData:
             }
 
     def journalstring(self):
-        if not (self.journal == "" and self.volume == "" and self.firstpage=="" and self.year==""):
-            journalstring = self.journal
-            journalstring += " "+self.volume
-            journalstring += ", "+self.firstpage+"-"+self.lastpage
-            journalstring += " ("+self.year+")"
-        else:
-            journalstring = "No journal information"
+        try:
+            if not (self.journal == "" and self.volume == "" and self.firstpage=="" and self.year==""):
+                journalstring = self.journal
+                journalstring += " "+self.volume
+                journalstring += ", "+self.firstpage+"-"+self.lastpage
+                journalstring += " ("+self.year+")"
+            else:
+                journalstring = "No journal information"
+        except:
+            journalstring = "Failed to create journal string"
         return journalstring
 
     def referencestring(self):
-        if self.authorstring == "":
-            referencestring = "No author information. "
-        else:
-            referencestring = self.authorstring+", "
-        referencestring += self.journalstring()
+        try:
+            if self.authorstring == "":
+                referencestring = "No author information. "
+            else:
+                referencestring = self.authorstring+", "
+            referencestring += self.journalstring()
+        except:
+            referencestring = "Failed to create reference string"
         return referencestring
 
     def getFromCIF(self, cifblock=None):
@@ -690,6 +736,10 @@ class ReferenceData:
             self.cpd = cifblock.get('_chemical_formula_sum')
             if type(self.cpd) == type(None):
                 self.cpd = ""
+        if type(self.compound) != type(str):
+            self.compound = ""
+        if type(self.cpd) != type(str):
+            self.cpd = ""
         # Try to identify a source database for the CIF
         for db in self.databasenames:
             # First all the standard ones
@@ -753,15 +803,27 @@ class ReferenceData:
             except IndexError:
                 # No primary reference found, using the first one.
                 i = 0
-            # journal title
+            # journal/book title
             self.journal = references.get('_citation_journal_full')[i]
+            if type(self.journal) == type(None):
+                self.journal = references.get('_citation_book_title')[i]
+            if type(self.journal) == type(None):
+                self.journal = ""
             # volume
             self.volume = references.get('_citation_journal_volume')[i]
+            if type(self.volume) == type(None):
+                self.volume = ""
             # pages
             self.firstpage = references.get('_citation_page_first')[i]
+            if type(self.firstpage) == type(None):
+                self.firstpage = ""
             self.lastpage = references.get('_citation_page_last')[i]
+            if type(self.lastpage) == type(None):
+                self.lastpage = ""
             # year
             self.year = references.get('_citation_year')[i]
+            if type(self.year) == type(None):
+                self.year = ""
         except KeyError:
             try:
                 # journal
@@ -790,14 +852,28 @@ class ReferenceData:
         if self.year == None:
             failed = True
             self.year = ""
-        
         if not failed:
             # get rid of newline characters
-            self.journal = self.journal.replace("\n","")
-            self.volume = self.volume.replace("\n","")
-            self.firstpage = self.firstpage.replace("\n","")
-            self.lastpage = self.lastpage.replace("\n","")
-            self.year = self.year.replace("\n","")
+            try:
+                self.journal = self.journal.replace("\n","")
+            except:
+                self.journal = "??????"
+            try:
+                self.volume = self.volume.replace("\n","")
+            except:
+                self.volume = "??"
+            try:
+                self.firstpage = self.firstpage.replace("\n","")
+            except:
+                self.firstpage = "??"
+            try:
+                self.lastpage = self.lastpage.replace("\n","")
+            except:
+                self.lastpage = "??"
+            try:
+                self.year = self.year.replace("\n","")
+            except:
+                self.year = "????"
 
 ################################################################################################
 class GeometryOutputFile:

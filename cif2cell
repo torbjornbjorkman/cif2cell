@@ -147,26 +147,33 @@ threedecs = " "+decform+" "+decform+" "+decform
 today = datetime.today()
 datestring = str(today.year)+"-"+str(today.month).rjust(2,'0')+"-"+str(today.day).rjust(2,'0')+' '+str(today.hour)+":"+str(today.minute).rjust(2,'0')
 
-# input CIF file. It would be nice to validate the file here, but 
-# the validate function in PyCifRW seems to be broken (on my MacBook 2010-07-02)
+# input CIF file
 if options.file:
     cif_file = options.file
+    # Skip validation for now... it causes too much trouble.
+#    cdic = CifFile.CifDic("cif_core.dic",grammar='1.1')     
+#    val_results = CifFile.validate(cif_file,dic=cdic)
+#    print validate_report(val_results)
+#    val_report = CifFile.ValidationResult(val_results)
     try:
         cf = CifFile.CifFile(cif_file)
     except IOError:
-        print "Error: The file "+cif_file+" could not be found."
-        sys.exit(1)
+        sys.stderr.write("***Error: The file "+cif_file+" could not be found.\n")
+        sys.exit(2)
+    except:
+        sys.stderr.write("***Error: could not read "+cif_file+"\n")
+        sys.exit(2)
 else:
-    print "ERROR: No input CIF file given"
-    sys.exit(1)
+    sys.stderr.write("***Error: No input CIF file given\n")
+    sys.exit(2)
 
 # Get blocks
 cfkeys = cf.keys()
 if options.block:
     cb = cf.get(options.block)
     if type(cb) == type(None):
-        print "Error: No block "+options.block+" in "+cif_file+"."
-        sys.exit(1)
+        sys.stderr.write("***Error: No block "+options.block+" in "+cif_file+".\n")
+        sys.exit(2)
 else:
     cb = cf.get(cfkeys[0])
 
@@ -180,7 +187,14 @@ cd = CellData()
 cd.quiet = options.quiet
 if options.coordtol:
     cd.coordepsilon = float(options.coordtol)
-cd.getFromCIF(cb)
+try:
+    cd.getFromCIF(cb)
+except PositionError as e:
+    sys.stderr.write("***Error: atomic positions: "+e.value+"\n")
+    sys.exit(2)
+except CellError as e:
+    sys.stderr.write("***Error: unit cell: "+e.value+"\n")
+    sys.exit(2)
 #
 if reducetoprim:
     cell = cd.primitive()
