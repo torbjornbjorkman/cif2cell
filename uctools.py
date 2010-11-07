@@ -560,7 +560,7 @@ class CellData:
             try:
                 eqsitestrs = eqsitedata.get('_symmetry_equiv_pos_as_xyz')
                 # funny exception which will occur if there is only one position and there is still a loop
-                if type(eqsitestrs).__name__ == 'str':
+                if type(eqsitestrs) == StringType:
                     eqsitestrs = [eqsitestrs]
                 self.eqsites = []
                 for i in range(len(eqsitestrs)):
