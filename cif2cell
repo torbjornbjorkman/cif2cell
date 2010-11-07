@@ -197,9 +197,17 @@ except CellError as e:
     sys.exit(2)
 #
 if reducetoprim:
-    cell = cd.primitive()
+    try:
+        cell = cd.primitive()
+    except SymmetryError as e:
+        sys.stderr.write("***Error: cell setup: "+e.value+"\n")
+        sys.exit(2)
 else:
-    cell = cd.conventional()
+    try:
+        cell = cd.conventional()
+    except SymmetryError as e:
+        sys.stderr.write("***Error: cell setup: "+e.value+"\n")
+        sys.exit(2)
 
 # Sort sites so that the ones occupied by the heaviest elements come first,
 # if Python version supports this form of the max function and there is

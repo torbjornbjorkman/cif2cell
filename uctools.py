@@ -154,7 +154,7 @@ class CellData:
     """
     Class for a lot of stuff specifying a unit cell.
     Methods:
-        getFromCIF          : obtain data from a CIF block
+        getFromCIF          : obtain data for setting up a cell from a CIF block
         crystal_system      : return a string with the name of the crystal system
         latticevectors      : Return the Bravais lattice vectors as a 3x3 matrix
         volume              : Return the unit cell volume
@@ -229,12 +229,13 @@ class CellData:
                               [zero, self.boa, zero], 
                               [self.coa*cos(betar), zero, self.coa*sin(betar)]]
         elif self.crystal_system() == 'trigonal':
-            # Hexagonal setup normally used
+            # Hexagonal cell normally used
             if abs(self.gamma-120) < self.coordepsilon:
                 latticevectors = [[sin(gammar), cos(gammar), zero],
                                   [zero, one, zero],
                                   [zero, zero, self.coa]]
             else:
+                # Symmetric rhombohedral cell (stretching a cube along the main diagonal)
                 c = sqrt((1 + 2*cos(alphar))/(1 - cos(alphar)))
                 a = pow(1/c, 1/3)
                 t = a * (c + 2) / 3
@@ -305,6 +306,16 @@ class CellData:
         """
         # Initialize 
         struct = self.structure
+        # Check if we know enough:
+        # To produce the conventional cell (reduce=False) we don't need the space group
+        # symbol or number as long as we have the symmetry operations (equivalent sites).
+        if self.a!=0 and self.b!=0 and self.c!=0 and self.alpha!=0 and self.beta!=0 and self.gamma!=0:
+            if self.spacegroupnr == -1 and not self.spacegroupsymbol in SpaceGroupData().HMtoSGnr:
+                if len(self.eqsites) >= 1:
+                    if reduce == True:
+                        raise SymmetryError("Insufficient symmetry information to reduce to primitive cell.")
+                    else:
+                        self.spacegroupnr = 0
         struct.latticevectors = self.latticevectors()
         struct.lengthscale = self.a
         struct.sitedata = []
@@ -511,19 +522,19 @@ class CellData:
         try:
             self.spacegroupsymbol=cifblock['_space_group_name_H-M_alt'].translate(string.maketrans("",""),string.whitespace)
             self.spacegroupsymboltype='(H-M)'
-        except KeyError:
+        except:
             try:
                 self.spacegroupsymbol=cifblock['_space_group_name_Hall'].translate(string.maketrans("",""),string.whitespace)
                 self.spacegroupsymboltype='(Hall)'
-            except KeyError:
+            except:
                 try:
                     self.spacegroupsymbol=cifblock['_symmetry_space_group_name_H-M'].translate(string.maketrans("", ""),string.whitespace)
                     self.spacegroupsymboltype='(H-M)'
-                except KeyError:
+                except:
                     try:
                         self.spacegroupsymbol=cifblock['_symmetry_space_group_name_Hall'].translate(string.maketrans("",""),string.whitespace)
                         self.spacegroupsymboltype='(Hall)'
-                    except KeyError:
+                    except:
                         self.spacegroupsymbol = ""
                         self.spacegroupsymboltype = ""
         # Found symbol but not number?
@@ -726,15 +737,15 @@ class ReferenceData:
     def getFromCIF(self, cifblock=None):
         # Get long compound name
         self.compound = cifblock.get('_chemical_name_systematic')
-        if type(self.compound) == type(None):
+        if type(self.compound) == NoneType:
             self.compound = cifblock.get('_chemical_name_mineral')
-            if type(self.compound) == type(None):
+            if type(self.compound) == NoneType:
                 self.compound = ""
         # Get short compound name
         self.cpd = cifblock.get('_chemical_formula_structural')
-        if type(self.cpd) == type(None):
+        if type(self.cpd) == NoneType:
             self.cpd = cifblock.get('_chemical_formula_sum')
-            if type(self.cpd) == type(None):
+            if type(self.cpd) == NoneType:
                 self.cpd = ""
         if type(self.compound) != type(str):
             self.compound = ""
@@ -745,7 +756,7 @@ class ReferenceData:
             # First all the standard ones
             try:
                 tmp = cifblock.get('_database_code_'+db)
-                if type(tmp) != type(None):
+                if type(tmp) != NoneType:
                     self.databasecode = tmp
                     self.database = self.databasenames[db]
                     self.databasestring = "CIF file exported from "+self.database+\
@@ -765,7 +776,7 @@ class ReferenceData:
         if self.databasecode == "":
             try:
                 tmp = cifblock.get('_cod_database_code')
-                if type(tmp) != type(None):
+                if type(tmp) != NoneType:
                     self.databasecode = tmp
                     self.database = self.databasenames["COD"]
                     self.databasestring = "CIF file exported from "+self.database+\
@@ -804,25 +815,43 @@ class ReferenceData:
                 # No primary reference found, using the first one.
                 i = 0
             # journal/book title
-            self.journal = references.get('_citation_journal_full')[i]
-            if type(self.journal) == type(None):
-                self.journal = references.get('_citation_book_title')[i]
-            if type(self.journal) == type(None):
-                self.journal = ""
+            if type(references.get('_citation_journal_full')) != NoneType:
+                self.journal = references.get('_citation_journal_full')[i]
+            else:
+                if type(references.get('_citation_journal_abbrev')) != NoneType:
+                    self.journal = references.get('_citation_journal_abbrev')[i]
+                else:
+                    if type(references.get('_citation_book_title')) != NoneType:
+                        self.journal = references.get('_citation_book_title')[i]
+                    else:
+                        self.journal = ""
             # volume
-            self.volume = references.get('_citation_journal_volume')[i]
-            if type(self.volume) == type(None):
+            if type(references.get('_citation_journal_volume')) != NoneType:
+                self.volume = references.get('_citation_journal_volume')[i]
+            else:
                 self.volume = ""
-            # pages
-            self.firstpage = references.get('_citation_page_first')[i]
-            if type(self.firstpage) == type(None):
+            if type(self.volume) == NoneType:
+                self.volume = ""
+            # first page
+            if type(references.get('_citation_page_first')) != NoneType:
+                self.firstpage = references.get('_citation_page_first')[i]
+            else:
                 self.firstpage = ""
-            self.lastpage = references.get('_citation_page_last')[i]
-            if type(self.lastpage) == type(None):
+            if type(self.firstpage) == NoneType:
+                self.firstpage = ""
+            # last page
+            if type(references.get('_citation_page_last')) != NoneType:
+                self.lastpage = references.get('_citation_page_last')[i]
+            else:
+                self.lastpage = ""
+            if type(self.lastpage) == NoneType:
                 self.lastpage = ""
             # year
-            self.year = references.get('_citation_year')[i]
-            if type(self.year) == type(None):
+            if type(references.get('_citation_year')) != NoneType:
+                self.year = references.get('_citation_year')[i]
+            else:
+                self.year = ""
+            if type(self.year) == NoneType:
                 self.year = ""
         except KeyError:
             try:
@@ -3270,7 +3299,9 @@ def mvmult3(mat,vec):
 
 def crystal_system(spacegroupnr):
     # Determine crystal system
-    if 0 < spacegroupnr <= 2:
+    if spacegroupnr == 0:
+        return "default"
+    elif 0 < spacegroupnr <= 2:
         return "triclinic"
     elif 2 < spacegroupnr <=15:
         return "monoclinic"
