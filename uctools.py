@@ -306,23 +306,29 @@ class CellData:
         """
         # Initialize 
         struct = self.structure
+        if self.spacegroupsymbol == "":
+            if 0 < self.spacegroupnr < 231:
+                self.spacegroupsymbol = SpaceGroupData().HMSymbol[str(self.spacegroupnr)]
+                self.spacegroupsymboltype = "(H-M)"
         # Check if we know enough:
         # To produce the conventional cell (reduce=False) we don't need the space group
         # symbol or number as long as we have the symmetry operations (equivalent sites).
         if self.a!=0 and self.b!=0 and self.c!=0 and self.alpha!=0 and self.beta!=0 and self.gamma!=0:
-            if self.spacegroupnr == -1 and not self.spacegroupsymbol in SpaceGroupData().HMtoSGnr:
+            if self.spacegroupnr == -1:
                 if len(self.eqsites) >= 1:
                     if reduce == True:
-                        raise SymmetryError("Insufficient symmetry information to reduce to primitive cell.")
+                        if self.spacegroupsetting == 'P':
+                            self.spacegroupnr = 0
+                        else:
+                            raise SymmetryError("Insufficient symmetry information to reduce to primitive cell.")
                     else:
                         self.spacegroupnr = 0
+        else:
+            raise CellError("No crystallographic parameter may be zero.")
         struct.latticevectors = self.latticevectors()
         struct.lengthscale = self.a
         struct.sitedata = []
         struct.alloy = False
-        if self.spacegroupsymbol == "":
-            self.spacegroupsymbol = SpaceGroupData().HMSymbol[str(self.spacegroupnr)]
-            self.spacegroupsymboltype = "(H-M)"
         # For reduction to primitive cell
         if self.spacegroupsetting == "":
             self.spacegroupsetting = SpaceGroupData().HMSymbol[str(self.spacegroupnr)][0]
@@ -550,6 +556,7 @@ class CellData:
             self.spacegroupsymboltype = "(H-M)"
         else:
             pass
+        # Define setting
         try:
             self.spacegroupsetting = self.spacegroupsymbol[0]
         except:

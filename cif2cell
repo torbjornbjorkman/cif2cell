@@ -329,7 +329,7 @@ if verbose or not options.program and not options.quiet:
     print "\n BIBLIOGRAPHIC INFORMATION"
     print ref.referencestring()
     print "\n SYMMETRY INFORMATION"
-    if cd.spacegroupnr > 0:
+    if cd.spacegroupnr >= 0:
         print "Space group number "+": ".rjust(len(cd.spacegroupsymboltype)+2)+str(cd.spacegroupnr)
         print "Space group symbol "+cd.spacegroupsymboltype+": "+cd.spacegroupsymbol
         print "This system is "+cd.crystal_system()+"."
