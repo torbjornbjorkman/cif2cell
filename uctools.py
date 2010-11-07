@@ -62,7 +62,7 @@ import os
 import sys
 import string
 import CifFile
-from types import NoneType
+from types import *
 from math import sin,cos,pi,sqrt
 from spacegroupdata import *
 
@@ -747,9 +747,9 @@ class ReferenceData:
             self.cpd = cifblock.get('_chemical_formula_sum')
             if type(self.cpd) == NoneType:
                 self.cpd = ""
-        if type(self.compound) != type(str):
+        if type(self.compound) != StringType:
             self.compound = ""
-        if type(self.cpd) != type(str):
+        if type(self.cpd) != StringType:
             self.cpd = ""
         # Try to identify a source database for the CIF
         for db in self.databasenames:
