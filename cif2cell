@@ -189,23 +189,23 @@ if options.coordtol:
     cd.coordepsilon = float(options.coordtol)
 try:
     cd.getFromCIF(cb)
-except PositionError as e:
-    sys.stderr.write("***Error: atomic positions: "+e.value+"\n")
+except PositionError, e:
+    sys.stderr.write("***Error: cell setup: "+e.value+"\n")
     sys.exit(2)
-except CellError as e:
-    sys.stderr.write("***Error: unit cell: "+e.value+"\n")
+except CellError, e:
+    sys.stderr.write("***Error: cell setup: "+e.value+"\n")
     sys.exit(2)
 #
 if reducetoprim:
     try:
         cell = cd.primitive()
-    except SymmetryError as e:
+    except SymmetryError, e:
         sys.stderr.write("***Error: cell setup: "+e.value+"\n")
         sys.exit(2)
 else:
     try:
         cell = cd.conventional()
-    except SymmetryError as e:
+    except SymmetryError, e:
         sys.stderr.write("***Error: cell setup: "+e.value+"\n")
         sys.exit(2)
 
