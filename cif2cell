@@ -49,10 +49,13 @@
 #        - Added output for exciting.
 #      2010-10-01 Torbjorn Bjorkman
 #        - Added output of new CIF file with all atoms explicitly written (no reduction of cell!)
+#      2010-12-11 Torbjorn Bjorkman
+#        - Added supercell generation (primitive version).
 #
 # TODO:
 #   - More formats (always...)
 #   - No way of setting output file names for emto and ncol.
+#   - Add "full" supercell generation (with full matrix instead of just diagonal elements).
 #
 # KNOWN BUGS:
 #************************************************************************************
@@ -79,14 +82,16 @@ parser = OptionParser(usage=usage, description=description)
 parser.add_option("-v","--verbose",dest="verbose",help="Print a lot of extra information to screen",action="store_true")
 parser.add_option("-q","--quiet",dest="quiet",help="Suppress most screen output, such as warnings and overrides --verbose flag, but will print all other requested output.",action="store_true")
 parser.add_option("-f","--file",dest="file",help="Input CIF file",metavar="FILE")
+parser.add_option("-p","--program",dest="program",help="The electronic structure code you want to create input file(s) for. Currently supports: abinit, cpmd, cellgen, crystal09, elk, emto, exciting, fleur, ncol, rspt, siesta, spacegroup, vasp. This keyword is case insensitive.")
 parser.add_option("-o","--outputfile",dest="outputfile",help="Name of output file (if other than default for you electronic structure code).",metavar="FILE")
 parser.add_option("-a","--append",dest="append",help="Append the output to given output file rather than overwriting.",action="store_true")
-parser.add_option("-p","--program",dest="program",help="The electronic structure code you want to create input file(s) for. Currently supports: abinit, cpmd, cellgen, crystal09, elk, emto, exciting, fleur, ncol, rspt, siesta, spacegroup, vasp. This keyword is case insensitive.")
 parser.add_option("--which-filename",dest="filenamequery",help="If given together with the --program-name option, the name of the output file will be printed to screen.",action="store_true")
 parser.add_option("-b","--block",dest="block",help="Block of data in input file (if there are more than one block in the CIF file).")
 parser.add_option("--no-reduce",dest="noreduce",help="Do not attempt to reduce to the primitive cell.",action="store_true")
 parser.add_option("--force-alloy",dest="forcealloy",help="Force generation of output file for an alloy compound for an electronic structure code that does not implement any alloy theory (such as CPA).",action="store_true")
 parser.add_option("--coordinate-tolerance",dest="coordtol",help="Parameter for determining when two coordinates are the same (default=0.0002).")
+# Supercell options
+parser.add_option("--supercell",dest="supercellmap",help="Three integers separated with commas and enclosed in square brackets that specify the dimensions of a supercell to be constructed from the generated cell.")
 # Printing to screen
 parser.add_option("--print-digits",dest="printdigits",help="Number of digits used when printing coordinates etc. to screen (default=8). Useful if you need to tweak the screen output for cutting and pasting into some unsupported program. There is no point in going over 16 because of the floating point accuracy.")
 parser.add_option("--print-atomic-units",dest="printau",help="Output lattice parameters in bohrradii rather than angstrom.",action="store_true")
@@ -167,6 +172,14 @@ else:
     sys.stderr.write("***Error: No input CIF file given\n")
     sys.exit(2)
 
+# Make supercell?
+if options.supercellmap:
+    makesupercell = True
+    supercellmap = eval(options.supercellmap)
+else:
+    makesupercell = False
+
+##############################################
 # Get blocks
 cfkeys = cf.keys()
 if options.block:
@@ -176,11 +189,9 @@ if options.block:
         sys.exit(2)
 else:
     cb = cf.get(cfkeys[0])
-
 # Get reference data
 ref = ReferenceData()
 ref.getFromCIF(cb)
-
 # Get cell data
 cd = CellData()
 # suppress warnings if requested
@@ -195,7 +206,9 @@ except PositionError, e:
 except CellError, e:
     sys.stderr.write("***Error: cell setup: "+e.value+"\n")
     sys.exit(2)
-#
+    
+##############################################
+# Generate cell
 if reducetoprim:
     try:
         cell = cd.primitive()
@@ -208,117 +221,7 @@ else:
     except SymmetryError, e:
         sys.stderr.write("***Error: cell setup: "+e.value+"\n")
         sys.exit(2)
-
-# Sort sites so that the ones occupied by the heaviest elements come first,
-# if Python version supports this form of the max function and there is
-# nothing wrong with the site data.
-try:
-    cell.sitedata.sort(key = lambda site: ed.elementnr[max(site[1], key = site[1].get)], reverse=True)
-except:
-    pass
-
-# Output file. ot parsed until this point, since the default file names for some of
-# the codes contain the names of space group and compound.
-if options.outputfile:
-    outputfile = options.outputfile
-    # Output file mode (overwrite or append?)
-    if options.append:
-        outmode = "a"
-    else:
-        outmode = "w"
-else:
-    # Always overwrite unless an output file is explicitly given
-    outmode = "w"
-    # Default output filenames for different programs
-    if outputprogram == "vasp":
-        outputfile = "POSCAR"
-    elif outputprogram == "rspt":
-        outputfile = "symt.inp"
-    elif outputprogram == "cellgen":
-        outputfile = "cellgen.inp"
-    elif outputprogram == "elk":
-        outputfile = "GEOMETRY.OUT"
-    elif outputprogram == "exciting":
-        outputfile = "input.xml"
-    elif outputprogram == "spacegroup":
-        outputfile = "spacegroup.in"
-    elif outputprogram == "abinit":
-        outputfile = ref.cpd.replace(" ", "").replace("(","").replace(")","")
-        # If the filename seems too long, replace by the name of the cif file
-        if len(outputfile) > 10:
-            if len(cif_file) < len(outputfile):
-                outputfile = cif_file.replace(".cif","")
-            else:
-                outputfile = outputfile[0:9]
-        outputfile = outputfile+".in"
-    elif outputprogram == "siesta":
-        outputfile = ref.cpd.replace(" ", "").replace("(","").replace(")","")
-        # If the filename seems too long, replace by the name of the cif file
-        if len(outputfile) > 10:
-            if len(cif_file) < len(outputfile):
-                outputfile = cif_file.replace(".cif","")
-            else:
-                outputfile = outputfile[0:9]
-        outputfile = outputfile+".fdf"
-    elif outputprogram == "cpmd":
-        outputfile = ref.cpd.replace(" ", "").replace("(","").replace(")","")
-        # If the filename seems too long, replace by the name of the cif file
-        if len(outputfile) > 10:
-            if len(cif_file) < len(outputfile):
-                outputfile = cif_file.replace(".cif","")
-            else:
-                outputfile = outputfile[0:9]
-        outputfile = outputfile+".inp"
-    elif outputprogram == "castep":
-        outputfile = ref.cpd.replace(" ", "").replace("(","").replace(")","")
-        # If the filename seems too long, replace by the name of the cif file
-        if len(outputfile) > 10:
-            if len(cif_file) < len(outputfile):
-                outputfile = cif_file.replace(".cif","")
-            else:
-                outputfile = outputfile[0:9]
-        outputfile = outputfile+".cell"
-    elif outputprogram == "fleur":
-        outputfile = ref.cpd.replace(" ", "").replace("(","").replace(")","")
-        # If the filename seems too long, replace by the name of the cif file
-        if len(outputfile) > 10:
-            if len(cif_file) < len(outputfile):
-                outputfile = cif_file.replace(".cif","")
-            else:
-                outputfile = outputfile[0:9]
-        outputfile = "inp_"+outputfile
-    elif outputprogram == "crystal09":
-        outputfile = ref.cpd.replace(" ", "").replace("(","").replace(")","")
-        # If the filename seems too long, replace by the name of the cif file
-        if len(outputfile) > 10:
-            if len(cif_file) < len(outputfile):
-                outputfile = cif_file.replace(".cif","")
-            else:
-                outputfile = outputfile[0:9]
-        # This is the naming convention from a large bunch of test cases, no idea why
-        outputfile = outputfile+".d12"
-    elif outputprogram == "cif":
-        outputfile = cif_file.replace(".cif","")+"_allatoms.cif"
-    else:
-        outputfile = ""
-
-# Print output filename to screen
-if outputprogram !="":
-    if (verbose or options.filenamequery) and outputfile != "":
-        print "Data will be written to the file "+outputfile
-
-################################################################################################
-# stuff that should be printed irrespective of the verbose flag
-if cell.alloy and options.forcealloy and options.program and not verbose:
-    tmpstring = "Enforcing file generation for alloy. "
-    if outputprogram == 'bstr' or outputprogram == 'vasp' or outputprogram == 'cpmd':
-        print tmpstring
-    else:
-        tmpstring += "Warning! The file(s) will be incomplete!"
-        print tmpstring
-    
-################################################################################################
-# PRINT TO STANDARD OUT
+# Print cell
 if verbose or not options.program and not options.quiet:
     print string.upper(programname)+":"
     print datestring
@@ -471,6 +374,165 @@ if verbose or not options.program and not options.quiet:
             tmpstring += " "+occstring.rjust(w3)
             print tmpstring
 
+##############################################
+# Generate supercell
+if makesupercell:
+    try:
+        supercell = cd.getSuperCell(supercellmap)
+    except CellError, e:
+        sys.stderr.write("***Error: Supercell setup: "+e.value+"\n")
+        sys.exit(2)
+    # Print supercell
+    if verbose or not options.program and not options.quiet:
+        print "\n SUPERCELL INFORMATION"
+        tmpstring = "Bravais lattice vectors :"
+        if options.printcart:
+            fact = cd.a
+        else:
+            fact = 1
+        print tmpstring
+        formatstring = ""
+        for i in range(3):
+            formatstring = formatstring+decform+" "
+        for i in range(3):
+            print formatstring % (supercell.latticevectors[i][0]*fact, supercell.latticevectors[i][1]*fact, supercell.latticevectors[i][2]*fact)
+        # Print out all sites
+        tmpstring = "All sites, "
+        if options.printcart:
+            tmpstring += "(cartesian coordinates):"
+        else:
+            tmpstring += "(lattice coordinates):"
+        print tmpstring
+        print siteheader
+        for site in supercell.sitedata:
+            spcsstring = ""
+            for k in site[1]:
+                spcsstring = spcsstring+k+"/"
+            spcsstring = spcsstring.rstrip("/")
+            occstring = ""
+            if supercell.alloy:
+                for (k,v) in site[1].iteritems():
+                    occstring = occstring + str(v).rstrip('0.') + "/"
+                occstring = occstring.rstrip("/")
+            for j in range(len(site[2])):
+                v = mvmult3(transmtx,site[2][j])
+                tmpstring = spcsstring.ljust(w1)+threedecs % (v[0], v[1], v[2])
+                tmpstring += " "+occstring.rjust(w3)
+                print tmpstring
+    # update to the supercell
+    cell = supercell
+
+##############################################
+# Sort sites so that the ones occupied by the heaviest elements come first,
+# if the Python version supports this form of the max function and there is
+# nothing wrong with the site data.
+try:
+    cell.sitedata.sort(key = lambda site: ed.elementnr[max(site[1], key = site[1].get)], reverse=True)
+except:
+    pass
+
+##############################################
+# Output file. ot parsed until this point, since the default file names for some of
+# the codes contain the names of space group and compound.
+if options.outputfile:
+    outputfile = options.outputfile
+    # Output file mode (overwrite or append?)
+    if options.append:
+        outmode = "a"
+    else:
+        outmode = "w"
+else:
+    # Always overwrite unless an output file is explicitly given
+    outmode = "w"
+    # Default output filenames for different programs
+    if outputprogram == "vasp":
+        outputfile = "POSCAR"
+    elif outputprogram == "rspt":
+        outputfile = "symt.inp"
+    elif outputprogram == "cellgen":
+        outputfile = "cellgen.inp"
+    elif outputprogram == "elk":
+        outputfile = "GEOMETRY.OUT"
+    elif outputprogram == "exciting":
+        outputfile = "input.xml"
+    elif outputprogram == "spacegroup":
+        outputfile = "spacegroup.in"
+    elif outputprogram == "abinit":
+        outputfile = ref.cpd.replace(" ", "").replace("(","").replace(")","")
+        # If the filename seems too long, replace by the name of the cif file
+        if len(outputfile) > 10:
+            if len(cif_file) < len(outputfile):
+                outputfile = cif_file.replace(".cif","")
+            else:
+                outputfile = outputfile[0:9]
+        outputfile = outputfile+".in"
+    elif outputprogram == "siesta":
+        outputfile = ref.cpd.replace(" ", "").replace("(","").replace(")","")
+        # If the filename seems too long, replace by the name of the cif file
+        if len(outputfile) > 10:
+            if len(cif_file) < len(outputfile):
+                outputfile = cif_file.replace(".cif","")
+            else:
+                outputfile = outputfile[0:9]
+        outputfile = outputfile+".fdf"
+    elif outputprogram == "cpmd":
+        outputfile = ref.cpd.replace(" ", "").replace("(","").replace(")","")
+        # If the filename seems too long, replace by the name of the cif file
+        if len(outputfile) > 10:
+            if len(cif_file) < len(outputfile):
+                outputfile = cif_file.replace(".cif","")
+            else:
+                outputfile = outputfile[0:9]
+        outputfile = outputfile+".inp"
+    elif outputprogram == "castep":
+        outputfile = ref.cpd.replace(" ", "").replace("(","").replace(")","")
+        # If the filename seems too long, replace by the name of the cif file
+        if len(outputfile) > 10:
+            if len(cif_file) < len(outputfile):
+                outputfile = cif_file.replace(".cif","")
+            else:
+                outputfile = outputfile[0:9]
+        outputfile = outputfile+".cell"
+    elif outputprogram == "fleur":
+        outputfile = ref.cpd.replace(" ", "").replace("(","").replace(")","")
+        # If the filename seems too long, replace by the name of the cif file
+        if len(outputfile) > 10:
+            if len(cif_file) < len(outputfile):
+                outputfile = cif_file.replace(".cif","")
+            else:
+                outputfile = outputfile[0:9]
+        outputfile = "inp_"+outputfile
+    elif outputprogram == "crystal09":
+        outputfile = ref.cpd.replace(" ", "").replace("(","").replace(")","")
+        # If the filename seems too long, replace by the name of the cif file
+        if len(outputfile) > 10:
+            if len(cif_file) < len(outputfile):
+                outputfile = cif_file.replace(".cif","")
+            else:
+                outputfile = outputfile[0:9]
+        # This is the naming convention from a large bunch of test cases, no idea why
+        outputfile = outputfile+".d12"
+    elif outputprogram == "cif":
+        outputfile = cif_file.replace(".cif","")+"_allatoms.cif"
+    else:
+        outputfile = ""
+
+# Print output filename to screen
+if outputprogram !="":
+    if (verbose or options.filenamequery) and outputfile != "":
+        print "Data will be written to the file "+outputfile
+
+################################################################################################
+# stuff that should be printed irrespective of the verbose flag
+if cell.alloy and options.forcealloy and options.program and not verbose:
+    tmpstring = "Enforcing file generation for alloy. "
+    if outputprogram == 'bstr' or outputprogram == 'vasp' or outputprogram == 'cpmd':
+        print tmpstring
+    else:
+        tmpstring += "Warning! The file(s) will be incomplete!"
+        print tmpstring
+    
+################################################################################################
 # Stop here if no specific output was requested
 if not options.program:
     sys.exit(0)

@@ -50,10 +50,15 @@
 #        - Added output for Fleur.
 #      2010-08-27 Torbjorn Bjorkman
 #        - Added output for Crystal09.
+#      2010-12-11 Torbjorn Bjorkman
+#        - Added getSuperCell method to CellData.
 #
 # TODO:
-#   - More output formats (always...)
-#   - Improve exception handling
+#   - More output formats (always)
+#   - Improve exception handling (probably also always...)
+#   - Make the getSuperCell method to also set proper symmetries
+#     of the new cell (probably requires using some more advanced
+#     symmetry library like computational crystallographics toolbox).
 #
 # KNOWN BUGS:
 #******************************************************************************************
@@ -61,6 +66,7 @@ from __future__ import division
 import os
 import sys
 import string
+import copy
 import CifFile
 from types import *
 from math import sin,cos,pi,sqrt
@@ -160,7 +166,7 @@ class CellData:
         volume              : Return the unit cell volume
         primitive           : Returns a CrystalStructure object for the primitive cell
         conventional        : Returns a CrystalStructure object for the conventional cell.
-        getCrystalStructure : The 'primitive' and 'conventional' methods are in fact just
+        getCrystalStructure : The 'primitive' and 'conventional' methods are just
                               wrappers around this method. It requires the following
                               to be set beforehand:
                                   a, b, c, alpha, beta, gamma : the lattice parameters
@@ -173,8 +179,12 @@ class CellData:
                                                 Example: Two inequivalent sites, one with iron
                                                 and the other with 90% oxygen and 10% flourine:
                                                     occupations = [{'Fe':1.0}, {'O':0.9, 'F':0.1}]
+        getSuperCell        : Return a supercell from input supercell dimensions [i,j,k]. The crystal
+                              structure must first have been initialized by getCrystalStructure (or
+                              'primitive' or 'conventional').
     """
     def __init__(self):
+        self.initialized = False
         self.quiet = False
         self.coordepsilon = 0.0002
         self.spacegroupnr = 0
@@ -511,7 +521,45 @@ class CellData:
                     if occ1 == occ2:
                         site1[3] += 1
             i += 1
-        # Finally, return the CrystalStructure in the conventional setting
+        # Finally, set flag and return the CrystalStructure in the conventional setting
+        self.initialized = True
+        return struct
+
+    def getSuperCell(self, supercellmap):
+        """
+        Returns a supercell based on the input supercell map. The cell must
+        have been initialized.
+        """
+        if not self.initialized:
+            raise CellError("The unit cell must be initialized before a supercell can be generated.")
+        if len(supercellmap) != 3 or type(supercellmap[0]) != IntType or type(supercellmap[1]) != IntType \
+               or type(supercellmap[2]) != IntType or supercellmap[0] <= 0 or supercellmap[1] <= 0 \
+               or supercellmap[2] <= 0:
+            raise CellError("The supercell map must be an array of three positive integers.")
+        struct = copy.deepcopy(self.structure)
+        vectors = self.structure.latticevectors
+        # Set up offsets
+        offsets = []
+        multfac = 0
+        for k in range(supercellmap[2]):
+            for j in range(supercellmap[1]):
+                for i in range(supercellmap[0]):
+                    offsets.append([i,j,k])
+                    multfac += 1
+        # generate additional positions
+        for i in range(1,len(offsets)):
+            for j in range(len(self.structure.sitedata)):
+                for l in range(len(self.structure.sitedata[j][2])):
+                    position = [self.structure.sitedata[j][2][l][m] for m in range(3)]
+                    for m in range(3):
+                        position[m] += offsets[i][m]
+                    struct.sitedata[j][2].append(position)
+        # transform lattice vectors
+        for i in range(len(supercellmap)):
+            factor = supercellmap[i]
+            for j in range(len(vectors[i])):
+                struct.latticevectors[i][j] = vectors[i][j] * factor
+        
         return struct
 
     # Get lattice information from CIF block
@@ -652,7 +700,6 @@ class CellData:
             except ValueError:
                 v = 1.0
             self.occupations.append({ k : v })
-
 
 ################################################################################################
 class ReferenceData:
