@@ -2374,6 +2374,7 @@ class KSTRFile(GeometryOutputFile):
         self.beta = 90
         self.gamma = 90
         self.hardsphere = 0.67
+        self.iprim = 0
         self.latticenr = 14
         # To be put on the first line
         self.programdoc = ""
@@ -2410,16 +2411,13 @@ class KSTRFile(GeometryOutputFile):
         wsr = (3*volume/(nosites * 4 * pi))**third
         tmpstring = "(K*W)^2..=  0.000000 DMAX....=%10f RWATS...=      0.10\n" % (wsr*4.5)
         filestring += tmpstring
-        if self.latticenr == 0:
-            tmpstring = "NQ3...=%3i LAT...= 0 IPRIM.= 0 NGHBP.=13 NQR2..= 0\n" % (nosites,self.latticenr)
-        else:
-            tmpstring = "NQ3...=%3i LAT...=%2i IPRIM.= 1 NGHBP.=13 NQR2..= 0\n" % (nosites,self.latticenr)
+        tmpstring = "NQ3...=%3i LAT...=%2i IPRIM.=%2i NGHBP.=13 NQR2..= 0\n" % (nosites,self.latticenr,self.iprim)
         filestring += tmpstring
         boa = self.b/self.a
         coa = self.c/self.a
         filestring += "A........= 1.0000000 B.......=%10f C.......=%10f\n"%(boa,coa)
         tmpstring = ""
-        if self.latticenr == 0:
+        if self.iprim == 0:
             for i in range(3):
                 tmpstring += "BSX......=%10f BSY.....=%10f BSZ.....=%10f\n" % (self.cell.latticevectors[i][0],self.cell.latticevectors[i][1],self.cell.latticevectors[i][2])
         else:
