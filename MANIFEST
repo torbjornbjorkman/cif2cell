@@ -1,0 +1,16 @@
+LICENSE
+README
+cif2cell
+setup.py
+spacegroupdata.py
+uctools.py
+cifs/BaTiO3_cubic.cif
+cifs/BaTiO3_orthorhombic.cif
+cifs/FeAs.cif
+cifs/LSMO.cif
+cifs/Ni20Mn3P6.cif
+cifs/Si.cif
+cifs/SiC.cif
+cifs/alpha-Mn.cif
+cifs/b-Pu.cif
+cifs/gamma-Pu.cif

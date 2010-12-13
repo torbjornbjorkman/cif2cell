@@ -16,9 +16,8 @@
 # along with cif2cell.  If not, see <http://www.gnu.org/licenses/>.
 #
 #**********************************************************************************
-#  Description: A tool to generate the geometrical setup
-#               for various electronic structure codes
-#               from a CIF format file.
+#  Description: A command-line tool to generate the geometrical setup
+#               for various electronic structure codes from a CIF format file.
 #  Author: Torbjorn Bjorkman
 #  Affiliation: COMP, Aaalto University School of
 #               Science and Technology, Department of
