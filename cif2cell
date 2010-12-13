@@ -87,15 +87,17 @@ parser.add_option("-o","--outputfile",dest="outputfile",help="Name of output fil
 parser.add_option("-a","--append",dest="append",help="Append the output to given output file rather than overwriting.",action="store_true")
 parser.add_option("--which-filename",dest="filenamequery",help="If given together with the --program-name option, the name of the output file will be printed to screen.",action="store_true")
 parser.add_option("-b","--block",dest="block",help="Block of data in input file (if there are more than one block in the CIF file).")
-parser.add_option("--no-reduce",dest="noreduce",help="Do not attempt to reduce to the primitive cell.",action="store_true")
 parser.add_option("--force-alloy",dest="forcealloy",help="Force generation of output file for an alloy compound for an electronic structure code that does not implement any alloy theory (such as CPA).",action="store_true")
 parser.add_option("--coordinate-tolerance",dest="coordtol",help="Parameter for determining when two coordinates are the same (default=0.0002).")
-# Supercell options
-parser.add_option("--supercell",dest="supercellmap",help="Three integers separated with commas and enclosed in square brackets that specify the dimensions of a supercell to be constructed from the generated cell.")
 # Printing to screen
 parser.add_option("--print-digits",dest="printdigits",help="Number of digits used when printing coordinates etc. to screen (default=8). Useful if you need to tweak the screen output for cutting and pasting into some unsupported program. There is no point in going over 16 because of the floating point accuracy.")
 parser.add_option("--print-atomic-units",dest="printau",help="Output lattice parameters in bohrradii rather than angstrom.",action="store_true")
 parser.add_option("--print-cartesian",dest="printcart",help="Atomic sites printed to screen in cartesian rather than lattice coordinates.",action="store_true")
+# CELL GENERATION OPTIONS
+#cellgenopts = OptionGroup(parser, "Cell generation options")
+parser.add_option("--no-reduce",dest="noreduce",help="Do not reduce to the primitive cell.",action="store_true")
+# Supercell options
+parser.add_option("--supercell",dest="supercellmap",help="Three integers separated with commas and enclosed in square brackets that specify the dimensions of a supercell to be constructed from the primitive cell. If combined with the --no-reduce option the supercell will instead be generated based on the conventional cell.",metavar="[k,l,m]")
 # PROGRAM SPECIFIC OPTIONS
 progspec = OptionGroup(parser, "Program specific options")
 # emto
@@ -432,18 +434,16 @@ except:
     pass
 
 ##############################################
+# Output file mode (overwrite or append?)
+if options.append:
+    outmode = "a"
+else:
+    outmode = "w"
 # Output file. ot parsed until this point, since the default file names for some of
 # the codes contain the names of space group and compound.
 if options.outputfile:
     outputfile = options.outputfile
-    # Output file mode (overwrite or append?)
-    if options.append:
-        outmode = "a"
-    else:
-        outmode = "w"
 else:
-    # Always overwrite unless an output file is explicitly given
-    outmode = "w"
     # Default output filenames for different programs
     if outputprogram == "vasp":
         outputfile = "POSCAR"
