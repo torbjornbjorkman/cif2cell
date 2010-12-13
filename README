@@ -46,11 +46,12 @@ Prerequisites: The program requires Python 2.4 or higher and the
                may be slightly different (but physically equivalent) 
 	       with Python 2.4 than with later versions.
 
-To install, put the files cif2cell and uctools.py in the directory
-where you want the program installed. Make sure that the chosen
-directory is in your PATH, and you are ready. The two .py files
-can instead be put in your PYTHONPATH, if you so prefer. Installation 
-instructions for PyCIFRW can be found in the end of this file.
+To install the program in your systems standard location, simply type:
+python setup.py install 
+To choose a different location, add 
+--prefix=where/you/want/it 
+to the above line. For help and more options type
+python setup.py --help
 
 
 RUNNING
