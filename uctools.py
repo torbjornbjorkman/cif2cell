@@ -657,6 +657,8 @@ class CellData:
                 sys.exit(1)
         # Remove junk from strings
         elements[:] = [element.strip(string.punctuation).strip(string.digits).strip(string.punctuation) for element in elements]
+        # Make element name start with capital and then have lower case letters
+        elements[:] = [element[0].upper()+element[1:].lower() for element in elements]
         for element in elements:
             if not element in ElementData().elementnr:
                 print "***Warning: "+element+" is not a chemical element."
@@ -2455,8 +2457,9 @@ class ElementData:
     """
     def __init__(self):
         # Element numbers
-        self.elementnr = { 
+        self.elementnr = {
             'H'  : 1  ,
+            'D'  : 1  ,
             'He' : 2  ,
             'Li' : 3  ,
             'Be' : 4  ,
@@ -2572,6 +2575,7 @@ class ElementData:
         # Element classification in s, p, d and f blocks
         self.elementblock = { 
             'H'  : 's'  ,
+            'D'  : 's'  ,
             'He' : 's'  ,
             'Li' : 's'  ,
             'Be' : 's'  ,
@@ -2702,6 +2706,12 @@ Kappa -1\n\
 Occup  0\n\
 Valen  1\n",
             "H":
+            "Iz=   1 Norb=  1 Ion=  0 Config= 1s1\n\
+n      1\n\
+Kappa -1\n\
+Occup  1\n\
+Valen  1\n",
+            "D":
             "Iz=   1 Norb=  1 Ion=  0 Config= 1s1\n\
 n      1\n\
 Kappa -1\n\

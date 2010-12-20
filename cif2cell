@@ -79,6 +79,7 @@ description = "A program for generating input lattice structures to various elec
 usage = "usage: %prog -f FILE [-p PROGRAM] [other options]"
 parser = OptionParser(usage=usage, description=description)
 parser.add_option("-v","--verbose",dest="verbose",help="Print a lot of extra information to screen",action="store_true")
+parser.add_option("--version",dest="version",help="Print version number.",action="store_true")
 parser.add_option("-q","--quiet",dest="quiet",help="Suppress most screen output, such as warnings and overrides --verbose flag, but will print all other requested output.",action="store_true")
 parser.add_option("-f","--file",dest="file",help="Input CIF file",metavar="FILE")
 parser.add_option("-p","--program",dest="program",help="The electronic structure code you want to create input file(s) for. Currently supports: abinit, cpmd, cellgen, crystal09, elk, emto, exciting, fleur, ncol, rspt, siesta, spacegroup, vasp. This keyword is case insensitive.")
@@ -118,7 +119,12 @@ parser.add_option_group(progspec)
 (options,args) = parser.parse_args()
 
 # own name
-programname = "cif2cell"        
+programname = "cif2cell"
+version = "0.1"
+if options.version:
+    print programname+" version "+version
+    sys.exit(0)
+
 if options.program:
     outputprogram = options.program.lower()
 else:
@@ -224,7 +230,7 @@ else:
         sys.exit(2)
 # Print cell
 if verbose or not options.program and not options.quiet:
-    print string.upper(programname)+":"
+    print string.upper(programname)+" "+version
     print datestring
     print "Output for "+ref.cpd+" ("+ref.compound+")"
     print ref.databasestring
