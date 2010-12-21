@@ -261,8 +261,7 @@ class CellData:
                               [self.boa*cos(gammar), self.boa*sin(gammar), zero], 
                               [self.coa*cos(betar), self.coa*angfac1, self.coa*angfac2]]
         else:
-            print "Error : No support for "+self.crystal_system()+" crystal systems."
-            sys.exit(3)
+            raise SymmetryError("No support for "+self.crystal_system()+" crystal systems.")
         return latticevectors
 
     # Define comparison functions
@@ -646,22 +645,9 @@ class CellData:
             raise CellError("Unable to read crystallographic parameters")
         # Get info on atom positions
         try:
-            tmpdata = cifblock.GetLoop("_atom_site_type_symbol")
-            elements = tmpdata.get('_atom_site_type_symbol')
-        except KeyError:
-            try:
-                tmpdata = cifblock.GetLoop("_atom_site_label")
-                elements = tmpdata.get('_atom_site_label')
-            except KeyError:
-                print "***Error reading element names"
-                sys.exit(1)
-        # Remove junk from strings
-        elements[:] = [element.strip(string.punctuation).strip(string.digits).strip(string.punctuation) for element in elements]
-        # Make element name start with capital and then have lower case letters
-        elements[:] = [element[0].upper()+element[1:].lower() for element in elements]
-        for element in elements:
-            if not element in ElementData().elementnr:
-                print "***Warning: "+element+" is not a chemical element."
+            tmpdata = cifblock.GetLoop('_atom_site_fract_x')
+        except:
+            raise PositionError("Unable to find irreducible positions.")
         # Positions
         try:
             sitexer = tmpdata.get('_atom_site_fract_x')
@@ -671,6 +657,27 @@ class CellData:
                 raise PositionError("Irreducible positions not found.")
         except KeyError:
             raise PositionError("Irreducible positions not found.")
+        # Element names
+        elements = tmpdata.get('_atom_site_type_symbol')
+        if type(elements) == NoneType:
+            elements = tmpdata.get('_atom_site_label')
+            if type(elements) == NoneType:
+                # Fill up with question marks if not found
+                print "***Warning: Could not find element names."
+                elements = []
+                elements[:] = ["??" for site in sitexer]
+        # Remove junk from strings
+        for i in range(len(elements)):
+            elements[i] = elements[i].strip(string.punctuation).strip(string.digits).strip(string.punctuation)
+            # Make it ?? if there was nothing left after removing junk
+            if elements[i] == "":
+                elements[i] = "??"
+        # Make element name start with capital and then have lower case letters
+        elements[:] = [element[0].upper()+element[1:].lower() for element in elements]
+        for element in elements:
+            if not element in ElementData().elementnr:
+                print "***Warning: "+element+" is not a chemical element."
+        # Find occupancies
         try:
             siteoccer = tmpdata.get('_atom_site_occupancy')
         except KeyError:
