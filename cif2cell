@@ -85,6 +85,7 @@ parser.add_option("-f","--file",dest="file",help="Input CIF file",metavar="FILE"
 parser.add_option("-p","--program",dest="program",help="The electronic structure code you want to create input file(s) for. Currently supports: abinit, cpmd, cellgen, crystal09, elk, emto, exciting, fleur, ncol, rspt, siesta, spacegroup, vasp. This keyword is case insensitive.")
 parser.add_option("-o","--outputfile",dest="outputfile",help="Name of output file (if other than default for you electronic structure code).",metavar="FILE")
 parser.add_option("-a","--append",dest="append",help="Append the output to given output file rather than overwriting.",action="store_true")
+parser.add_option("--grammar",dest="grammar",help="Set the CIF grammar to be used when parsing the input file (default is 1.1).")
 parser.add_option("--which-filename",dest="filenamequery",help="If given together with the --program-name option, the name of the output file will be printed to screen.",action="store_true")
 parser.add_option("-b","--block",dest="block",help="Block of data in input file (if there are more than one block in the CIF file).")
 parser.add_option("--force-alloy",dest="forcealloy",help="Force generation of output file for an alloy compound for an electronic structure code that does not implement any alloy theory (such as CPA).",action="store_true")
@@ -125,6 +126,7 @@ if options.version:
     print programname+" version "+version
     sys.exit(0)
 
+# Electronic structure program
 if options.program:
     outputprogram = options.program.lower()
 else:
@@ -159,21 +161,27 @@ threedecs = " "+decform+" "+decform+" "+decform
 today = datetime.today()
 datestring = str(today.year)+"-"+str(today.month).rjust(2,'0')+"-"+str(today.day).rjust(2,'0')+' '+str(today.hour)+":"+str(today.minute).rjust(2,'0')
 
-# input CIF file
-if options.file:
+# Open and read CIF file
+if options.file:    
+    # input CIF file
     cif_file = options.file
+    # Set CIF grammar
+    if options.grammar:
+        cif_grammar = options.grammar
+    else:
+        cif_grammar = '1.1'
     # Skip validation for now... it causes too much trouble.
 #    cdic = CifFile.CifDic("cif_core.dic",grammar='1.1')     
 #    val_results = CifFile.validate(cif_file,dic=cdic)
 #    print validate_report(val_results)
 #    val_report = CifFile.ValidationResult(val_results)
     try:
-        cf = CifFile.CifFile(cif_file)
+        cf = CifFile.CifFile(cif_file,grammar=cif_grammar)
     except IOError:
         sys.stderr.write("***Error: The file "+cif_file+" could not be found.\n")
         sys.exit(2)
     except:
-        sys.stderr.write("***Error: could not read "+cif_file+"\n")
+        sys.stderr.write("***Error: could not read "+cif_file+".\n")
         sys.exit(2)
 else:
     sys.stderr.write("***Error: No input CIF file given\n")
