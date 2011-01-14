@@ -1,5 +1,7 @@
 CIF2CELL RELEASE INFORMATION
 
+* Possibility of adding vacuum added to the supercell
+  generator.
 
 VERSION 0.1.1
 

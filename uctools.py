@@ -52,6 +52,8 @@
 #        - Added output for Crystal09.
 #      2010-12-11 Torbjorn Bjorkman
 #        - Added getSuperCell method to CellData.
+#      2011-01-14 Torbjorn Bjorkman
+#        - Added vacuum padding to getSuperCell method.
 #
 # TODO:
 #   - More output formats (always)
@@ -524,10 +526,12 @@ class CellData:
         self.initialized = True
         return struct
 
-    def getSuperCell(self, supercellmap):
+    def getSuperCell(self, supercellmap, vacuum):
         """
         Returns a supercell based on the input supercell map. The cell must
         have been initialized.
+        If vacuum is specified the cell will be padded with original unit cells of vacuum by
+        simple rescaling of the lattice vectors and positions.
         """
         if not self.initialized:
             raise CellError("The unit cell must be initialized before a supercell can be generated.")
@@ -535,6 +539,8 @@ class CellData:
                or type(supercellmap[2]) != IntType or supercellmap[0] <= 0 or supercellmap[1] <= 0 \
                or supercellmap[2] <= 0:
             raise CellError("The supercell map must be an array of three positive integers.")
+        if len(supercellmap) != 3 or vacuum[0] < 0 or vacuum[1] < 0 or vacuum[2] < 0:
+            raise CellError("The vacuum padding must be an array of three integers >= 0.")
         struct = copy.deepcopy(self.structure)
         vectors = self.structure.latticevectors
         # Set up offsets
@@ -558,7 +564,28 @@ class CellData:
             factor = supercellmap[i]
             for j in range(len(vectors[i])):
                 struct.latticevectors[i][j] = vectors[i][j] * factor
-        
+        # Pad with vacuum
+        if reduce(lambda x,y: x+y, vacuum) > 0:
+            # original length of lattice vectors
+            orglatlen = []
+            for vec in struct.latticevectors:
+                leng = sqrt(vec[0]**2+vec[1]**2+vec[2]**2)
+                orglatlen.append(leng)
+            # add the given number of unit cell units along the lattice vectors
+            for j in range(len(vacuum)):
+                for i in range(len(struct.latticevectors[j])):
+                    struct.latticevectors[j][i] = struct.latticevectors[j][i] + vectors[j][i]*vacuum[j]
+            # newlength of lattice vectors
+            newlatlen = []
+            for vec in struct.latticevectors:
+                leng = sqrt(vec[0]**2+vec[1]**2+vec[2]**2)
+                newlatlen.append(leng)
+            # Rescale coordinates
+            for j in range(len(struct.sitedata)):
+                for l in range(len(struct.sitedata[j][2])):
+                    for k in range(3):
+                        fac = orglatlen[k]/newlatlen[k]
+                        struct.sitedata[j][2][l][k] = struct.sitedata[j][2][l][k] * fac
         return struct
 
     # Get lattice information from CIF block

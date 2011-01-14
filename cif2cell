@@ -50,6 +50,8 @@
 #        - Added output of new CIF file with all atoms explicitly written (no reduction of cell!)
 #      2010-12-11 Torbjorn Bjorkman
 #        - Added supercell generation (primitive version).
+#      2011-01-14 Torbjorn Bjorkman
+#        - Added possibility of vacuum padding to supercell generation.
 #
 # TODO:
 #   - More formats (always...)
@@ -99,6 +101,7 @@ parser.add_option("--print-cartesian",dest="printcart",help="Atomic sites printe
 parser.add_option("--no-reduce",dest="noreduce",help="Do not reduce to the primitive cell.",action="store_true")
 # Supercell options
 parser.add_option("--supercell",dest="supercellmap",help="Three integers separated with commas and enclosed in square brackets that specify the dimensions of a supercell to be constructed from the primitive cell. If combined with the --no-reduce option the supercell will instead be generated based on the conventional cell.",metavar="[k,l,m]")
+parser.add_option("--supercell-vacuum",dest="supercellvacuum",help="Three positive numbers separated with commas and enclosed in square brackets that specify a number of unit cell units of vacuum to be added along the first, second or third of the generated lattice vectors.",metavar="[k,l,m]")
 # PROGRAM SPECIFIC OPTIONS
 progspec = OptionGroup(parser, "Program specific options")
 # emto
@@ -188,9 +191,16 @@ else:
     sys.exit(2)
 
 # Make supercell?
-if options.supercellmap:
+if options.supercellmap or options.supercellvacuum:
     makesupercell = True
-    supercellmap = eval(options.supercellmap)
+    if options.supercellmap:
+        supercellmap = eval(options.supercellmap)
+    else:
+        supercellmap = [1,1,1]
+    if options.supercellvacuum:
+        supercellvacuum = eval(options.supercellvacuum)
+    else:
+        supercellvacuum = [0,0,0]
 else:
     makesupercell = False
 
@@ -393,7 +403,7 @@ if verbose or not options.program and not options.quiet:
 # Generate supercell
 if makesupercell:
     try:
-        supercell = cd.getSuperCell(supercellmap)
+        supercell = cd.getSuperCell(supercellmap,supercellvacuum)
     except CellError, e:
         sys.stderr.write("***Error: Supercell setup: "+e.value+"\n")
         sys.exit(2)
