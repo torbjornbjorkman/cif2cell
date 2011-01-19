@@ -54,6 +54,8 @@
 #        - Added getSuperCell method to CellData.
 #      2011-01-14 Torbjorn Bjorkman
 #        - Added vacuum padding to getSuperCell method.
+#      2011-01-19 Torbjorn Bjorkman
+#        - Added translation vector to getSuperCell method.
 #
 # TODO:
 #   - More output formats (always)
@@ -71,7 +73,7 @@ import string
 import copy
 import CifFile
 from types import *
-from math import sin,cos,pi,sqrt
+from math import sin,cos,pi,sqrt,copysign
 from spacegroupdata import *
 
 ################################################################################################
@@ -526,12 +528,14 @@ class CellData:
         self.initialized = True
         return struct
 
-    def getSuperCell(self, supercellmap, vacuum):
+    def getSuperCell(self, supercellmap, vacuum, transvec):
         """
         Returns a supercell based on the input supercell map. The cell must
         have been initialized.
-        If vacuum is specified the cell will be padded with original unit cells of vacuum by
-        simple rescaling of the lattice vectors and positions.
+        The cell will be padded with some number of original unit cells of vacuum
+        by simple rescaling of the lattice vectors and positions. Controlled by 'vacuum'.
+        All coordinates will be translated by 'transvec', which is given in units
+        of the original lattice vectors.
         """
         if not self.initialized:
             raise CellError("The unit cell must be initialized before a supercell can be generated.")
@@ -543,6 +547,16 @@ class CellData:
             raise CellError("The vacuum padding must be an array of three integers >= 0.")
         struct = copy.deepcopy(self.structure)
         vectors = self.structure.latticevectors
+        # original length of lattice vectors
+        orglatlen = []
+        for vec in struct.latticevectors:
+            leng = sqrt(vec[0]**2+vec[1]**2+vec[2]**2)
+            orglatlen.append(leng)
+        # newlength of lattice vectors
+        newlatlen = []
+        for vec in struct.latticevectors:
+            leng = sqrt((vec[0]*supercellmap[0])**2+(vec[1]*supercellmap[1])**2+(vec[2]*supercellmap[2])**2)
+            newlatlen.append(leng)
         # Set up offsets
         offsets = []
         multfac = 0
@@ -566,26 +580,29 @@ class CellData:
                 struct.latticevectors[i][j] = vectors[i][j] * factor
         # Pad with vacuum
         if reduce(lambda x,y: x+y, vacuum) > 0:
-            # original length of lattice vectors
-            orglatlen = []
-            for vec in struct.latticevectors:
-                leng = sqrt(vec[0]**2+vec[1]**2+vec[2]**2)
-                orglatlen.append(leng)
             # add the given number of unit cell units along the lattice vectors
             for j in range(len(vacuum)):
                 for i in range(len(struct.latticevectors[j])):
                     struct.latticevectors[j][i] = struct.latticevectors[j][i] + vectors[j][i]*vacuum[j]
-            # newlength of lattice vectors
-            newlatlen = []
-            for vec in struct.latticevectors:
-                leng = sqrt(vec[0]**2+vec[1]**2+vec[2]**2)
-                newlatlen.append(leng)
             # Rescale coordinates
             for j in range(len(struct.sitedata)):
                 for l in range(len(struct.sitedata[j][2])):
                     for k in range(3):
                         fac = orglatlen[k]/newlatlen[k]
                         struct.sitedata[j][2][l][k] = struct.sitedata[j][2][l][k] * fac
+        # Move all atoms by transvec
+        if reduce(lambda x,y: x+y, transvec) != 0:
+            for j in range(len(struct.sitedata)):
+                for l in range(len(struct.sitedata[j][2])):
+                    for k in range(3):
+                        fac = orglatlen[k]/newlatlen[k]
+                        struct.sitedata[j][2][l][k] = struct.sitedata[j][2][l][k] + fac*transvec[k]
+        # Put stuff back in ]-1,1[ interval
+        for j in range(len(struct.sitedata)):
+            for l in range(len(struct.sitedata[j][2])):
+                for k in range(3):
+                    while abs(struct.sitedata[j][2][l][k]) >= 1:
+                        struct.sitedata[j][2][l][k] = struct.sitedata[j][2][l][k] - copysign(1,struct.sitedata[j][2][l][k])
         return struct
 
     # Get lattice information from CIF block
