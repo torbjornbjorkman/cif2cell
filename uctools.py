@@ -75,7 +75,7 @@ import string
 import copy
 import CifFile
 from types import *
-from math import sin,cos,pi,sqrt,copysign
+from math import sin,cos,pi,sqrt
 from spacegroupdata import *
 
 ################################################################################################
@@ -3498,3 +3498,9 @@ def crystal_system(spacegroupnr):
     else:
         return "unknown"
 
+# Return x with the sign of y
+def copysign(x, y):
+    if y >= 0:
+        return x
+    else:
+        return -x
