@@ -109,6 +109,8 @@ parser.add_option("--supercell-translation-vector",dest="supercelltransvec",help
 progspec = OptionGroup(parser, "Program specific options")
 # emto
 progspec.add_option("--emto-hard-sphere-radii",dest="hardsphereradii",help="Set hard spheres in KSTR to something other than the default (=0.67).")
+# RSPt
+progspec.add_option("--rspt-new", dest="newsymt", help="Generate a symt.inp file in the new format.", action="store_true")
 # cellgen
 progspec.add_option("--cellgen-map",dest="cellgenmap",help="Nine integers separated with commas and enclosed three and three in square brackets (this is a matrix in Python) that specify the map to a supercell to be output for the RSPt supercell generator 'cellgen'. Overrides --cellgen-supercell-dims.",metavar="[[k,l,m],[n,o,p],[q,r,s]]")
 progspec.add_option("--cellgen-supercell-dimensions",dest="cellgensupercelldims",help="Three integers separated with commas and enclosed in square brackets that specify the dimensions of a supercell to be output to the RSPt supercell generator 'cellgen' (the diagonal elements of the 'map').",metavar="[k,l,m]")
@@ -479,6 +481,10 @@ else:
         outputfile = "POSCAR"
     elif outputprogram == "rspt":
         outputfile = "symt.inp"
+        if options.newsymt:
+            newsymtformat = True
+        else:
+            newsymtformat = False
     elif outputprogram == "cellgen":
         outputfile = "cellgen.inp"
     elif outputprogram == "elk":
@@ -807,7 +813,10 @@ if outputprogram == 'rspt':
     # Construct documentation string
     docstring = StandardDocstring()
     # Get file string and print to symt.inp
-    symtfile = SymtFile(cell, docstring)
+    if newsymtformat:
+        symtfile = SymtFile2(cell, docstring)
+    else:
+        symtfile = SymtFile(cell, docstring)
     f = open(outputfile, outmode)
     f.write(symtfile.FileString())
     f.close()

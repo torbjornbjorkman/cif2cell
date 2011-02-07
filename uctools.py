@@ -56,6 +56,8 @@
 #        - Added vacuum padding to getSuperCell method.
 #      2011-01-19 Torbjorn Bjorkman
 #        - Added translation vector to getSuperCell method.
+#      2011-02-04 Torbjorn Bjorkman
+#        - Added new format SymtFile2 class
 #
 # TODO:
 #   - More output formats (always)
@@ -1302,7 +1304,7 @@ class CellgenFile(GeometryOutputFile):
 ################################################################################################
 class SymtFile(GeometryOutputFile):
     """
-    Class for storing the geometrical data needed in a symt.inp file and the method
+    Class for storing the geometrical data needed in an old format symt.inp file and the method
     FileString that outputs the contents of an symt.inp file as a string.
     """
     def __init__(self,crystalstructure,string):
@@ -1339,6 +1341,71 @@ class SymtFile(GeometryOutputFile):
             for pos in site[2]:
                 nosites += 1
         filestring += "# Sites\n"
+        filestring += str(nosites)+"\n"
+        for site in self.cell.sitedata:
+            for pos in site[2]:
+                tmpstring = ""
+                for k in range(3):
+                    x = improveprecision(pos[k],0.00001)
+                    tmpstring += "%19.15f " % x
+                if len(site[1]) > 1:
+                    # don't know what to put for an alloy
+                    tmpstring += "???"
+                else:
+                    for k in site[1]:
+                        tmpstring += "%3i" % ed.elementnr[k]
+                tmpstring += " l "+chr(site[3]+96)+"   # "
+                for k in site[1]:
+                    tmpstring += k+"/"
+                tmpstring = tmpstring.rstrip("/")+"\n"
+                filestring += tmpstring
+        return filestring
+
+################################################################################################
+class SymtFile2(GeometryOutputFile):
+    """
+    Class for storing the geometrical data needed in a new format symt.inp file and the method
+    FileString that outputs the contents of an symt.inp file as a string.
+    """
+    def __init__(self,crystalstructure,string):
+        GeometryOutputFile.__init__(self,crystalstructure,string)
+        # Set atomic units for length scale
+        self.cell.newunit("bohr")
+        # Make sure the docstring has comment form
+        self.docstring = self.docstring.rstrip("\n")
+        tmpstrings = self.docstring.split("\n")
+        self.docstring = ""
+        for string in tmpstrings:
+            string = string.lstrip("#")
+            string = "#"+string+"\n"
+            self.docstring += string
+    def FileString(self):
+        # Initialize element data
+        ed = ElementData()
+        # Add docstring
+        filestring = self.docstring
+        # Add lattice constant
+        filestring += "# Lattice constant in a.u.\n"
+        filestring += "lengthscale\n"
+        filestring += str(self.cell.lengthscale)+"\n"
+        filestring += "# Lattice vectors (columns)\n"
+        filestring += "latticevectors\n"
+        tmpstring = ""
+        for i in range(3):
+            for j in range(3):
+                tmpstring += "%19.15f "%self.cell.latticevectors[j][i]
+            tmpstring += "\n"
+        filestring += tmpstring
+        filestring += "# Spin axis\n"
+        filestring += "spinaxis\n"
+        filestring += "%19.15f %19.15f %19.15f  l\n"%(0,0,0)
+        # Get number of sites
+        nosites = 0
+        for site in self.cell.sitedata:
+            for pos in site[2]:
+                nosites += 1
+        filestring += "# Sites\n"
+        filestring += "atoms\n"
         filestring += str(nosites)+"\n"
         for site in self.cell.sitedata:
             for pos in site[2]:
