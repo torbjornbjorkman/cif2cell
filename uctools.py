@@ -554,11 +554,6 @@ class CellData:
         for vec in struct.latticevectors:
             leng = sqrt(vec[0]**2+vec[1]**2+vec[2]**2)
             orglatlen.append(leng)
-        # newlength of lattice vectors
-        newlatlen = []
-        for vec in struct.latticevectors:
-            leng = sqrt((vec[0]*supercellmap[0])**2+(vec[1]*supercellmap[1])**2+(vec[2]*supercellmap[2])**2)
-            newlatlen.append(leng)
         # Set up offsets
         offsets = []
         multfac = 0
@@ -586,12 +581,17 @@ class CellData:
             for j in range(len(vacuum)):
                 for i in range(len(struct.latticevectors[j])):
                     struct.latticevectors[j][i] = struct.latticevectors[j][i] + vectors[j][i]*vacuum[j]
-            # Rescale coordinates
-            for j in range(len(struct.sitedata)):
-                for l in range(len(struct.sitedata[j][2])):
-                    for k in range(3):
-                        fac = orglatlen[k]/newlatlen[k]
-                        struct.sitedata[j][2][l][k] = struct.sitedata[j][2][l][k] * fac
+        # new length of lattice vectors
+        newlatlen = []
+        for vec in struct.latticevectors:
+            leng = sqrt((vec[0])**2+(vec[1])**2+(vec[2])**2)
+            newlatlen.append(leng)
+        # Rescale coordinates
+        for j in range(len(struct.sitedata)):
+            for l in range(len(struct.sitedata[j][2])):
+                for k in range(3):
+                    fac = orglatlen[k]/newlatlen[k]
+                    struct.sitedata[j][2][l][k] = struct.sitedata[j][2][l][k] * fac
         # Move all atoms by transvec
         if reduce(lambda x,y: x+y, transvec) != 0:
             for j in range(len(struct.sitedata)):
