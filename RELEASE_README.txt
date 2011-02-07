@@ -1,7 +1,11 @@
 CIF2CELL RELEASE INFORMATION
 
+VERSION 0.2.0
+
+* Translation of supercell possible.
 * Possibility of adding vacuum added to the supercell
   generator.
+* New input format for RSPt program.
 
 VERSION 0.1.1
 

@@ -25,7 +25,7 @@ for f in filelist:
     ciffiles.append('cifs/'+f)
 
 setup(name='cif2cell',
-      version='0.1.1',
+      version='0.2.0',
       description='Construct a unit cell from CIF data',
       long_description='A command-line tool to generate the geometrical setup for various electronic structure codes from a CIF format file.',
       author='Torbjorn Bjorkman',
