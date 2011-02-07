@@ -1,5 +1,10 @@
 CIF2CELL RELEASE INFORMATION
 
+VERSION 0.2.1
+
+* Fixed problem with Python < 2.6
+
+--------------------------------------------------------------
 VERSION 0.2.0
 
 * Translation of supercell possible.
