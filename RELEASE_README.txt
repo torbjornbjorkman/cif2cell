@@ -7,6 +7,7 @@ VERSION 0.2.0
   generator.
 * New input format for RSPt program.
 
+--------------------------------------------------------------
 VERSION 0.1.1
 
 * A couple of minor bugfixes.
