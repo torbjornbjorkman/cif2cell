@@ -15,14 +15,10 @@
 # along with cif2cell.  If not, see <http://www.gnu.org/licenses/>.
 #
 from distutils.core import setup
-from subprocess import *
+from glob import glob
 
 # Get list of the cif example files
-tmp = Popen(['ls','cifs'], stdout=PIPE).communicate()[0]
-filelist = tmp.split()
-ciffiles = []
-for f in filelist:
-    ciffiles.append('cifs/'+f)
+ciffiles = glob('cifs/*.cif')
 
 setup(name='cif2cell',
       version='0.2.1',
