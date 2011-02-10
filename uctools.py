@@ -1403,7 +1403,7 @@ class SymtFile2(GeometryOutputFile):
             filestring += "# Relativistic symmetries\nrelativistic\n"
         if self.mtradii != 0:
             filestring += "# Choice of MT radii\n"
-            filestring += "#mtradii\n"+str(self.mtradii)+"\n"
+            filestring += "mtradii\n"+str(self.mtradii)+"\n"
         filestring += "# Lattice vectors (columns)\n"
         filestring += "latticevectors\n"
         tmpstring = ""
