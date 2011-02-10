@@ -111,6 +111,9 @@ progspec = OptionGroup(parser, "Program specific options")
 progspec.add_option("--emto-hard-sphere-radii",dest="hardsphereradii",help="Set hard spheres in KSTR to something other than the default (=0.67).")
 # RSPt
 progspec.add_option("--rspt-new", dest="newsymt", help="Generate a symt.inp file in the new format.", action="store_true")
+progspec.add_option("--rspt-spinpol", dest="rsptspinpol", help="Generate new format symt.inp file with spin polarization.", action="store_true")
+progspec.add_option("--rspt-relativistic", dest="rsptrelativistic", help="Generate new format symt.inp file with relativistic effects.", action="store_true")
+progspec.add_option("--rspt-spinaxis", dest="rsptspinaxis", help="Spin axis for symt.inp (default is [0.0,0.0,0.0].", metavar="[x,y,z]")
 # cellgen
 progspec.add_option("--cellgen-map",dest="cellgenmap",help="Nine integers separated with commas and enclosed three and three in square brackets (this is a matrix in Python) that specify the map to a supercell to be output for the RSPt supercell generator 'cellgen'. Overrides --cellgen-supercell-dims.",metavar="[[k,l,m],[n,o,p],[q,r,s]]")
 progspec.add_option("--cellgen-supercell-dimensions",dest="cellgensupercelldims",help="Three integers separated with commas and enclosed in square brackets that specify the dimensions of a supercell to be output to the RSPt supercell generator 'cellgen' (the diagonal elements of the 'map').",metavar="[k,l,m]")
@@ -815,8 +818,16 @@ if outputprogram == 'rspt':
     # Get file string and print to symt.inp
     if newsymtformat:
         symtfile = SymtFile2(cell, docstring)
+        # spin polarization and relativity
+        if options.rsptspinpol:
+            symtfile.spinpol = True
+        if options.rsptrelativistic:
+            symtfile.relativistic = True
     else:
         symtfile = SymtFile(cell, docstring)
+    # spin axis 
+    if options.rsptspinaxis:
+        symtfile.spinaxis = eval(options.rsptspinaxis)
     f = open(outputfile, outmode)
     f.write(symtfile.FileString())
     f.close()

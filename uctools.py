@@ -1319,6 +1319,8 @@ class SymtFile(GeometryOutputFile):
             string = string.lstrip("#")
             string = "#"+string+"\n"
             self.docstring += string
+        # Default spin axis is [0,0,0]
+        self.spinaxis = [0.0, 0.0, 0.0]
     def FileString(self):
         # Initialize element data
         ed = ElementData()
@@ -1334,7 +1336,7 @@ class SymtFile(GeometryOutputFile):
             tmpstring += "\n"
         filestring += tmpstring
         filestring += "# Spin axis\n"
-        filestring += "%19.15f %19.15f %19.15f  l\n"%(0,0,0)
+        filestring += "%19.15f %19.15f %19.15f  l\n"%(self.spinaxis[0],self.spinaxis[1],self.spinaxis[2])
         # Get number of sites
         nosites = 0
         for site in self.cell.sitedata:
@@ -1379,6 +1381,11 @@ class SymtFile2(GeometryOutputFile):
             string = string.lstrip("#")
             string = "#"+string+"\n"
             self.docstring += string
+        # Default spin axis is [0,0,0]
+        self.spinaxis = [0.0, 0.0, 0.0]
+        # parameters for spin polarization
+        self.spinpol = False
+        self.relativistic = False
     def FileString(self):
         # Initialize element data
         ed = ElementData()
@@ -1388,6 +1395,11 @@ class SymtFile2(GeometryOutputFile):
         filestring += "# Lattice constant in a.u.\n"
         filestring += "lengthscale\n"
         filestring += str(self.cell.lengthscale)+"\n"
+        if self.spinpol:
+            filestring += "# Spin polarized calculation\nspinpol\n"
+            filestring += "# Spin polarize atomic densities\nspinpol_atomdens\n"
+        if self.relativistic:
+            filestring += "# Relativistic symmetries\nrelativistic\n"
         filestring += "# Lattice vectors (columns)\n"
         filestring += "latticevectors\n"
         tmpstring = ""
@@ -1398,7 +1410,7 @@ class SymtFile2(GeometryOutputFile):
         filestring += tmpstring
         filestring += "# Spin axis\n"
         filestring += "spinaxis\n"
-        filestring += "%19.15f %19.15f %19.15f  l\n"%(0,0,0)
+        filestring += "%19.15f %19.15f %19.15f  l\n"%(self.spinaxis[0],self.spinaxis[1],self.spinaxis[2])
         # Get number of sites
         nosites = 0
         for site in self.cell.sitedata:
