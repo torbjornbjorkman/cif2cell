@@ -1386,6 +1386,7 @@ class SymtFile2(GeometryOutputFile):
         # parameters for spin polarization
         self.spinpol = False
         self.relativistic = False
+        self.mtradii = 0
     def FileString(self):
         # Initialize element data
         ed = ElementData()
@@ -1400,6 +1401,9 @@ class SymtFile2(GeometryOutputFile):
             filestring += "# Spin polarize atomic densities\nspinpol_atomdens\n"
         if self.relativistic:
             filestring += "# Relativistic symmetries\nrelativistic\n"
+        if self.mtradii != 0:
+            filestring += "# Choice of MT radii\n"
+            filestring += "#mtradii\n"+str(self.mtradii)+"\n"
         filestring += "# Lattice vectors (columns)\n"
         filestring += "latticevectors\n"
         tmpstring = ""

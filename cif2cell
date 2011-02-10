@@ -114,6 +114,7 @@ progspec.add_option("--rspt-new", dest="newsymt", help="Generate a symt.inp file
 progspec.add_option("--rspt-spinpol", dest="rsptspinpol", help="Generate new format symt.inp file with spin polarization.", action="store_true")
 progspec.add_option("--rspt-relativistic", dest="rsptrelativistic", help="Generate new format symt.inp file with relativistic effects.", action="store_true")
 progspec.add_option("--rspt-spinaxis", dest="rsptspinaxis", help="Spin axis for symt.inp (default is [0.0,0.0,0.0].", metavar="[x,y,z]")
+progspec.add_option("--rspt-mtradii", dest="rsptmtradii", help="Integer that gives the method for setting muffin tin radii.", metavar="N")
 # cellgen
 progspec.add_option("--cellgen-map",dest="cellgenmap",help="Nine integers separated with commas and enclosed three and three in square brackets (this is a matrix in Python) that specify the map to a supercell to be output for the RSPt supercell generator 'cellgen'. Overrides --cellgen-supercell-dims.",metavar="[[k,l,m],[n,o,p],[q,r,s]]")
 progspec.add_option("--cellgen-supercell-dimensions",dest="cellgensupercelldims",help="Three integers separated with commas and enclosed in square brackets that specify the dimensions of a supercell to be output to the RSPt supercell generator 'cellgen' (the diagonal elements of the 'map').",metavar="[k,l,m]")
@@ -823,6 +824,8 @@ if outputprogram == 'rspt':
             symtfile.spinpol = True
         if options.rsptrelativistic:
             symtfile.relativistic = True
+        if options.rsptmtradii:
+            symtfile.mtradii = int(options.rsptmtradii)
     else:
         symtfile = SymtFile(cell, docstring)
     # spin axis 
