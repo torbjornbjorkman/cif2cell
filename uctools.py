@@ -169,6 +169,7 @@ class CellData:
         getFromCIF          : obtain data for setting up a cell from a CIF block
         crystal_system      : return a string with the name of the crystal system
         latticevectors      : Return the Bravais lattice vectors as a 3x3 matrix
+        reciprocal_latticevectors: Return the reciprocal lattice vectors as a 3x3 matrix.
         volume              : Return the unit cell volume
         primitive           : Returns a CrystalStructure object for the primitive cell
         conventional        : Returns a CrystalStructure object for the conventional cell.
@@ -270,6 +271,17 @@ class CellData:
             raise SymmetryError("No support for "+self.crystal_system()+" crystal systems.")
         return latticevectors
 
+    # The reciprocal lattice vectors corresponding to the choice made by the latticevectors() method
+    # (b1, b2, b3)^T = 2 * pi * (a1, a2, a3)^{-1}
+    def reciprocal_latticevectors(self):
+        t = minv3(self.latticevectors())
+        reclatvect = []
+        for j in range(3):
+            reclatvect.append([])
+            for i in range(3):
+                reclatvect[j].append(t[i][j]*2*pi)
+        return reclatvect
+
     # Define comparison functions
     def poscomp(self, pos1, pos2):
         # Return True if two positions are the same
@@ -279,6 +291,7 @@ class CellData:
             return True
         else:
             return False
+        
     def transveccomp(self, pos1,pos2):
         # Return True if two positions only differ by one
         # of the induced lattice translations
@@ -289,6 +302,7 @@ class CellData:
                 abs(pos1[2]-(pos2[2]-tv[2]))<self.coordepsilon):
                 match = True
         return match
+    
     def duplicates(self, poslist, compfunc = transveccomp):
         # Return list of indices of duplicates in a list,
         # sorted in reverse order to be easy to use for removing the duplicates.
@@ -310,10 +324,12 @@ class CellData:
         """ Return a CrystalStructure object for the primitive cell."""
         w = self.getCrystalStructure(reduce=True)
         return w
+    
     def conventional(self):
         """ Return a CrystalStructure object for the conventional cell."""
         w = self.getCrystalStructure(reduce=False)
         return w
+    
     def getCrystalStructure(self, reduce=False):
         """
         Return a CrystalStructure object, either as it is or reduced to the
@@ -526,6 +542,7 @@ class CellData:
                     if occ1 == occ2:
                         site1[3] += 1
             i += 1
+        self.alloy = struct.alloy
         # Finally, set flag and return the CrystalStructure in the conventional setting
         self.initialized = True
         return struct
@@ -899,12 +916,15 @@ class ReferenceData:
         # Authors
             authorsloop = cifblock.GetLoop('_publ_author_name')
             self.authors = authorsloop.get('_publ_author_name')
-            if len(self.authors) > 2:
-                self.authorstring = self.authors[0]+" et al."
-            elif len(self.authors) == 2:
-                self.authorstring = self.authors[0]+" and "+self.authors[1]
-            elif len(self.authors) == 1:
-                self.authorstring = self.authors[0]
+            if type(self.authors) == StringType:
+                self.authorstring = self.authors
+            else:                
+                if len(self.authors) == 1:
+                    self.authorstring = self.authors[0]
+                elif len(self.authors) == 2:
+                    self.authorstring = self.authors[0]+" and "+self.authors[1]
+                elif len(self.authors) > 2:
+                    self.authorstring = self.authors[0]+" et al."
         except KeyError:
             self.authors = []
             self.authorstring = "Failed to get author information"
