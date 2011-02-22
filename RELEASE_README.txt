@@ -1,5 +1,12 @@
 CIF2CELL RELEASE INFORMATION
 
+VERSION 0.2.2
+
+* Added reciprocal lattice vectors method to CrystalData (useful 
+for setting up a k-space mesh).
+* Bugfixes.
+
+--------------------------------------------------------------
 VERSION 0.2.1
 
 * Fixed problem with Python < 2.6
