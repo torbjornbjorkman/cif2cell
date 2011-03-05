@@ -71,6 +71,8 @@ from datetime import datetime
 from optparse import OptionParser, OptionGroup
 import warnings
 from uctools import *
+from ESPInterfaces import *
+from elementdata import *
 import CifFile
 import subprocess
 
