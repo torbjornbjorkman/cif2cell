@@ -21,7 +21,7 @@ from glob import glob
 ciffiles = glob('cifs/*.cif')
 
 setup(name='cif2cell',
-      version='0.2.2',
+      version='0.2.3',
       description='Construct a unit cell from CIF data',
       long_description='A command-line tool to generate the geometrical setup for various electronic structure codes from a CIF format file.',
       author='Torbjorn Bjorkman',

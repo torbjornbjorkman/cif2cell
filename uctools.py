@@ -60,6 +60,7 @@
 #        - Added new format SymtFile2 class
 #
 # TODO:
+#   - Make a lot of things inherit from GeometryObject
 #   - More output formats (always)
 #   - Improve exception handling (probably also always...)
 #   - Make the getSuperCell method to also set proper symmetries
@@ -85,9 +86,11 @@ one = 1.0
 two = 2.0
 three = 3.0
 four = 4.0
+six = 6.0
 third = 1/3
 half = one/two
 fourth = one/four
+sixth = one/six
 occepsilon = 0.000001
 
 ################################################################################################
@@ -111,6 +114,79 @@ class CellError(Exception):
         return repr(self.value)
     
 ################################################################################################
+class GeometryObject:
+    """
+    Parent class for anything geometrical contains:
+    compeps  : epsilon for determining when two floats are equal
+    """
+    def __init__(self):
+        self.compeps = 0.0002
+    
+class SymmetryOperation(GeometryObject):
+    """
+    Class describing a symmetry operation, with a rotation matrix and a translation.
+    """
+    def __init__(self, eqsite):
+        GeometryObject.__init__(self)
+        self.eqsite = eqsite
+        self.rotation_matrix = self.rotmat()
+        self.translation = self.transvec()  
+    def __str__(self):
+        matstr = ""
+        for l in self.rotation_matrix:
+            matstr += "%19.15f %19.15f %19.15f\n"%(l[0],l[1],l[2])
+        v = self.translation
+        matstr +=  "%19.15f %19.15f %19.15f\n"%(v[0],v[1],v[2])
+        return matstr
+    # Two symmetry operations are equal if rotation matrices and translation vector
+    # differ by at most compeps
+    def __eq__(self, other):
+        eq = True
+        for i in range(3):
+            for j in range(3):
+                eq = eq and abs(self.rotation_matrix[i][j] - other.rotation_matrix[i][j]) < self.compeps
+            eq = eq and abs(self.translation[i] - other.translation[i]) < self.compeps
+        return eq
+    # comparison between operations made by comparing lengths of translation vectors
+    def __lt__(self, other):
+        sl = self.translation[0]**2+self.translation[1]**2+self.translation[2]**2
+        ol = other.translation[0]**2+other.translation[1]**2+other.translation[2]**2
+        return sl < ol
+    def __gt__(self, other):
+        sl = self.translation[0]**2+self.translation[1]**2+self.translation[2]**2
+        ol = other.translation[0]**2+other.translation[1]**2+other.translation[2]**2
+        return sl > ol
+    def __le__(self, other):
+        sl = self.translation[0]**2+self.translation[1]**2+self.translation[2]**2
+        ol = other.translation[0]**2+other.translation[1]**2+other.translation[2]**2
+        return sl <= ol
+    def __ge__(self, other):
+        sl = self.translation[0]**2+self.translation[1]**2+self.translation[2]**2
+        ol = other.translation[0]**2+other.translation[1]**2+other.translation[2]**2
+        return sl >= ol
+    # Return a rotation matrix from "x,y,z" representation of a symmetry operation
+    def rotmat(self):
+        mat = [[0.0,0.0,0.0],[0.0,0.0,0.0],[0.0,0.0,0.0]]
+        for j in range(len(self.eqsite)):
+            xyz = self.eqsite[j].replace('+',' +').replace('-',' -').split()
+            for i in xyz:
+                if i.strip("+-") == 'x':
+                    mat[0][j] = float(i.strip('x')+"1")
+                elif i.strip("+-") == 'y':
+                    mat[1][j] = float(i.strip('y')+"1")
+                elif i.strip("+-") == 'z':
+                    mat[2][j] = float(i.strip('z')+"1")
+        return mat
+    # Return a translation vector from "x,y,z" representation of a symmetry operation
+    def transvec(self):
+        vec = [0.0,0.0,0.0]
+        for j in range(len(self.eqsite)):
+            xyz = self.eqsite[j].replace('+',' +').replace('-',' -').split()
+            for i in xyz:
+                if i.strip("+-xyz") != "":
+                    vec[j] = eval(i)
+        return vec
+    
 class CrystalStructure:
     """
     Class for the minimal set of data for outputting the geometrical information
@@ -209,6 +285,7 @@ class CellData:
         self.coa = 1
         self.boa = 1
         self.eqsites = []
+        self.symops = []
         self.alloy = False
         self.numofineqsites = 0
         self.ineqsites = []
@@ -271,10 +348,10 @@ class CellData:
             raise SymmetryError("No support for "+self.crystal_system()+" crystal systems.")
         return latticevectors
 
-    # The reciprocal lattice vectors corresponding to the choice made by the latticevectors() method
+    # The reciprocal lattice vectors corresponding to the lattice vectors of the structure
     # (b1, b2, b3)^T = 2 * pi * (a1, a2, a3)^{-1}
     def reciprocal_latticevectors(self):
-        t = minv3(self.latticevectors())
+        t = minv3(self.structure.latticevectors)
         reclatvect = []
         for j in range(3):
             reclatvect.append([])
@@ -360,9 +437,36 @@ class CellData:
         struct.lengthscale = self.a
         struct.sitedata = []
         struct.alloy = False
-        # For reduction to primitive cell
         if self.spacegroupsetting == "":
             self.spacegroupsetting = SpaceGroupData().HMSymbol[str(self.spacegroupnr)][0]
+        # REDUCTION TO PRIMITIVE CELL
+        #
+        # Choices of lattice vectors made to largely coincide with the choices
+        # made at http://cst-www.nrl.navy.mil/lattice/
+        #
+        # The induced translation vectors are from Zachariasen, "Theory of x-ray
+        # diffraction in crystals". 
+        #
+        # Relations between rhombohedral and hexagonal settings of trigonal
+        # space groups from Tilley, "Crystals and crystal structures"
+        # Bravais lattice vectors:
+        #
+        # a_r =  2/3 a_h + 1/3 b_h + 1/3 c_h
+        # b_r = -1/3 a_h + 1/3 b_h + 1/3 c_h
+        # c_r = -1/3 a_h - 2/3 b_h + 1/3 c_h
+        #
+        # a_h = a_r - b_r
+        # b_h = b_r - c_r
+        # c_h = a_r + b_r + c_r
+        #
+        # a, c and rhombohedral angle alpha:
+        #
+        # a_h = 2 * a_r * sin(alpha/2)
+        # c_h = a_r * sqrt(3 + 6*cos(alpha))
+        # 
+        # a_r = sqrt(3*a_h^2 + c_h^2) / 3
+        # sin(alpha/2) = 3*a_h / (2 * sqrt(3*a_h^2 + c_h^2))
+        #
         if reduce:
             if self.spacegroupsetting == 'I':
                 # Body centered
@@ -512,7 +616,30 @@ class CellData:
             removelist = self.duplicates(struct.sitedata[i][2])
             for j in removelist:
                 struct.sitedata[i][2].pop(j)
-                
+
+        # Symmetry operations
+        for eqsite in self.eqsites:
+            self.symops.append(SymmetryOperation(eqsite))
+
+        # If we reduce the cell, remove the symmetry operations that are the
+        # same up to an induced lattice translation
+        if reduce:
+            if len(self.transvecs) > 1:
+                # sort the symmetry operations (by length of translation vectors)
+                self.symops.sort()
+                removelist = []
+                for j in range(len(self.symops)):
+                    for i in range(j+1,len(self.symops)):
+                        for vec in self.transvecs:
+                            s = copy.deepcopy(self.symops[i])
+                            s.translation = latvectadd(s.translation, vec)
+                            if s == self.symops[j]:
+                                removelist.append(i)
+                removelist = list(set(removelist))
+                removelist.sort(reverse=True)
+                for i in removelist:
+                    self.symops.pop(i)
+
         # work out the number of times that a species appears and store index in sitedata[site][3]
         i = 0
         for site1 in struct.sitedata:
@@ -1882,6 +2009,14 @@ class CASTEPFile(GeometryOutputFile):
     def __init__(self, crystalstructure, string):
         GeometryOutputFile.__init__(self,crystalstructure,string)
         self.cell.newunit("angstrom")
+        # Make sure the docstring has comment form
+        self.docstring = self.docstring.rstrip("\n")
+        tmpstrings = self.docstring.split("\n")
+        self.docstring = ""
+        for string in tmpstrings:
+            string = string.lstrip("#")
+            string = "#"+string+"\n"
+            self.docstring += string
     def FileString(self):
         # Assign some local variables
         a = self.cell.lengthscale
@@ -1890,15 +2025,17 @@ class CASTEPFile(GeometryOutputFile):
         # docstring
         filestring = self.docstring+"\n"
         filestring += "%BLOCK LATTICE_CART\n"
+        # units
+        filestring += "ang    # angstrom units\n"
         # lattice
         for vec in lattice:
             for coord in vec:
                 filestring += " %19.15f"%(coord*a)
             filestring += "\n"
         # Cutoff
-        filestring += "&ENDBLOCK LATTICE_CART\n\n"
+        filestring += "%ENDBLOCK LATTICE_CART\n\n"
         # The atom position info
-        filestring += "&BLOCK POSITIONS_FRAC\n"
+        filestring += "%BLOCK POSITIONS_FRAC\n"
         for site in self.cell.sitedata:
             spcstring = ""
             l = ""
@@ -1915,7 +2052,11 @@ class CASTEPFile(GeometryOutputFile):
                 for coord in pos:
                     filestring += " %19.15f"%coord
                 filestring += "\n"
-        filestring += "&ENDBLOCK POSITIONS_FRAC\n"
+        filestring += "%ENDBLOCK POSITIONS_FRAC\n"
+        # pseudo-potential block
+        filestring += "\n"
+        filestring += "%BLOCK SPECIES_POT\n"
+        filestring += "%ENDBLOCK SPECIES_POT\n"
         return filestring
 
 ################################################################################################
@@ -3469,14 +3610,23 @@ def removeerror(string):
     return splitstr[0]
 
 # Guess the "true" values of some conspicuous numbers
-floatlist = [third, 2*third, half, fourth, one, zero, sqrt(2.0)]
+floatlist = [third, 2*third, half, fourth, one, zero, sqrt(2.0),sixth,5*sixth]
 def improveprecision(x,eps):
     for f in floatlist:
-        if abs(x-f) <= eps:
+        if abs(x-f) <= eps:                
             # 0
             return f
     # if no match found, return x
     return x
+
+def latvectadd(a,b):
+    t = []
+    for i in range(3):
+        t.append(a[i]+b[i])
+        if abs(t[i]) >= 1-occepsilon:
+            t[i] = t[i] - copysign(1,t[i])
+        t[i] = improveprecision(t[i],occepsilon)
+    return t
 
 def putincell(coords,coordepsilon):
     # Put coordinates in the interval 0 <= x < 1
@@ -3509,8 +3659,20 @@ def mvmult3(mat,vec):
     for i in range(3):
         t = 0
         for j in range(3):
-            t = t + mat[j][i]*vec[j]
+            t += mat[j][i]*vec[j]
         w.append(t)
+    return w
+
+# matrix-matrix multiplication
+def mmmult3(m1,m2):
+    w = []
+    for i in range(3):
+        w.append([])
+        for j in range(3):
+            t = 0
+            for k in range(3):
+                t += m1[i][k]*m2[k][j]
+            w[i].append(t)
     return w
 
 def crystal_system(spacegroupnr):
