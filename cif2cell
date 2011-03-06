@@ -179,6 +179,7 @@ datestring = str(today.year)+"-"+str(today.month).rjust(2,'0')+"-"+str(today.day
 if options.file:    
     # input CIF file
     cif_file = options.file
+    cif_file_name = cif_file.split("/")[-1]
     # Set CIF grammar
     if options.grammar:
         cif_grammar = options.grammar
@@ -273,9 +274,15 @@ if verbose or not options.program and not options.quiet:
     print ref.referencestring()
     print "\n SYMMETRY INFORMATION"
     if cd.spacegroupnr >= 0:
-        print "Space group number "+": ".rjust(len(cd.spacegroupsymboltype)+2)+str(cd.spacegroupnr)
-        print "Space group symbol "+cd.spacegroupsymboltype+": "+cd.spacegroupsymbol
-        print "This system is "+cd.crystal_system()+"."
+        if 0 < cd.spacegroupnr <=230:
+            print "Space group number "+": ".rjust(len(cd.spacegroupsymboltype)+2)+str(cd.spacegroupnr)
+        else:
+            print "Space group number "+": ".rjust(len(cd.spacegroupsymboltype)+2)+"?"
+        if cd.spacegroupsymbol != "":
+            print "Space group symbol "+cd.spacegroupsymboltype+": "+cd.spacegroupsymbol
+        else:
+            print "Space group symbol "+cd.spacegroupsymboltype+": ?"
+        print cd.crystal_system()[0].upper()+cd.crystal_system()[1:]+" crystal system."
     else:
         print "No space group information found."
     # only print these if verbose
@@ -503,8 +510,8 @@ else:
         outputfile = ref.cpd.replace(" ", "").replace("(","").replace(")","")
         # If the filename seems too long, replace by the name of the cif file
         if len(outputfile) > 10:
-            if len(cif_file) < len(outputfile):
-                outputfile = cif_file.replace(".cif","")
+            if len(cif_file_name) < len(outputfile):
+                outputfile = cif_file_name.replace(".cif","")
             else:
                 outputfile = outputfile[0:9]
         outputfile = outputfile+".in"
@@ -512,8 +519,8 @@ else:
         outputfile = ref.cpd.replace(" ", "").replace("(","").replace(")","")
         # If the filename seems too long, replace by the name of the cif file
         if len(outputfile) > 10:
-            if len(cif_file) < len(outputfile):
-                outputfile = cif_file.replace(".cif","")
+            if len(cif_file_name) < len(outputfile):
+                outputfile = cif_file_name.replace(".cif","")
             else:
                 outputfile = outputfile[0:9]
         outputfile = outputfile+".fdf"
@@ -521,8 +528,8 @@ else:
         outputfile = ref.cpd.replace(" ", "").replace("(","").replace(")","")
         # If the filename seems too long, replace by the name of the cif file
         if len(outputfile) > 10:
-            if len(cif_file) < len(outputfile):
-                outputfile = cif_file.replace(".cif","")
+            if len(cif_file_name) < len(outputfile):
+                outputfile = cif_file_name.replace(".cif","")
             else:
                 outputfile = outputfile[0:9]
         outputfile = outputfile+".inp"
@@ -530,8 +537,8 @@ else:
         outputfile = ref.cpd.replace(" ", "").replace("(","").replace(")","")
         # If the filename seems too long, replace by the name of the cif file
         if len(outputfile) > 10:
-            if len(cif_file) < len(outputfile):
-                outputfile = cif_file.replace(".cif","")
+            if len(cif_file_name) < len(outputfile):
+                outputfile = cif_file_name.replace(".cif","")
             else:
                 outputfile = outputfile[0:9]
         outputfile = outputfile+".cell"
@@ -539,8 +546,8 @@ else:
         outputfile = ref.cpd.replace(" ", "").replace("(","").replace(")","")
         # If the filename seems too long, replace by the name of the cif file
         if len(outputfile) > 10:
-            if len(cif_file) < len(outputfile):
-                outputfile = cif_file.replace(".cif","")
+            if len(cif_file_name) < len(outputfile):
+                outputfile = cif_file_name.replace(".cif","")
             else:
                 outputfile = outputfile[0:9]
         outputfile = "inp_"+outputfile
@@ -548,14 +555,14 @@ else:
         outputfile = ref.cpd.replace(" ", "").replace("(","").replace(")","")
         # If the filename seems too long, replace by the name of the cif file
         if len(outputfile) > 10:
-            if len(cif_file) < len(outputfile):
-                outputfile = cif_file.replace(".cif","")
+            if len(cif_file_name) < len(outputfile):
+                outputfile = cif_file_name.replace(".cif","")
             else:
                 outputfile = outputfile[0:9]
         # This is the naming convention from a large bunch of test cases, no idea why
         outputfile = outputfile+".d12"
     elif outputprogram == "cif":
-        outputfile = cif_file.replace(".cif","")+"_allatoms.cif"
+        outputfile = cif_file_name.replace(".cif","")+"_allatoms.cif"
     else:
         outputfile = ""
 
@@ -875,11 +882,11 @@ if outputprogram == 'ncol' or outputprogram == 'bstr':
         bstrjobnam = cd.spacegroupsymbol.replace("/","")
     jobnam = ref.cpd.replace(" ", "").replace("(","").replace(")","")
     # If the jobnames are long, replace by the name of the cif file
-    if len(bstrjobnam) > 30 and len(cif_file) < len(bstrjobnam)+4:
-        bstrjobnam = cif_file.replace(".cif","")
+    if len(bstrjobnam) > 30 and len(cif_file_name) < len(bstrjobnam)+4:
+        bstrjobnam = cif_file_name.replace(".cif","")
     if len(jobnam) > 10:
-        if len(cif_file) < len(jobnam):
-            jobnam = cif_file.replace(".cif","")
+        if len(cif_file_name) < len(jobnam):
+            jobnam = cif_file_name.replace(".cif","")
         else:
             jobnam = jobnam[0:9]
     # Build docstring
@@ -925,10 +932,10 @@ if outputprogram == "emto" or outputprogram == "kgrn" or outputprogram == "kfcd"
         kstrjobnam = cd.spacegroupsymbol.replace("/","")
     kgrnjobnam = ref.cpd.replace(" ", "").replace("(","").replace(")","")
     # If the jobnames are long, replace by the name of the cif file
-    if len(kstrjobnam) > 30 and len(cif_file) < len(kstrjobnam)+4:
-        kstrjobnam = cif_file.replace(".cif","")
-    if len(kgrnjobnam) > 30 and len(cif_file) < len(kgrnjobnam)+4:
-        kgrnjobnam = cif_file.replace(".cif","")
+    if len(kstrjobnam) > 30 and len(cif_file_name) < len(kstrjobnam)+4:
+        kstrjobnam = cif_file_name.replace(".cif","")
+    if len(kgrnjobnam) > 30 and len(cif_file_name) < len(kgrnjobnam)+4:
+        kgrnjobnam = cif_file_name.replace(".cif","")
     # Build docstring
     docstring = ref.compound+", "+ref.referencestring()
     # Document details of creation

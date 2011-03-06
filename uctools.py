@@ -300,7 +300,7 @@ class CellData(GeometryObject):
                 latticevectors = [[t, u, u],
                                   [u, t, u],
                                   [u, u, t]]
-        elif self.crystal_system() == 'triclinic' or self.crystal_system() == 'default':
+        elif self.crystal_system() == 'triclinic' or self.crystal_system() == 'unknown':
             angfac1 = (cos(alphar) - cos(betar)*cos(gammar))/sin(gammar)
             angfac2 = sqrt(sin(gammar)**2 - cos(betar)**2 - cos(alphar)**2 
                        + 2*cos(alphar)*cos(betar)*cos(gammar))/sin(gammar)
@@ -390,7 +390,9 @@ class CellData(GeometryObject):
                         if self.spacegroupsetting == 'P':
                             self.spacegroupnr = 0
                         else:
-                            raise SymmetryError("Insufficient symmetry information to reduce to primitive cell.")
+                            raise SymmetryError("Insufficient symmetry information to reduce to primitive cell"+\
+                                                " (need space group number or Hermann-Mauguin symbol).\n"+\
+                                                "  Run with --no-reduce to generate cell in the conventional setting.")
                     else:
                         self.spacegroupnr = 0
         else:
@@ -400,7 +402,10 @@ class CellData(GeometryObject):
         self.sitedata = []
         self.alloy = False
         if self.spacegroupsetting == "":
-            self.spacegroupsetting = SpaceGroupData().HMSymbol[str(self.spacegroupnr)][0]
+            try:
+                self.spacegroupsetting = SpaceGroupData().HMSymbol[str(self.spacegroupnr)][0]
+            except:
+                pass
         # REDUCTION TO PRIMITIVE CELL
         #
         # Choices of lattice vectors made to largely coincide with the choices
@@ -582,13 +587,13 @@ class CellData(GeometryObject):
         # Symmetry operations
         for eqsite in self.eqsites:
             self.symops.append(SymmetryOperation(eqsite))
-
+        # sort the symmetry operations (by length of translation vectors)
+        self.symops.sort()
+        
         # If we reduce the cell, remove the symmetry operations that are the
         # same up to an induced lattice translation
         if reduce:
             if len(self.transvecs) > 1:
-                # sort the symmetry operations (by length of translation vectors)
-                self.symops.sort()
                 removelist = []
                 for j in range(len(self.symops)):
                     for i in range(j+1,len(self.symops)):
@@ -1196,9 +1201,7 @@ def mmmult3(m1,m2):
 
 def crystal_system(spacegroupnr):
     # Determine crystal system
-    if spacegroupnr == 0:
-        return "default"
-    elif 0 < spacegroupnr <= 2:
+    if 0 < spacegroupnr <= 2:
         return "triclinic"
     elif 2 < spacegroupnr <=15:
         return "monoclinic"
