@@ -137,7 +137,7 @@ class LatticeVector(list,GeometryObject):
         t = LatticeVector([])
         for i in range(3):
             t.append(self[i]+other[i])
-        self.intocell()
+        t.intocell()
         return t
     def __str__(self):
         return "%19.15f %19.15f %19.15f"%(self[0],self[1],self[2])
@@ -176,6 +176,11 @@ class LatticeMatrix(list, GeometryObject):
         for l in self:
             matstr += str(l)+"\n"
         return matstr
+    def __eq__(self,other):
+        for i in range(3):
+            if self[i] != other[i]:
+                return False
+        return True
     # coordinate transformation
     def transform(self, matrix):
         return LatticeMatrix(mmmult3(matrix, self))
@@ -669,10 +674,9 @@ class CellData(GeometryObject):
                 for j in range(len(self.symops)):
                     for i in range(j+1,len(self.symops)):
                         for vec in self.transvecs:
-                            s = copy.deepcopy(self.symops[i])
-                            s.translation = s.translation + vec
-                            if s == self.symops[j]:
-                                removelist.append(i)
+                            if self.symops[i].translation+vec == self.symops[j].translation:
+                                if self.symops[i].rotation_matrix == self.symops[j].rotation_matrix:
+                                    removelist.append(i)
                 removelist = list(set(removelist))
                 removelist.sort(reverse=True)
                 for i in removelist:

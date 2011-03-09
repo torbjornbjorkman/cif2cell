@@ -4,6 +4,8 @@ cif2cell
 setup.py
 spacegroupdata.py
 uctools.py
+elementdata.py
+ESPInterfaces.py
 cifs/BaTiO3_cubic.cif
 cifs/BaTiO3_orthorhombic.cif
 cifs/FeAs.cif
