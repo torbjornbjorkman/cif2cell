@@ -373,17 +373,17 @@ if verbose or not options.program and not options.quiet:
             siteheader += "occ.".rjust(w3)
     print siteheader
     # Representative sites
-    for site in cell.sitedata:
+    for i in range(len(cell.ineqsites)):
         tmpstring = ""
-        for k in site[1]:
+        for k in cell.sitedata[i][1]:
             tmpstring += k+"/"
         tmpstring = tmpstring.rstrip("/")
-        v = [site[0][0],site[0][1],site[0][2]]
+        v = [t for t in cell.ineqsites[i]]
         v = mvmult3(transmtx,v)
         tmpstring = tmpstring.ljust(w1) + threedecs % (v[0], v[1], v[2])
         if cell.alloy:
             occstring = ""
-            for (k,v) in site[1].iteritems():
+            for (k,v) in cell.sitedata[i][1].iteritems():
                 occstring += str(v).rstrip('0.') + "/"
             occstring = occstring.rstrip("/")
             tmpstring += " "+occstring.rjust(w3)

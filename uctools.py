@@ -62,6 +62,7 @@ half = one/two
 fourth = one/four
 sixth = one/six
 occepsilon = 0.000001
+floatlist = [third, 2*third, half, fourth, one, zero, sqrt(2.0),sixth,5*sixth]
 
 ################################################################################################
 # Exception classes
@@ -118,6 +119,7 @@ class LatticeVector(list,GeometryObject):
         # Interval we wish to use for the coordinates.
         # In practice either [0,1] or [-.5, 0.5]
         self.interval = [0.0, 1.0]
+        self.intocell()
     def __eq__(self,other):
         for i in range(3):
             if abs(self[i]-other[i]) > self.compeps:
@@ -134,9 +136,7 @@ class LatticeVector(list,GeometryObject):
     def __add__(self, other):
         if self.interval[0] != other.interval[0] or self.interval[1] != other.interval[1]:
             raise GeometryObjectError("LatticeVectors must have the same definition intervals to be added.")
-        t = LatticeVector([])
-        for i in range(3):
-            t.append(self[i]+other[i])
+        t = LatticeVector([self[i]+other[i] for i in range(3)])
         t.intocell()
         return t
     def __str__(self):
@@ -144,7 +144,7 @@ class LatticeVector(list,GeometryObject):
     # Put the vector components into the cell interval defined by self.interval
     def intocell(self):
         for i in range(3):
-            if not (self.interval[0] <= self[i] < self.interval[1]):
+            while not (self.interval[0] <= self[i] < self.interval[1]):
                 self[i] -= copysign(1,self[i])
     # multiplication by scalar
     def scalmult(self, a):
@@ -162,29 +162,75 @@ class LatticeVector(list,GeometryObject):
         t = LatticeVector([0,0,0])
         t.interval = interval
         self = self + t
+    def improveprecision(self):
+        for p in self:
+            for f in floatlist:
+                if abs(p-f) <= self.compeps:
+                    # 0
+                    p = f
 
-class LatticeMatrix(list, GeometryObject):
+class LatticeMatrix(GeometryObject, list):
     """
-    Three by three matrix consisting of LatticeVector objects
+    Three by three matrix 
     """
     def __init__(self,mat):
         GeometryObject.__init__(self)
-        lmat = [LatticeVector(vec) for vec in mat]
-        list.__init__(self, lmat)
+        list.__init__(self, mat)
     def __str__(self):
         matstr = ""
         for l in self:
-            matstr += str(l)+"\n"
+            for k in l:
+                matstr += "%19.15f "%k
+            matstr += "\n"
         return matstr
     def __eq__(self,other):
         for i in range(3):
-            if self[i] != other[i]:
-                return False
+            for j in range(3):
+                if abs(self[i][j]-other[i][j]) > self.compeps:
+                    return False
         return True
     # coordinate transformation
     def transform(self, matrix):
         return LatticeMatrix(mmmult3(matrix, self))
 
+class AtomSite(GeometryObject):
+    """
+    Class for describing an atomic site.
+
+    position  : a vector that gives the position
+    species   : a dictionary with element-occupancy pairs (e.g. {Fe : 0.2, Co : 0.8})
+    label     : any label
+    index     : any integer
+    """
+    def __init__(self,position=None,species=None,label="",index=None):
+        GeometryObject.__init__(self)
+        if position != None:
+            self.position = LatticeVector(position)
+        else:
+            self.position = None
+        if species != None:
+            self.species = species
+        else:
+            self.species = {}
+        self.label = label
+        self.index = index
+    def __eq__(self,other):
+        return self.position == other.position and self.species == other.species
+    # print site data in some informative way
+    def __str__(self):
+        # Element symbol
+        tmp = ""
+        for k in self.species:
+            tmp += k+"/"
+        tmp = tmp.rstrip("/").ljust(8)
+        # Position
+        tmp += " %19.15f %19.15f %19.15f   "%(self.position[0],self.position[1],self.position[2])
+        # occupancy
+        for k,v in self.species.iteritems():
+            tmp += str(v)+"/"
+        tmp = tmp.rstrip("/")
+        return tmp
+        
 class SymmetryOperation(GeometryObject):
     """
     Class describing a symmetry operation, with a rotation matrix and a translation.
@@ -252,6 +298,14 @@ class CellData(GeometryObject):
                      Example: you get the second coordinate of the third lattice site of
                               the second type of site by:
                               sitedata[1][2][2][1]
+    atomdata       : Replaces sitedata. More convenient structure that consists of an array
+                     of arrays of AtomSite objects, in other words, a collection of collections
+                     of atoms. The getCrystalStructure method will set up a collection of
+                     all the inequivalent sites, and each such collection contains all the
+                     sites generated by the representative site. So: atomdata[0][2] is the
+                     third atom generated from the first wyckoff position.
+                     For supercells, there is only one collection with all the atomic positions,
+                     so in this case, atomdata[0][32] is the thirty-third atom in the cell.
     Methods:
         getFromCIF          : obtain data for setting up a cell from a CIF block
         crystal_system      : return a string with the name of the crystal system
@@ -286,11 +340,12 @@ class CellData(GeometryObject):
         self.spacegroupsymbol = ""
         self.spacegroupsymboltype = ""
         self.spacegroupsetting = ""
-        self.lattrans = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
+        self.lattrans = LatticeMatrix([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
         self.transvecs = [LatticeVector([zero, zero, zero])]
         self.eqsites = []
         self.symops = []
         self.sitedata = []
+        self.atomdata = []
         self.a = 0
         self.b = 0
         self.c = 0
@@ -299,7 +354,7 @@ class CellData(GeometryObject):
         self.gamma = 0
         self.coa = 1
         self.boa = 1
-        self.latticevectors = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
+        self.latticevectors = LatticeMatrix([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
         self.lengthscale = 1
         self.unit = "angstrom"
         self.sitedata = []
@@ -396,7 +451,7 @@ class CellData(GeometryObject):
             reclatvect.append([])
             for i in range(3):
                 reclatvect[j].append(t[i][j]*2*pi)
-        return reclatvect
+        return LatticeMatrix(reclatvect)
 
     # Define comparison functions
     def poscomp(self, pos1, pos2):
@@ -456,6 +511,8 @@ class CellData(GeometryObject):
             if 0 < self.spacegroupnr < 231:
                 self.spacegroupsymbol = SpaceGroupData().HMSymbol[str(self.spacegroupnr)]
                 self.spacegroupsymboltype = "(H-M)"
+        else:
+            self.spacegroupsetting = self.spacegroupsymbol[0]
         # Check if we know enough:
         # To produce the conventional cell (reduce=False) we don't need the space group
         # symbol or number as long as we have the symmetry operations (equivalent sites).
@@ -516,69 +573,67 @@ class CellData(GeometryObject):
                 self.transvecs = [LatticeVector([zero,zero,zero]),
                                   LatticeVector([half,half,half])]
                 if self.crystal_system() == 'cubic':
-                    self.lattrans = [[-half, half, half],
-                                     [half, -half, half],
-                                     [half, half, -half]]
+                    self.lattrans = LatticeMatrix([[-half, half, half],
+                                                   [half, -half, half],
+                                                   [half, half, -half]])
                 else:
-                    self.lattrans = [[one, zero, zero],
-                                     [zero, one, zero],
-                                     [half, half, half]]
+                    self.lattrans = LatticeMatrix([[one, zero, zero],
+                                                   [zero, one, zero],
+                                                   [half, half, half]])
             elif self.spacegroupsetting == 'F':
                 # face centered
                 self.transvecs = [LatticeVector([zero,zero,zero]),
                                   LatticeVector([half,half,zero]),
                                   LatticeVector([half,zero,half]),
                                   LatticeVector([zero,half,half])]
-                self.lattrans = [[half, half, zero],
-                                 [half, zero, half],
-                                 [zero, half, half]]
+                self.lattrans = LatticeMatrix([[half, half, zero],
+                                               [half, zero, half],
+                                               [zero, half, half]])
             elif self.spacegroupsetting == 'A':
                 # A-centered
                 self.transvecs = [LatticeVector([zero,zero,zero]),
                                   LatticeVector([zero,half,half])]
-                self.lattrans = [[one, zero, zero],
-                                 [zero, half, -half],
-                                 [zero, half, half]]
+                self.lattrans = LatticeMatrix([[one, zero, zero],
+                                               [zero, half, -half],
+                                               [zero, half, half]])
             elif self.spacegroupsetting == 'B':
                 # B-centered
                 self.transvecs = [LatticeVector([zero,zero,zero]),
                                   LatticeVector([half,zero,half])]
-                self.lattrans = [[half, zero, -half],
-                                 [zero, one, zero],
-                                 [half, zero, half]]
+                self.lattrans = LatticeMatrix([[half, zero, -half],
+                                               [zero, one, zero],
+                                               [half, zero, half]])
             elif self.spacegroupsetting == 'C':
                 # C-centered
                 self.transvecs = [LatticeVector([zero,zero,zero]),
                                   LatticeVector([half,half,zero])]
-                self.lattrans = [[half, -half, zero],
-                                 [half, half, zero],
-                                 [zero, zero, one]]
+                self.lattrans = LatticeMatrix([[half, -half, zero],
+                                               [half, half, zero],
+                                               [zero, zero, one]])
             elif self.spacegroupsetting == 'R':
                 if abs(self.gamma - 120) < self.coordepsilon:
                     # rhombohedral from hexagonal setting
                     self.transvecs = [LatticeVector([zero,zero,zero]),
                                       LatticeVector([third, 2*third, 2*third]),
                                       LatticeVector([2*third, third, third])]
-                    self.lattrans = [[2*third, third, third],
-                                     [-third, third, third],
-                                     [-third, -2*third, third]]
+                    self.lattrans = LatticeMatrix([[2*third, third, third],
+                                                   [-third, third, third],
+                                                   [-third, -2*third, third]])
                 else:
                     self.transvecs = [LatticeVector([zero,zero,zero])]
-                    self.lattrans = [[1, 0, 0],
-                                     [0, 1, 0],
-                                     [0, 0, 1]]
+                    self.lattrans = LatticeMatrix([[1, 0, 0],
+                                                   [0, 1, 0],
+                                                   [0, 0, 1]])
             else:
                 self.transvecs = [LatticeVector([zero,zero,zero])]
-                self.lattrans = [[1, 0, 0],
-                                 [0, 1, 0],
-                                 [0, 0, 1]]
-            # Find inverse lattice transformation matrix
-            invlattrans = minv3(self.lattrans)
+                self.lattrans = LatticeMatrix([[1, 0, 0],
+                                               [0, 1, 0],
+                                               [0, 0, 1]])
             # Transform to primitive cell
             tmp = []
             for i in range(3):
                 tmp.append(mvmult3(self.latticevectors,self.lattrans[i]))
-            self.latticevectors = tmp
+            self.latticevectors = LatticeMatrix(tmp)
             # Improve precision again...
             for i in range(3):
                 for j in range(3):
@@ -586,80 +641,95 @@ class CellData(GeometryObject):
         else:
             # If no reduction is to be done
             self.transvecs = [LatticeVector([zero,zero,zero])]
-            self.lattrans = [[1, 0, 0],
-                             [0, 1, 0],
-                             [0, 0, 1]]
-                
+            self.lattrans = LatticeMatrix([[1, 0, 0],
+                                          [0, 1, 0],
+                                          [0, 0, 1]])
+
+        # Find inverse lattice transformation matrix
+        invlattrans = LatticeMatrix(minv3(self.lattrans))
+        
         # Atomic species and the number of each species. Site occupancies.
         for i in range(len(self.ineqsites)):
-            self.sitedata.append([])
-            self.sitedata[i].append(self.ineqsites[i])
-            # Add a copy of occupations[i] to sitedata[i][1]
+            # Set up atomdata
+            self.atomdata.append([])
+            self.atomdata[i].append(AtomSite(position=self.ineqsites[i]))
+            # Add species and occupations to atomdata
             for k,v in self.occupations[i].iteritems():
-                self.sitedata[i].append({k:v})
+                self.atomdata[i][0].species[k] = v
             # Determine if we have an alloy
             for element in self.occupations[i]:
                 v = self.occupations[i][element]
                 if abs(1-v) > occepsilon:
-                    self.alloy = True  
+                    self.alloy = True
+
         # Make sites unique with array of occupation info in case of an alloy
         if self.alloy:
             removeindices = []
-            # 
-            for i in range(len(self.sitedata)):
-                for j in range(len(self.sitedata)-1,i,-1):
-                    if self.poscomp(self.sitedata[i][0], self.sitedata[j][0]):
+            # set up atomdata
+            for i in range(len(self.atomdata)):
+                for j in range(len(self.atomdata)-1,i,-1):
+                    if self.atomdata[i][0].position == self.atomdata[j][0].position:
                         # Add the dictionary of site j to that of site i and schedule index j for
                         # removal. If there is already an instance of the species on this site,
                         # then add the occupancies (this happens when different valencies has been
                         # recorded)
-                        for k in self.sitedata[j][1]:
-                            if k in self.sitedata[i][1]:
-                                v = self.sitedata[j][1][k] + self.sitedata[i][1][k]
-                                self.sitedata[i][1][k] = v
+                        for k in self.atomdata[j][0].species:
+                            if k in self.atomdata[i][0].species:
+                                v = self.atomdata[j][0].species[k] + self.atomdata[i][0].species[k]
+                                self.atomdata[i][0].species[k] = v
                             else:
-                                self.sitedata[i][1][k] = self.sitedata[j][1][k]
+                                self.atomdata[i][0].species[k] = self.atomdata[j][0].species[k]
                                 removeindices.append(j)
             # Remove duplicate elements
             removeindices = list(set(removeindices))
             removeindices.sort(reverse=True)
             for i in removeindices:
-                self.sitedata.pop(i)
+                self.atomdata.pop(i)
+                self.ineqsites.pop(i)
 
-        # Work out all sites in the cell
+        # Get equivalent sites from tables if not present
         if self.eqsites == []:
             self.eqsites = SpaceGroupData().EquivalentPositions[self.spacegroupnr]
-        posexpr = []
-        for i in range(len(self.sitedata)):
-            posexpr.append([])
-            self.sitedata[i].append([])
-            for j in range(len(self.eqsites)):
-                posexpr[i].append([])
-                self.sitedata[i][2].append([])
-                # position expression string (x,y,z)
-                posexpr[i][j].append(self.eqsites[j][0])
-                posexpr[i][j].append(self.eqsites[j][1])
-                posexpr[i][j].append(self.eqsites[j][2])
+
+        # Work out all sites in the cell for atomdata
+        for a in self.atomdata:
+            for eqsite in self.eqsites:
+                # position expression string
+                posexpr = [s for s in eqsite]
                 for k in range(3):
                     # position expression string, replacing x,y,z with numbers
-                    posexpr[i][j][k] = posexpr[i][j][k].replace('x',str(self.sitedata[i][0][0]))
-                    posexpr[i][j][k] = posexpr[i][j][k].replace('y',str(self.sitedata[i][0][1]))
-                    posexpr[i][j][k] = posexpr[i][j][k].replace('z',str(self.sitedata[i][0][2]))
-                # positions as decimal point numbers (this only works with __future__ division)
-                self.sitedata[i][2][j].append(eval(posexpr[i][j][0]))
-                self.sitedata[i][2][j].append(eval(posexpr[i][j][1]))
-                self.sitedata[i][2][j].append(eval(posexpr[i][j][2]))
-            for j in range(len(self.sitedata[i][2])):
-                if reduce:
-                    # Transform to primitive cell lattice vectors
-                    self.sitedata[i][2][j] = mvmult3(invlattrans, self.sitedata[i][2][j])
-                # Make all coordinates go in the interval [0,1)
-                putincell(self.sitedata[i][2][j], self.coordepsilon)
-            # Remove sites that are the same (up to one of the induced lattice translations)
-            removelist = self.duplicates(self.sitedata[i][2])
-            for j in removelist:
-                self.sitedata[i][2].pop(j)
-
+                    posexpr[k] = posexpr[k].replace('x',str(a[0].position[0]))
+                    posexpr[k] = posexpr[k].replace('y',str(a[0].position[1]))
+                    posexpr[k] = posexpr[k].replace('z',str(a[0].position[2]))
+                position = LatticeVector([eval(pos) for pos in posexpr])
+                b = AtomSite(position=position,species=a[0].species)
+                append = True
+                for site in a:
+                    for vec in self.transvecs:
+                        t = vec + b.position
+                        if site.position == t:
+                            append=False
+                            break
+                    if not append:
+                        break
+                if append:
+                    a.append(b)
+        for a in self.atomdata:
+            for b in a:
+                b.position = b.position.transform(invlattrans)
+                    
+        # set up sitedata from atomdata
+        self.sitedata = []
+        i = 0
+        for a in self.atomdata:
+            self.sitedata.append([])
+            self.sitedata[i].append(a[0].position)
+            self.sitedata[i].append(a[0].species)
+            self.sitedata[i].append([])
+            for b in a:
+                self.sitedata[i][2].append(b.position)
+            i += 1
+        
         # Symmetry operations
         for eqsite in self.eqsites:
             self.symops.append(SymmetryOperation(eqsite))
@@ -1204,7 +1274,6 @@ def removeerror(string):
     return splitstr[0]
 
 # Guess the "true" values of some conspicuous numbers
-floatlist = [third, 2*third, half, fourth, one, zero, sqrt(2.0),sixth,5*sixth]
 def improveprecision(x,eps):
     for f in floatlist:
         if abs(x-f) <= eps:                
