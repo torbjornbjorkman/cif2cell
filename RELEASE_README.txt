@@ -4,7 +4,8 @@ VERSION 0.2.5
 
 * Setting up symmetry operations in matrix/translation vector format+
   output of these to CASTEP. NOTE: Not yet available for supercells.
-* Fixed bug in cell generation without space group information.
+* Bugfixes in cell generation without space group information 
+  and EMTO interface.
 * Some tidying up of the source code, splitting over more files,
   introducing some more convenient classes etc.
 
