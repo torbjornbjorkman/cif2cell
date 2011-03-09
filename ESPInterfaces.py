@@ -28,7 +28,9 @@
 #               Science and Technology, Department of
 #               Applied Physics, Espoo, Finland
 #******************************************************************************************
+import copy
 from elementdata import *
+from uctools import *
 
 ################################################################################################
 class GeometryOutputFile:
@@ -929,11 +931,24 @@ class CASTEPFile(GeometryOutputFile):
         filestring += "%ENDBLOCK SPECIES_POT\n"
         # Put the symmetry operations
         filestring += "\n%BLOCK SYMMETRY_OPS\n"
-        i = 1
-        for op in self.cell.symops:
-            filestring += "# Symm. op. %i\n"%i
+        latvect = self.cell.conventional_latticevectors()
+        # CASTEP assumes that you put identity first
+        symops = copy.deepcopy(self.cell.symops)
+        identity = SymmetryOperation(['x','y','z'])
+        symops.remove(identity)
+        symops.insert(0,identity)
+        latticevectors = self.cell.conventional_latticevectors()
+        k = 1
+        for op in symops:
+            # Rotations relate to conventional cell
+            # axes, we need them w.r.t. cartesian axes
+            op.rotation_matrix = latticevectors.transform(op.rotation_matrix)
+            op.rotation_matrix = op.rotation_matrix.transform(minv3(latticevectors))
+            # transform translations
+            op.translation = op.translation.transform(minv3(self.cell.lattrans))
+            filestring += "# Symm. op. %i\n"%k
             filestring += str(op)
-            i += 1
+            k += 1
         filestring += "%ENDBLOCK SYMMETRY_OPS\n"        
         return filestring
 
@@ -1320,7 +1335,12 @@ class KGRNFile(GeometryOutputFile):
             # Make sure the string will end with a single /
             tmpstring = tmpstring.rstrip("/")
         else:
-            tmptring += "/tmp"
+            # ...else check for /tmp
+            if os.path.isdir("/tmp"):
+                tmpstring += "/tmp"
+            else:
+                # ...and last resort is ./
+                tmpstring += "."
         tmpstring += "/\n"
         filestring += tmpstring
         filestring += self.docstring.replace("\n"," ")+"\n"
@@ -1335,6 +1355,7 @@ class KGRNFile(GeometryOutputFile):
         filestring += "MODE..= 3D FRC..=  N DOS..=  N OPS..=  N AFM..=  P CRT..=  M\n"
         filestring += "Lmaxh.=  8 Lmaxt=  4 NFI..= 31 FIXG.=  2 SHF..=  0 SOFC.=  N\n"
         # Choose brillouin zone by lattice type
+        # Output the smallest allowed n for each direction in this lattice type
         if self.latticenr == 1:
             nkx = 0
             nky = 2

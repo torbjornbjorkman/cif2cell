@@ -135,7 +135,7 @@ parser.add_option_group(progspec)
 
 # own name
 programname = "cif2cell"
-version = "0.2.3"
+version = "0.2.5"
 if options.version:
     print programname+" version "+version
     sys.exit(0)
@@ -266,7 +266,10 @@ else:
 if verbose or not options.program and not options.quiet:
     print string.upper(programname)+" "+version
     print datestring
-    print "Output for "+ref.cpd+" ("+ref.compound+")"
+    if ref.cpd == "" and ref.compound == "":
+        print "Output for unknown compound"
+    else:
+        print "Output for "+ref.cpd+" ("+ref.compound+")"
     print ref.databasestring
     if cell.alloy and options.forcealloy and options.program:
         print "\nEnforcing generation of file(s) for "+outputprogram+" for an alloy."

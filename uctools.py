@@ -83,6 +83,12 @@ class CellError(Exception):
     def __str__(self):
         return repr(self.value)
     
+class GeometryObjectError(Exception):
+    def __init__(self, value):
+        self.value = value
+    def __str__(self):
+        return repr(self.value)
+    
 ################################################################################################
 class GeometryObject:
     """
@@ -91,7 +97,89 @@ class GeometryObject:
     """
     def __init__(self):
         self.compeps = 0.0002
-    
+
+class LatticeVector(list,GeometryObject):
+    """
+    Floating point vector describing a lattice point. Assumed to have length three.
+    * Supports testing for equality using the self.compeps parameter inherited
+    from the parent class GeometryObject
+    * Supports testing for < using the euclidean norm (length) of the vector
+    * Supports addition with another LatticeVector, in which case the
+      vectors are added component-wise and then translated back into
+      the interval defined by self.interval (default=[0,1[)
+    More methods:
+    length            : returns the euclidean norm of the vector
+    transform(matrix) : returns matrix*vector
+    set_interval      : change the definition interval for the lattice vector
+    """
+    def __init__(self, vec):
+        GeometryObject.__init__(self)
+        list.__init__(self, vec)
+        # Interval we wish to use for the coordinates.
+        # In practice either [0,1] or [-.5, 0.5]
+        self.interval = [0.0, 1.0]
+    def __eq__(self,other):
+        for i in range(3):
+            if abs(self[i]-other[i]) > self.compeps:
+                return False
+        return True
+    def length(self):
+        return sqrt(self[0]**2+self[1]**2+self[2]**2)
+    def __lt__(self, other):
+        sl = self[0]**2+self[1]**2+self[2]**2
+        ol = other[0]**2+other[1]**2+other[2]**2
+        return sl < ol
+    # Addition of two vectors, putting the result back
+    # into the cell if necessary
+    def __add__(self, other):
+        if self.interval[0] != other.interval[0] or self.interval[1] != other.interval[1]:
+            raise GeometryObjectError("LatticeVectors must have the same definition intervals to be added.")
+        t = LatticeVector([])
+        for i in range(3):
+            t.append(self[i]+other[i])
+        self.intocell()
+        return t
+    def __str__(self):
+        return "%19.15f %19.15f %19.15f"%(self[0],self[1],self[2])
+    # Put the vector components into the cell interval defined by self.interval
+    def intocell(self):
+        for i in range(3):
+            if not (self.interval[0] <= self[i] < self.interval[1]):
+                self[i] -= copysign(1,self[i])
+    # multiplication by scalar
+    def scalmult(self, a):
+        for i in range(3):
+            self[i] *= a
+        return self
+    # coordinate transformation
+    def transform(self, matrix):
+        t = LatticeVector(mvmult3(matrix, self))
+        t.intocell()
+        return t
+    # Change interval
+    def change_interval(self, interval):
+        self.interval = interval
+        t = LatticeVector([0,0,0])
+        t.interval = interval
+        self = self + t
+
+class LatticeMatrix(list, GeometryObject):
+    """
+    Three by three matrix consisting of LatticeVector objects
+    """
+    def __init__(self,mat):
+        GeometryObject.__init__(self)
+        lmat = [LatticeVector(vec) for vec in mat]
+        list.__init__(self, lmat)
+    def __str__(self):
+        matstr = ""
+        for l in self:
+            matstr += str(l)+"\n"
+        return matstr
+    # coordinate transformation
+    def transform(self, matrix):
+        return LatticeMatrix(mmmult3(matrix, self))
+
 class SymmetryOperation(GeometryObject):
     """
     Class describing a symmetry operation, with a rotation matrix and a translation.
@@ -100,14 +188,10 @@ class SymmetryOperation(GeometryObject):
         GeometryObject.__init__(self)
         self.eqsite = eqsite
         self.rotation_matrix = self.rotmat()
-        self.translation = self.transvec()  
+        self.translation = self.transvec()
+    # This way of printing was useful for outputting to CASTEP.
     def __str__(self):
-        matstr = ""
-        for l in self.rotation_matrix:
-            matstr += "%19.15f %19.15f %19.15f\n"%(l[0],l[1],l[2])
-        v = self.translation
-        matstr +=  "%19.15f %19.15f %19.15f\n"%(v[0],v[1],v[2])
-        return matstr
+        return str(self.rotation_matrix)+str(self.translation)+"\n"
     # Two symmetry operations are equal if rotation matrices and translation vector
     # differ by at most compeps
     def __eq__(self, other):
@@ -115,28 +199,14 @@ class SymmetryOperation(GeometryObject):
         for i in range(3):
             for j in range(3):
                 eq = eq and abs(self.rotation_matrix[i][j] - other.rotation_matrix[i][j]) < self.compeps
-            eq = eq and abs(self.translation[i] - other.translation[i]) < self.compeps
+            eq = eq and self.translation == other.translation
         return eq
     # comparison between operations made by comparing lengths of translation vectors
     def __lt__(self, other):
-        sl = self.translation[0]**2+self.translation[1]**2+self.translation[2]**2
-        ol = other.translation[0]**2+other.translation[1]**2+other.translation[2]**2
-        return sl < ol
-    def __gt__(self, other):
-        sl = self.translation[0]**2+self.translation[1]**2+self.translation[2]**2
-        ol = other.translation[0]**2+other.translation[1]**2+other.translation[2]**2
-        return sl > ol
-    def __le__(self, other):
-        sl = self.translation[0]**2+self.translation[1]**2+self.translation[2]**2
-        ol = other.translation[0]**2+other.translation[1]**2+other.translation[2]**2
-        return sl <= ol
-    def __ge__(self, other):
-        sl = self.translation[0]**2+self.translation[1]**2+self.translation[2]**2
-        ol = other.translation[0]**2+other.translation[1]**2+other.translation[2]**2
-        return sl >= ol
+        return self.translation < other.translation
     # Return a rotation matrix from "x,y,z" representation of a symmetry operation
     def rotmat(self):
-        mat = [[0.0,0.0,0.0],[0.0,0.0,0.0],[0.0,0.0,0.0]]
+        mat = [[0,0,0],[0,0,0],[0,0,0]]
         for j in range(len(self.eqsite)):
             xyz = self.eqsite[j].replace('+',' +').replace('-',' -').split()
             for i in xyz:
@@ -145,17 +215,18 @@ class SymmetryOperation(GeometryObject):
                 elif i.strip("+-") == 'y':
                     mat[1][j] = float(i.strip('y')+"1")
                 elif i.strip("+-") == 'z':
-                    mat[2][j] = float(i.strip('z')+"1")
-        return mat
+                    mat[2][j] = float(i.strip('z')+"1")            
+        return LatticeMatrix(mat)
     # Return a translation vector from "x,y,z" representation of a symmetry operation
     def transvec(self):
-        vec = [0.0,0.0,0.0]
+        vec = []
+        for i in range(3): vec.append(0.0)
         for j in range(len(self.eqsite)):
             xyz = self.eqsite[j].replace('+',' +').replace('-',' -').split()
             for i in xyz:
                 if i.strip("+-xyz") != "":
                     vec[j] = eval(i)
-        return vec
+        return LatticeVector(vec)
     
 ################################################################################################
 class CellData(GeometryObject):
@@ -211,7 +282,7 @@ class CellData(GeometryObject):
         self.spacegroupsymboltype = ""
         self.spacegroupsetting = ""
         self.lattrans = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
-        self.transvecs = [[zero, zero, zero]]
+        self.transvecs = [LatticeVector([zero, zero, zero])]
         self.eqsites = []
         self.symops = []
         self.sitedata = []
@@ -266,47 +337,47 @@ class CellData(GeometryObject):
         betar  = self.beta*pi/180
         gammar = self.gamma*pi/180
         if self.crystal_system() == 'cubic':
-            latticevectors = [[one, zero, zero], 
-                              [zero, one, zero], 
-                              [zero, zero, one]]
+            latticevectors = LatticeMatrix([[one, zero, zero],
+                                            [zero, one, zero],
+                                            [zero, zero, one]])
         elif self.crystal_system() == 'hexagonal':
-            latticevectors = [[sin(gammar), cos(gammar), zero],
-                              [zero, one, zero],
-                              [zero, zero, self.coa]]
+            latticevectors = LatticeMatrix([[sin(gammar), cos(gammar), zero],
+                                            [zero, one, zero],
+                                            [zero, zero, self.coa]])
         elif self.crystal_system() == 'tetragonal':
-            latticevectors = [[one, zero, zero],
-                              [zero, one, zero],
-                              [zero, zero, self.coa]]
+            latticevectors = LatticeMatrix([[one, zero, zero],
+                                            [zero, one, zero],
+                                            [zero, zero, self.coa]])
         elif self.crystal_system() == 'orthorhombic':
-            latticevectors = [[one, zero, zero], 
-                              [zero, self.boa, zero], 
-                              [zero, zero, self.coa]]
+            latticevectors = LatticeMatrix([[one, zero, zero], 
+                                            [zero, self.boa, zero], 
+                                            [zero, zero, self.coa]])
         elif self.crystal_system() == 'monoclinic':
-            latticevectors = [[one, zero, zero], 
-                              [zero, self.boa, zero], 
-                              [self.coa*cos(betar), zero, self.coa*sin(betar)]]
+            latticevectors = LatticeMatrix([[one, zero, zero], 
+                                            [zero, self.boa, zero], 
+                                            [self.coa*cos(betar), zero, self.coa*sin(betar)]])
         elif self.crystal_system() == 'trigonal':
             # Hexagonal cell normally used
             if abs(self.gamma-120) < self.coordepsilon:
-                latticevectors = [[sin(gammar), cos(gammar), zero],
-                                  [zero, one, zero],
-                                  [zero, zero, self.coa]]
+                latticevectors = LatticeMatrix([[sin(gammar), cos(gammar), zero],
+                                                [zero, one, zero],
+                                                [zero, zero, self.coa]])
             else:
                 # Symmetric rhombohedral cell (stretching a cube along the main diagonal)
                 c = sqrt((1 + 2*cos(alphar))/(1 - cos(alphar)))
                 a = pow(1/c, 1/3)
                 t = a * (c + 2) / 3
                 u = a * (c - 1) / 3
-                latticevectors = [[t, u, u],
-                                  [u, t, u],
-                                  [u, u, t]]
+                latticevectors = LatticeMatrix([[t, u, u],
+                                                [u, t, u],
+                                                [u, u, t]])
         elif self.crystal_system() == 'triclinic' or self.crystal_system() == 'unknown':
             angfac1 = (cos(alphar) - cos(betar)*cos(gammar))/sin(gammar)
             angfac2 = sqrt(sin(gammar)**2 - cos(betar)**2 - cos(alphar)**2 
                        + 2*cos(alphar)*cos(betar)*cos(gammar))/sin(gammar)
-            latticevectors = [[one, zero, zero], 
-                              [self.boa*cos(gammar), self.boa*sin(gammar), zero], 
-                              [self.coa*cos(betar), self.coa*angfac1, self.coa*angfac2]]
+            latticevectors = LatticeMatrix([[one, zero, zero], 
+                                            [self.boa*cos(gammar), self.boa*sin(gammar), zero], 
+                                            [self.coa*cos(betar), self.coa*angfac1, self.coa*angfac2]])
         else:
             raise SymmetryError("No support for "+self.crystal_system()+" crystal systems.")
         return latticevectors
@@ -383,6 +454,11 @@ class CellData(GeometryObject):
         # Check if we know enough:
         # To produce the conventional cell (reduce=False) we don't need the space group
         # symbol or number as long as we have the symmetry operations (equivalent sites).
+        if self.spacegroupsetting == "":
+            try:
+                self.spacegroupsetting = SpaceGroupData().HMSymbol[str(self.spacegroupnr)][0]
+            except:
+                pass
         if self.a!=0 and self.b!=0 and self.c!=0 and self.alpha!=0 and self.beta!=0 and self.gamma!=0:
             if self.spacegroupnr == -1:
                 if len(self.eqsites) >= 1:
@@ -401,11 +477,6 @@ class CellData(GeometryObject):
         self.lengthscale = self.a
         self.sitedata = []
         self.alloy = False
-        if self.spacegroupsetting == "":
-            try:
-                self.spacegroupsetting = SpaceGroupData().HMSymbol[str(self.spacegroupnr)][0]
-            except:
-                pass
         # REDUCTION TO PRIMITIVE CELL
         #
         # Choices of lattice vectors made to largely coincide with the choices
@@ -437,8 +508,8 @@ class CellData(GeometryObject):
         if reduce:
             if self.spacegroupsetting == 'I':
                 # Body centered
-                self.transvecs = [[zero,zero,zero],
-                                  [half,half,half]]
+                self.transvecs = [LatticeVector([zero,zero,zero]),
+                                  LatticeVector([half,half,half])]
                 if self.crystal_system() == 'cubic':
                     self.lattrans = [[-half, half, half],
                                      [half, -half, half],
@@ -449,50 +520,50 @@ class CellData(GeometryObject):
                                      [half, half, half]]
             elif self.spacegroupsetting == 'F':
                 # face centered
-                self.transvecs = [[zero,zero,zero],
-                                  [half,half,zero],
-                                  [half,zero,half],
-                                  [zero,half,half]]
+                self.transvecs = [LatticeVector([zero,zero,zero]),
+                                  LatticeVector([half,half,zero]),
+                                  LatticeVector([half,zero,half]),
+                                  LatticeVector([zero,half,half])]
                 self.lattrans = [[half, half, zero],
                                  [half, zero, half],
                                  [zero, half, half]]
             elif self.spacegroupsetting == 'A':
                 # A-centered
-                self.transvecs = [[zero,zero,zero],
-                                  [zero,half,half]]
+                self.transvecs = [LatticeVector([zero,zero,zero]),
+                                  LatticeVector([zero,half,half])]
                 self.lattrans = [[one, zero, zero],
                                  [zero, half, -half],
                                  [zero, half, half]]
             elif self.spacegroupsetting == 'B':
                 # B-centered
-                self.transvecs = [[zero,zero,zero],
-                                  [half,zero,half]]
+                self.transvecs = [LatticeVector([zero,zero,zero]),
+                                  LatticeVector([half,zero,half])]
                 self.lattrans = [[half, zero, -half],
                                  [zero, one, zero],
                                  [half, zero, half]]
             elif self.spacegroupsetting == 'C':
                 # C-centered
-                self.transvecs = [[zero,zero,zero],
-                                  [half,half,zero]]
+                self.transvecs = [LatticeVector([zero,zero,zero]),
+                                  LatticeVector([half,half,zero])]
                 self.lattrans = [[half, -half, zero],
                                  [half, half, zero],
                                  [zero, zero, one]]
             elif self.spacegroupsetting == 'R':
                 if abs(self.gamma - 120) < self.coordepsilon:
                     # rhombohedral from hexagonal setting
-                    self.transvecs = [[zero,zero,zero],
-                                      [third, 2*third, 2*third],
-                                      [2*third, third, third]]
+                    self.transvecs = [LatticeVector([zero,zero,zero]),
+                                      LatticeVector([third, 2*third, 2*third]),
+                                      LatticeVector([2*third, third, third])]
                     self.lattrans = [[2*third, third, third],
                                      [-third, third, third],
                                      [-third, -2*third, third]]
                 else:
-                    self.transvecs = [[zero,zero,zero]]
+                    self.transvecs = [LatticeVector([zero,zero,zero])]
                     self.lattrans = [[1, 0, 0],
                                      [0, 1, 0],
                                      [0, 0, 1]]
             else:
-                self.transvecs = [[zero,zero,zero]]
+                self.transvecs = [LatticeVector([zero,zero,zero])]
                 self.lattrans = [[1, 0, 0],
                                  [0, 1, 0],
                                  [0, 0, 1]]
@@ -509,7 +580,7 @@ class CellData(GeometryObject):
                     self.latticevectors[i][j] = improveprecision(self.latticevectors[i][j],self.coordepsilon)
         else:
             # If no reduction is to be done
-            self.transvecs = [[zero,zero,zero]]
+            self.transvecs = [LatticeVector([zero,zero,zero])]
             self.lattrans = [[1, 0, 0],
                              [0, 1, 0],
                              [0, 0, 1]]
@@ -599,14 +670,14 @@ class CellData(GeometryObject):
                     for i in range(j+1,len(self.symops)):
                         for vec in self.transvecs:
                             s = copy.deepcopy(self.symops[i])
-                            s.translation = latvectadd(s.translation, vec)
+                            s.translation = s.translation + vec
                             if s == self.symops[j]:
                                 removelist.append(i)
                 removelist = list(set(removelist))
                 removelist.sort(reverse=True)
                 for i in removelist:
                     self.symops.pop(i)
-
+                    
         # work out the number of times that a species appears and store index in sitedata[site][3]
         i = 0
         for site1 in self.sitedata:
@@ -758,11 +829,6 @@ class CellData(GeometryObject):
             self.spacegroupsymbol = SpaceGroupData().HMSymbol[str(self.spacegroupnr)]
             self.spacegroupsymboltype = "(H-M)"
         else:
-            pass
-        # Define setting
-        try:
-            self.spacegroupsetting = self.spacegroupsymbol[0]
-        except:
             pass
         # Get symmetry equivalent positions (space group operations)
         try:
