@@ -802,8 +802,8 @@ class CellData(GeometryObject):
             raise CellError("The supercell map must be an array of three positive integers.")
         if len(supercellmap) != 3 or vacuum[0] < 0 or vacuum[1] < 0 or vacuum[2] < 0:
             raise CellError("The vacuum padding must be an array of three integers >= 0.")
-        struct = copy.deepcopy(self.structure)
-        vectors = self.structure.latticevectors
+#        struct = copy.deepcopy(self.structure)
+        vectors = self.latticevectors
         # original length of lattice vectors
         orglatlen = []
         for vec in self.latticevectors:
@@ -819,9 +819,9 @@ class CellData(GeometryObject):
                     multfac += 1
         # generate additional positions
         for i in range(1,len(offsets)):
-            for j in range(len(self.structure.sitedata)):
-                for l in range(len(self.structure.sitedata[j][2])):
-                    position = [self.structure.sitedata[j][2][l][m] for m in range(3)]
+            for j in range(len(self.sitedata)):
+                for l in range(len(self.sitedata[j][2])):
+                    position = [self.sitedata[j][2][l][m] for m in range(3)]
                     for m in range(3):
                         position[m] += offsets[i][m]
                     self.sitedata[j][2].append(position)
