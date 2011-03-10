@@ -1,5 +1,12 @@
 CIF2CELL RELEASE INFORMATION
 
+VERSION 0.2.6
+
+* Bugfixes in supercell generation.
+* Speeding up the program a bit (previous version could be very
+  slow in some circumstances).
+
+-------------------------------------------------------------- 
 VERSION 0.2.5
 
 * Setting up symmetry operations in matrix/translation vector format+
