@@ -886,24 +886,32 @@ class CellData(GeometryObject):
             newtranslations.append(t)
 
         # Transform coordinates to new basis
-        for j in range(len(self.sitedata)):
-            for l in range(len(self.sitedata[j][2])):
-                self.sitedata[j][2][l] = LatticeVector(mvmult3(invmapmatrix,self.sitedata[j][2][l]))
+        for a in self.atomdata:
+            for b in a:
+                b.position = LatticeVector(mvmult3(invmapmatrix,b.position))
         for op in self.symops:
             op.translation = LatticeVector(mvmult3(invmapmatrix,op.translation))
 
         # Operate with new translation group on coordinates to generate all positions
-        for i in range(1,len(newtranslations)):
-            for j in range(len(self.sitedata)):
-                for l in range(len(self.sitedata[j][2])):
-                    position = self.sitedata[j][2][l]
-                    position = position + newtranslations[i]
-                    self.sitedata[j][2].append(position)
-                    
+        newsites = []
+        i = 0
+        for a in self.atomdata:
+            newsites.append([])
+            for b in a:
+                for translation in newtranslations[1:]:
+                    position = b.position + translation
+                    newsites[i].append(AtomSite(position=position,species=b.species))
+            i += 1
+        i = 0
+        for a in newsites:
+            for b in a:
+                self.atomdata[i].append(b)
+            i += 1
+
         # previous length of lattice vectors
         oldlatlen = [vec.length() for vec in self.latticevectors]
             
-        # New latticevectors from vacuum padding
+        # New latticevectors after vacuum padding
         vacuummapmatrix = LatticeMatrix([[1,0,0],[0,1,0],[0,0,1]])
         if reduce(lambda x,y: x+y, vacuum) > 0:
             # add the given number of unit cell units along the lattice vectors
@@ -989,7 +997,19 @@ class CellData(GeometryObject):
         for i in removelist:
             self.symops.pop(i)
 
-        # Move all atoms by transvec !!THIS SEEMS BROKEN!!
+        # Set up sitedata from atomdata
+        self.sitedata = []
+        i = 0
+        for a in self.atomdata:
+            self.sitedata.append([])
+            self.sitedata[i].append(a[0].position)
+            self.sitedata[i].append(a[0].species)
+            self.sitedata[i].append([])
+            for b in a:
+                self.sitedata[i][2].append(b.position)
+            i += 1
+        
+        # Move all atoms by transvec 
         if reduce(lambda x,y: x+y, transvec) != 0:
             for j in range(len(self.sitedata)):
                 for l in range(len(self.sitedata[j][2])):
@@ -1004,18 +1024,6 @@ class CellData(GeometryObject):
                 for k in range(3):
                     while abs(self.sitedata[j][2][l][k]) >= 1:
                         self.sitedata[j][2][l][k] = self.sitedata[j][2][l][k] - copysign(1,self.sitedata[j][2][l][k])
-        
-        ## # set up sitedata from atomdata
-        ## self.sitedata = []
-        ## i = 0
-        ## for a in self.atomdata:
-        ##     self.sitedata.append([])
-        ##     self.sitedata[i].append(a[0].position)
-        ##     self.sitedata[i].append(a[0].species)
-        ##     self.sitedata[i].append([])
-        ##     for b in a:
-        ##         self.sitedata[i][2].append(b.position)
-        ##     i += 1
         
         return self
 
