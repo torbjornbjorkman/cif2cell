@@ -127,11 +127,8 @@ class Vector(list,GeometryObject):
         sl = self[0]**2+self[1]**2+self[2]**2
         ol = other[0]**2+other[1]**2+other[2]**2
         return sl < ol
-    # Addition of two vectors, putting the result back
-    # into the cell if necessary
+    # Addition of two vectors
     def __add__(self, other):
-        if self.interval[0] != other.interval[0] or self.interval[1] != other.interval[1]:
-            raise GeometryObjectError("LatticeVectors must have the same definition intervals to be added.")
         t = LatticeVector([self[i]+other[i] for i in range(3)])
         return t
     def __str__(self):
@@ -921,9 +918,9 @@ class CellData(GeometryObject):
                 vacuummapmatrix[j][j] = vacuummapmatrix[j][j] + vacuum[j]
         invvacmat = LatticeMatrix(minv3(vacuummapmatrix))
         # Rescale coordinates after padding
-        for j in range(len(self.sitedata)):
-            for l in range(len(self.sitedata[j][2])):
-                self.sitedata[j][2][l] = LatticeVector(mvmult3(invvacmat, self.sitedata[j][2][l]))
+        for a in self.atomdata:
+            for b in a:
+                b.position = LatticeVector(mvmult3(invvacmat, b.position))
 
         # Multiply group by new translation group
         newops = []
@@ -997,6 +994,22 @@ class CellData(GeometryObject):
         for i in removelist:
             self.symops.pop(i)
 
+        # Move all atoms by transvec 
+        if reduce(lambda x,y: x+y, transvec) != 0:
+            for a in self.atomdata:
+                for b in a:
+                    for k in range(3):
+                        fac = oldlatlen[k]/self.latticevectors[k].length()
+                        b.position[k] = b.position[k] + fac*transvec[k]
+                        
+        # Put stuff back in ]-1,1[ interval
+        # THIS SHOULD BE DONE BETTER USING THE INTERVAL OF LATTICEVECTOR CLASS
+        for a in self.atomdata:
+            for b in a:
+                for k in range(3):
+                    while abs(b.position[k]) >= 1:
+                        b.position[k] = b.position[k] - copysign(1,b.position[k])
+        
         # Set up sitedata from atomdata
         self.sitedata = []
         i = 0
@@ -1008,22 +1021,6 @@ class CellData(GeometryObject):
             for b in a:
                 self.sitedata[i][2].append(b.position)
             i += 1
-        
-        # Move all atoms by transvec 
-        if reduce(lambda x,y: x+y, transvec) != 0:
-            for j in range(len(self.sitedata)):
-                for l in range(len(self.sitedata[j][2])):
-                    for k in range(3):
-                        fac = oldlatlen[k]/self.latticevectors[k].length()
-                        self.sitedata[j][2][l][k] = self.sitedata[j][2][l][k] + fac*transvec[k]
-                        
-        # Put stuff back in ]-1,1[ interval
-        # THIS SHOULD BE DONE BETTER USING THE LATTICEVECTOR CLASS
-        for j in range(len(self.sitedata)):
-            for l in range(len(self.sitedata[j][2])):
-                for k in range(3):
-                    while abs(self.sitedata[j][2][l][k]) >= 1:
-                        self.sitedata[j][2][l][k] = self.sitedata[j][2][l][k] - copysign(1,self.sitedata[j][2][l][k])
         
         return self
 
