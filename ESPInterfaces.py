@@ -937,15 +937,8 @@ class CASTEPFile(GeometryOutputFile):
         identity = SymmetryOperation(['x','y','z'])
         symops.remove(identity)
         symops.insert(0,identity)
-        latticevectors = self.cell.conventional_latticevectors()
         k = 1
         for op in symops:
-            # Rotations relate to conventional cell
-            # axes, we need them w.r.t. cartesian axes
-            op.rotation_matrix = latticevectors.transform(op.rotation_matrix)
-            op.rotation_matrix = op.rotation_matrix.transform(minv3(latticevectors))
-            # transform translations
-            op.translation = op.translation.transform(minv3(self.cell.lattrans))
             filestring += "# Symm. op. %i\n"%k
             filestring += str(op)
             k += 1

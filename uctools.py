@@ -99,7 +99,7 @@ class GeometryObject:
     def __init__(self):
         self.compeps = 0.0002
 
-class LatticeVector(list,GeometryObject):
+class Vector(list,GeometryObject):
     """
     Floating point vector describing a lattice point. Assumed to have length three.
     * Supports testing for equality using the self.compeps parameter inherited
@@ -116,10 +116,6 @@ class LatticeVector(list,GeometryObject):
     def __init__(self, vec):
         GeometryObject.__init__(self)
         list.__init__(self, vec)
-        # Interval we wish to use for the coordinates.
-        # In practice either [0,1] or [-.5, 0.5]
-        self.interval = [0.0, 1.0]
-        self.intocell()
     def __eq__(self,other):
         for i in range(3):
             if abs(self[i]-other[i]) > self.compeps:
@@ -137,15 +133,9 @@ class LatticeVector(list,GeometryObject):
         if self.interval[0] != other.interval[0] or self.interval[1] != other.interval[1]:
             raise GeometryObjectError("LatticeVectors must have the same definition intervals to be added.")
         t = LatticeVector([self[i]+other[i] for i in range(3)])
-        t.intocell()
         return t
     def __str__(self):
         return "%19.15f %19.15f %19.15f"%(self[0],self[1],self[2])
-    # Put the vector components into the cell interval defined by self.interval
-    def intocell(self):
-        for i in range(3):
-            while not (self.interval[0] <= self[i] < self.interval[1]):
-                self[i] -= copysign(1,self[i])
     # multiplication by scalar
     def scalmult(self, a):
         for i in range(3):
@@ -154,7 +144,6 @@ class LatticeVector(list,GeometryObject):
     # coordinate transformation
     def transform(self, matrix):
         t = LatticeVector(mvmult3(matrix, self))
-        t.intocell()
         return t
     # Change interval
     def change_interval(self, interval):
@@ -169,19 +158,49 @@ class LatticeVector(list,GeometryObject):
                     # 0
                     p = f
 
+class LatticeVector(Vector):
+    """
+    Vector of length three that maps back things into the cell
+    """
+    def __init__(self, vec):
+        Vector.__init__(self, vec)
+        # Interval we wish to use for the coordinates.
+        # In practice either [0,1] or [-.5, 0.5]
+        self.interval = [0.0, 1.0]
+        self.intocell()
+    # Addition of two vectors, putting the result back
+    # into the cell if necessary
+    def __add__(self, other):
+        if self.interval[0] != other.interval[0] or self.interval[1] != other.interval[1]:
+            raise GeometryObjectError("LatticeVectors must have the same definition intervals to be added.")
+        t = LatticeVector([self[i]+other[i] for i in range(3)])
+        t.intocell()
+        return t
+    # coordinate transformation
+    def transform(self, matrix):
+        t = LatticeVector(mvmult3(matrix, self))
+        t.intocell()
+        return t
+    # Put the vector components into the cell interval defined by self.interval
+    def intocell(self):
+        for i in range(3):
+            while not (self.interval[0] <= self[i] < self.interval[1]):
+                self[i] -= copysign(1,self[i])
+
 class LatticeMatrix(GeometryObject, list):
     """
-    Three by three matrix 
+    Three by three matrix
     """
     def __init__(self,mat):
         GeometryObject.__init__(self)
-        list.__init__(self, mat)
+        t = []
+        for vec in mat:
+            t.append(Vector(vec))
+        list.__init__(self, t)
     def __str__(self):
         matstr = ""
         for l in self:
-            for k in l:
-                matstr += "%19.15f "%k
-            matstr += "\n"
+            matstr += str(l)+"\n"
         return matstr
     def __eq__(self,other):
         for i in range(3):
@@ -235,11 +254,15 @@ class SymmetryOperation(GeometryObject):
     """
     Class describing a symmetry operation, with a rotation matrix and a translation.
     """
-    def __init__(self, eqsite):
+    def __init__(self, eqsite=None):
         GeometryObject.__init__(self)
         self.eqsite = eqsite
-        self.rotation_matrix = self.rotmat()
-        self.translation = self.transvec()
+        if self.eqsite != None:
+            self.rotation_matrix = self.rotmat()
+            self.translation = self.transvec()
+        else:
+            self.rotation_matrix = None
+            self.translation = None
     # This way of printing was useful for outputting to CASTEP.
     def __str__(self):
         return str(self.rotation_matrix)+str(self.translation)+"\n"
@@ -362,6 +385,7 @@ class CellData(GeometryObject):
         self.numofineqsites = 0
         self.ineqsites = []
         self.occupations = []
+        self.primcell=False
 
     def newunit(self,newunit="angstrom"):
         """ Set new unit for the length scale. Valid choices are:
@@ -506,7 +530,12 @@ class CellData(GeometryObject):
         Return a CrystalStructure object, either as it is or reduced to the
         primitive cell.
         """
-        # Initialize 
+        # reduce to primitive cell?
+        self.primcell = reduce
+        
+        ###################################
+        #   INITIALIZE SPACE GROUP DATA   #
+        ###################################
         if self.spacegroupsymbol == "":
             if 0 < self.spacegroupnr < 231:
                 self.spacegroupsymbol = SpaceGroupData().HMSymbol[str(self.spacegroupnr)]
@@ -514,7 +543,7 @@ class CellData(GeometryObject):
         else:
             self.spacegroupsetting = self.spacegroupsymbol[0]
         # Check if we know enough:
-        # To produce the conventional cell (reduce=False) we don't need the space group
+        # To produce the conventional cell (self.primcell=False) we don't need the space group
         # symbol or number as long as we have the symmetry operations (equivalent sites).
         if self.spacegroupsetting == "":
             try:
@@ -524,7 +553,7 @@ class CellData(GeometryObject):
         if self.a!=0 and self.b!=0 and self.c!=0 and self.alpha!=0 and self.beta!=0 and self.gamma!=0:
             if self.spacegroupnr == -1:
                 if len(self.eqsites) >= 1:
-                    if reduce == True:
+                    if self.primcell == True:
                         if self.spacegroupsetting == 'P':
                             self.spacegroupnr = 0
                         else:
@@ -539,7 +568,10 @@ class CellData(GeometryObject):
         self.lengthscale = self.a
         self.sitedata = []
         self.alloy = False
-        # REDUCTION TO PRIMITIVE CELL
+        
+        ###############################
+        #     LATTICE TRANSLATIONS    #
+        ###############################
         #
         # Choices of lattice vectors made to largely coincide with the choices
         # made at http://cst-www.nrl.navy.mil/lattice/
@@ -567,7 +599,7 @@ class CellData(GeometryObject):
         # a_r = sqrt(3*a_h^2 + c_h^2) / 3
         # sin(alpha/2) = 3*a_h / (2 * sqrt(3*a_h^2 + c_h^2))
         #
-        if reduce:
+        if self.primcell:
             if self.spacegroupsetting == 'I':
                 # Body centered
                 self.transvecs = [LatticeVector([zero,zero,zero]),
@@ -648,6 +680,9 @@ class CellData(GeometryObject):
         # Find inverse lattice transformation matrix
         invlattrans = LatticeMatrix(minv3(self.lattrans))
         
+        #########################
+        #    CELL GENERATION    # 
+        #########################
         # Atomic species and the number of each species. Site occupancies.
         for i in range(len(self.ineqsites)):
             # Set up atomdata
@@ -730,15 +765,17 @@ class CellData(GeometryObject):
                 self.sitedata[i][2].append(b.position)
             i += 1
         
-        # Symmetry operations
+        #################################
+        #       SYMMETRY OPERATIONS     #
+        #################################
         for eqsite in self.eqsites:
-            self.symops.append(SymmetryOperation(eqsite))
+            self.symops.append(SymmetryOperation(eqsite=eqsite))
         # sort the symmetry operations (by length of translation vectors)
         self.symops.sort()
         
         # If we reduce the cell, remove the symmetry operations that are the
         # same up to an induced lattice translation
-        if reduce:
+        if self.primcell:
             if len(self.transvecs) > 1:
                 removelist = []
                 for j in range(len(self.symops)):
@@ -751,7 +788,21 @@ class CellData(GeometryObject):
                 removelist.sort(reverse=True)
                 for i in removelist:
                     self.symops.pop(i)
+
+        # To cartesian representation
+        lv = self.conventional_latticevectors()
+        for op in self.symops:
+            # Rotations relate to conventional cell
+            # axes, we need them w.r.t. cartesian axes
+            op.rotation_matrix = lv.transform(op.rotation_matrix)
+            op.rotation_matrix = op.rotation_matrix.transform(minv3(lv))
+            # transform translations
+            op.translation = op.translation.transform(minv3(self.lattrans))
+            
                     
+        ######################
+        #    MISCELLANEOUS   #
+        ######################
         # work out the number of times that a species appears and store index in sitedata[site][3]
         i = 0
         for site1 in self.sitedata:
@@ -787,13 +838,17 @@ class CellData(GeometryObject):
 
     def getSuperCell(self, supercellmap, vacuum, transvec):
         """
-        Returns a supercell based on the input supercell map. The cell must
-        have been initialized.
+        Returns a supercell based on the input supercell map, vacuum layers and translation vector.
+        The cell must have been initialized prior to calling getSuperCell.
+        
         The cell will be padded with some number of original unit cells of vacuum
-        by simple rescaling of the lattice vectors and positions. Controlled by 'vacuum'.
+        by simple rescaling of the lattice vectors and positions. This is controlled by 'vacuum'.
+        
         All coordinates will be translated by 'transvec', which is given in units
         of the original lattice vectors.
         """
+        
+        # Sanity checks
         if not self.initialized:
             raise CellError("The unit cell must be initialized before a supercell can be generated.")
         if len(supercellmap) != 3 or type(supercellmap[0]) != IntType or type(supercellmap[1]) != IntType \
@@ -802,14 +857,21 @@ class CellData(GeometryObject):
             raise CellError("The supercell map must be an array of three positive integers.")
         if len(supercellmap) != 3 or vacuum[0] < 0 or vacuum[1] < 0 or vacuum[2] < 0:
             raise CellError("The vacuum padding must be an array of three integers >= 0.")
-#        struct = copy.deepcopy(self.structure)
         vectors = self.latticevectors
-        # original length of lattice vectors
-        orglatlen = []
-        for vec in self.latticevectors:
-            leng = sqrt(vec[0]**2+vec[1]**2+vec[2]**2)
-            orglatlen.append(leng)
-        # Set up offsets
+
+        # map matrix
+        mapmatrix = LatticeMatrix([[supercellmap[0],0,0],[0,supercellmap[1],0],[0,0,supercellmap[2]]])
+        invmapmatrix = LatticeMatrix(minv3(mapmatrix))
+        
+        # previous length of lattice vectors
+        oldlatlen = [vec.length() for vec in self.latticevectors]
+            
+        # New latticevectors from supercell map
+        t = mmmult3(mapmatrix,self.latticevectors)
+        self.latticevectors = LatticeMatrix(t)
+        invlatvects = minv3(self.latticevectors)
+                
+        # Set up new translation group (in new latice vector coordinates)
         offsets = []
         multfac = 0
         for k in range(supercellmap[2]):
@@ -817,49 +879,144 @@ class CellData(GeometryObject):
                 for i in range(supercellmap[0]):
                     offsets.append([i,j,k])
                     multfac += 1
-        # generate additional positions
-        for i in range(1,len(offsets)):
+        # Transform to new coordinates
+        newtranslations = []
+        for trans in offsets:
+            t = LatticeVector(mvmult3(minv3(mapmatrix),trans))
+            newtranslations.append(t)
+
+        # Transform coordinates to new basis
+        for j in range(len(self.sitedata)):
+            for l in range(len(self.sitedata[j][2])):
+                self.sitedata[j][2][l] = LatticeVector(mvmult3(invmapmatrix,self.sitedata[j][2][l]))
+        for op in self.symops:
+            op.translation = LatticeVector(mvmult3(invmapmatrix,op.translation))
+
+        # Operate with new translation group on coordinates to generate all positions
+        for i in range(1,len(newtranslations)):
             for j in range(len(self.sitedata)):
                 for l in range(len(self.sitedata[j][2])):
-                    position = [self.sitedata[j][2][l][m] for m in range(3)]
-                    for m in range(3):
-                        position[m] += offsets[i][m]
+                    position = self.sitedata[j][2][l]
+                    position = position + newtranslations[i]
                     self.sitedata[j][2].append(position)
-        # transform lattice vectors
-        for i in range(len(supercellmap)):
-            factor = supercellmap[i]
-            for j in range(len(vectors[i])):
-                self.latticevectors[i][j] = vectors[i][j] * factor
-        # Pad with vacuum
+                    
+        # previous length of lattice vectors
+        oldlatlen = [vec.length() for vec in self.latticevectors]
+            
+        # New latticevectors from vacuum padding
+        vacuummapmatrix = LatticeMatrix([[1,0,0],[0,1,0],[0,0,1]])
         if reduce(lambda x,y: x+y, vacuum) > 0:
             # add the given number of unit cell units along the lattice vectors
             for j in range(len(vacuum)):
                 for i in range(len(self.latticevectors[j])):
                     self.latticevectors[j][i] = self.latticevectors[j][i] + vectors[j][i]*vacuum[j]
-        # new length of lattice vectors
-        newlatlen = []
-        for vec in self.latticevectors:
-            leng = sqrt((vec[0])**2+(vec[1])**2+(vec[2])**2)
-            newlatlen.append(leng)
-        # Rescale coordinates
+                vacuummapmatrix[j][j] = vacuummapmatrix[j][j] + vacuum[j]
+        invvacmat = LatticeMatrix(minv3(vacuummapmatrix))
+        # Rescale coordinates after padding
         for j in range(len(self.sitedata)):
             for l in range(len(self.sitedata[j][2])):
-                for k in range(3):
-                    fac = orglatlen[k]/newlatlen[k]
-                    self.sitedata[j][2][l][k] = self.sitedata[j][2][l][k] * fac
-        # Move all atoms by transvec
+                self.sitedata[j][2][l] = LatticeVector(mvmult3(invvacmat, self.sitedata[j][2][l]))
+
+        # Multiply group by new translation group
+        newops = []
+        i = 0
+        for vec in newtranslations[1:]:
+            for op in self.symops:
+                newops.append(SymmetryOperation())
+                newops[i].rotation_matrix = op.rotation_matrix
+                newops[i].translation = vec + op.translation
+                i += 1 
+        for op in newops:
+            self.symops.append(op)
+
+        # Weed out rotations that are broken by supercell map
+        lv = self.latticevectors
+        removelist = []
+        # Ugly special treatment of hexagonal cell settings
+        # THIS WILL NOT WORK WITH GENERAL SUPERCELL MAP MATRIX 
+        if self.crystal_system()=="hexagonal" or (self.crystal_system()=="trigonal" and not self.primcell):
+            if abs(lv[0].length()-lv[1].length()) < lv.compeps:
+                # if a and b are still the same, no rotation symmetry is broken
+                pass
+            else:
+                # if a and b are different, all rotation symmetries except inversion are broken
+                e = SymmetryOperation(["x","y","z"])
+                i = SymmetryOperation(["-x","-y","-z"])
+                j = 0
+                for op in self.symops:
+                    if op.rotation_matrix == e.rotation_matrix or op.rotation_matrix == i.rotation_matrix:
+                        pass
+                    else:
+                        removelist.append(j)
+                    j += 1
+        elif self.crystal_system()=="trigonal" and self.primcell:
+            # if any latticevector has different length, all symmetries except inversion are broken
+            if lv[0].length() == lv[1].length() == lv[2].length():
+                pass
+            else:
+                e = SymmetryOperation(["x","y","z"])
+                i = SymmetryOperation(["-x","-y","-z"])
+                j = 0
+                for op in self.symops:
+                    if op.rotation_matrix == e.rotation_matrix or op.rotation_matrix == i.rotation_matrix:
+                        pass
+                    else:
+                        removelist.append(j)
+                    j += 1
+        else:
+            i = 0
+            for op in self.symops:
+                for vec in lv:
+                    t = Vector(mvmult3(op.rotation_matrix,vec))
+                    r = Vector([-u for u in t])
+                    # Symmetry operation OK if it maps a lattice vector into one of the other lattice vectors
+                    equivalent = t == lv[0] or t == lv[1] or t == lv[2] or \
+                                 r == lv[0] or r == lv[1] or r == lv[2]
+                    if not equivalent:
+                        removelist.append(i)
+                i += 1
+        # Weed out translations broken by the vacuum
+        j = 0
+        for op in self.symops:
+            # check if vacuum padding destroys this translation
+            t = op.translation
+            for i in range(3):
+                if abs(t[i]) > self.compeps and abs(vacuum[i]) > self.compeps:
+                    removelist.append(j)
+            j += 1
+        # Remove broken symmetries
+        removelist = sorted(list(set(removelist)), reverse=True)
+        for i in removelist:
+            self.symops.pop(i)
+
+        # Move all atoms by transvec !!THIS SEEMS BROKEN!!
         if reduce(lambda x,y: x+y, transvec) != 0:
             for j in range(len(self.sitedata)):
                 for l in range(len(self.sitedata[j][2])):
                     for k in range(3):
-                        fac = orglatlen[k]/newlatlen[k]
+                        fac = oldlatlen[k]/self.latticevectors[k].length()
                         self.sitedata[j][2][l][k] = self.sitedata[j][2][l][k] + fac*transvec[k]
+                        
         # Put stuff back in ]-1,1[ interval
+        # THIS SHOULD BE DONE BETTER USING THE LATTICEVECTOR CLASS
         for j in range(len(self.sitedata)):
             for l in range(len(self.sitedata[j][2])):
                 for k in range(3):
                     while abs(self.sitedata[j][2][l][k]) >= 1:
                         self.sitedata[j][2][l][k] = self.sitedata[j][2][l][k] - copysign(1,self.sitedata[j][2][l][k])
+        
+        ## # set up sitedata from atomdata
+        ## self.sitedata = []
+        ## i = 0
+        ## for a in self.atomdata:
+        ##     self.sitedata.append([])
+        ##     self.sitedata[i].append(a[0].position)
+        ##     self.sitedata[i].append(a[0].species)
+        ##     self.sitedata[i].append([])
+        ##     for b in a:
+        ##         self.sitedata[i][2].append(b.position)
+        ##     i += 1
+        
         return self
 
     # Get lattice information from CIF block
