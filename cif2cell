@@ -504,7 +504,31 @@ if makesupercell:
                 tmpstring = spcsstring.ljust(w1)+threedecs % (v[0], v[1], v[2])
                 tmpstring += " "+occstring.rjust(w3)
                 print tmpstring
-    # update to the supercell
+        if printsymops:
+            print "\nSymmetry operations : "
+            print "  3x3 rotation matrix +"
+            print "  3x1 translation vector"
+            i = 1
+            for op in cell.symops:
+                print "Operation "+str(i)
+                print str(op).rstrip("\n")
+                i += 1
+        if printseitz:
+            print "\nSymmetry operations :"
+            print "  In Seitz matrix form"
+            i = 1
+            for op in cell.symops:
+                print "Operation "+str(i)
+                tmpstring = ""
+                for j in range(3):
+                    for k in range(3):
+                        tmpstring += "%19.14f "%op.rotation_matrix[j][k]
+                    tmpstring += "%19.14f \n"%op.translation[j]
+                tmpstring += "%19.14f %19.14f %19.14f %19.14f "%(0,0,0,1)
+                print tmpstring
+                i += 1
+                
+    # update cell to the supercell
     cell = supercell
 
 ##############################################
