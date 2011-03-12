@@ -96,10 +96,12 @@ parser.add_option("--which-filename",dest="filenamequery",help="If given togethe
 parser.add_option("-b","--block",dest="block",help="Block of data in input file (if there are more than one block in the CIF file).")
 parser.add_option("--force-alloy",dest="forcealloy",help="Force generation of output file for an alloy compound for an electronic structure code that does not implement any alloy theory (such as CPA).",action="store_true")
 parser.add_option("--coordinate-tolerance",dest="coordtol",help="Parameter for determining when two coordinates are the same (default=0.0002).")
-# Printing to screen
+# OUTPUT OPTIONS
 parser.add_option("--print-digits",dest="printdigits",help="Number of digits used when printing coordinates etc. to screen (default=8). Useful if you need to tweak the screen output for cutting and pasting into some unsupported program. There is no point in going over 16 because of the floating point accuracy.")
 parser.add_option("--print-atomic-units",dest="printau",help="Output lattice parameters in bohrradii rather than angstrom.",action="store_true")
 parser.add_option("--print-cartesian",dest="printcart",help="Atomic sites printed to screen in cartesian rather than lattice coordinates.",action="store_true")
+parser.add_option("--print-symmetry-operations",dest="printsymops",help="Print symmetry operations of the generated cell.",action="store_true")
+parser.add_option("--print-seitz-matrices",dest="printseitz",help="Print symmetry operations of the generated cell in Seitz matrix form.",action="store_true")
 # CELL GENERATION OPTIONS
 #cellgenopts = OptionGroup(parser, "Cell generation options")
 parser.add_option("--no-reduce",dest="noreduce",help="Do not reduce to the primitive cell.",action="store_true")
@@ -174,6 +176,16 @@ threedecs = " "+decform+" "+decform+" "+decform
 # For printing time
 today = datetime.today()
 datestring = str(today.year)+"-"+str(today.month).rjust(2,'0')+"-"+str(today.day).rjust(2,'0')+' '+str(today.hour)+":"+str(today.minute).rjust(2,'0')
+
+# Printing of symmetry operations
+if options.printsymops:
+    printsymops = True
+else:
+    printsymops = False
+if options.printseitz:
+    printseitz = True
+else:
+    printseitz = False
 
 # Open and read CIF file
 if options.file:    
@@ -423,7 +435,30 @@ if verbose or not options.program and not options.quiet:
             tmpstring = spcsstring.ljust(w1)+threedecs % (v[0], v[1], v[2])
             tmpstring += " "+occstring.rjust(w3)
             print tmpstring
-
+    if printsymops:
+        print "\nSymmetry operations : "
+        print "  3x3 rotation matrix +"
+        print "  3x1 translation vector"
+        i = 1
+        for op in cell.symops:
+            print "Operation "+str(i)
+            print str(op).rstrip("\n")
+            i += 1
+    if printseitz:
+        print "\nSymmetry operations :"
+        print "  In Seitz matrix form"
+        i = 1
+        for op in cell.symops:
+            print "Operation "+str(i)
+            tmpstring = ""
+            for j in range(3):
+                for k in range(3):
+                    tmpstring += "%19.14f "%op.rotation_matrix[j][k]
+                tmpstring += "%19.14f \n"%op.translation[j]
+            tmpstring += "%19.14f %19.14f %19.14f %19.14f "%(0,0,0,1)
+            print tmpstring
+            i += 1
+    
 ##############################################
 # Generate supercell
 if makesupercell:
