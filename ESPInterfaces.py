@@ -932,11 +932,14 @@ class CASTEPFile(GeometryOutputFile):
         # Put the symmetry operations
         filestring += "\n%BLOCK SYMMETRY_OPS\n"
         latvect = self.cell.conventional_latticevectors()
-        # CASTEP assumes that you put identity first
-        symops = copy.deepcopy(self.cell.symops)
+        # make sure that identity comes first
         identity = SymmetryOperation(['x','y','z'])
-        symops.remove(identity)
-        symops.insert(0,identity)
+        if self.cell.symops[0] != identity:
+            symops = copy.deepcopy(self.cell.symops)
+            symops.remove(identity)
+            symops.insert(0,identity)
+        else:
+            symops = self.cell.symops
         k = 1
         for op in symops:
             filestring += "# Symm. op. %i\n"%k

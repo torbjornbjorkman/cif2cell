@@ -298,6 +298,18 @@ class SymmetryOperation(GeometryObject):
                 if i.strip("+-xyz") != "":
                     vec[j] = eval(i)
         return LatticeVector(vec)
+    # True if the operation is diagonal
+    def diagonal(self):
+        if abs(self.rotation_matrix[0][1]) < self.compeps and \
+           abs(self.rotation_matrix[0][2]) < self.compeps and \
+           abs(self.rotation_matrix[1][0]) < self.compeps and \
+           abs(self.rotation_matrix[1][2]) < self.compeps and \
+           abs(self.rotation_matrix[2][0]) < self.compeps and \
+           abs(self.rotation_matrix[2][1]) < self.compeps:
+            return True
+        else:
+            return False
+        
     
 ################################################################################################
 class CellData(GeometryObject):
@@ -767,8 +779,15 @@ class CellData(GeometryObject):
         #################################
         for eqsite in self.eqsites:
             self.symops.append(SymmetryOperation(eqsite=eqsite))
-        # sort the symmetry operations (by length of translation vectors)
+        # sort the symmetry operations
+        # 1. by length of translation vectors
         self.symops.sort()
+        # 2. by determinant (1 first then -1)
+        self.symops.sort(key = lambda op : det3(op.rotation_matrix), reverse=True)
+        # 3. put identity first
+        identity = SymmetryOperation(['x','y','z'])
+        self.symops.remove(identity)
+        self.symops.insert(0,identity)
         
         # If we reduce the cell, remove the symmetry operations that are the
         # same up to an induced lattice translation
@@ -937,7 +956,7 @@ class CellData(GeometryObject):
         # Weed out rotations that are broken by supercell map
         lv = self.latticevectors
         removelist = []
-        # Ugly special treatment of hexagonal cell settings
+        # Ugly set of if's and special cases
         # THIS WILL NOT WORK WITH GENERAL SUPERCELL MAP MATRIX 
         if self.crystal_system()=="hexagonal" or (self.crystal_system()=="trigonal" and not self.primcell):
             if abs(lv[0].length()-lv[1].length()) < lv.compeps:
@@ -971,14 +990,18 @@ class CellData(GeometryObject):
         else:
             i = 0
             for op in self.symops:
-                for vec in lv:
-                    t = Vector(mvmult3(op.rotation_matrix,vec))
-                    r = Vector([-u for u in t])
-                    # Symmetry operation OK if it maps a lattice vector into one of the other lattice vectors
-                    equivalent = t == lv[0] or t == lv[1] or t == lv[2] or \
-                                 r == lv[0] or r == lv[1] or r == lv[2]
-                    if not equivalent:
-                        removelist.append(i)
+                # diagonal operations always ok (since we only have diagonal map for now)
+                if op.diagonal():
+                    pass
+                else:
+                    for vec in lv:
+                        t = Vector(mvmult3(op.rotation_matrix,vec))
+                        r = Vector([-u for u in t])
+                        # Symmetry operation OK if it maps a lattice vector into one of the other lattice vectors
+                        equivalent = t == lv[0] or t == lv[1] or t == lv[2] or \
+                                     r == lv[0] or r == lv[1] or r == lv[2]
+                        if not equivalent:
+                            removelist.append(i)
                 i += 1
         # Weed out translations broken by the vacuum
         j = 0
