@@ -276,6 +276,7 @@ class CellgenFile(GeometryOutputFile):
         filestring = self.docstring
         # Add lattice constant
         filestring += "# Lattice constant in a.u.: "+str(self.cell.lengthscale)+"\n"
+        # RSPt reads the lattice vectors as columns...
         filestring +="# Lattice vectors (columns)\n"
         tmpstring = ""
         for i in range(3):
@@ -348,6 +349,7 @@ class SymtFile(GeometryOutputFile):
         filestring = self.docstring
         # Add lattice constant
         filestring += "# Lattice constant in a.u.: "+str(self.cell.lengthscale)+"\n"
+        # RSPt reads the lattice vectors as columns...
         filestring +="# Lattice vectors (columns)\n"
         tmpstring = ""
         for i in range(3):
@@ -359,28 +361,27 @@ class SymtFile(GeometryOutputFile):
         filestring += "%19.15f %19.15f %19.15f  l\n"%(self.spinaxis[0],self.spinaxis[1],self.spinaxis[2])
         # Get number of sites
         nosites = 0
-        for site in self.cell.sitedata:
-            for pos in site[2]:
-                nosites += 1
+        for a in self.cell.atomdata:
+            nosites += len(a)
         filestring += "# Sites\n"
         filestring += str(nosites)+"\n"
-        for site in self.cell.sitedata:
-            for pos in site[2]:
+        it = 1
+        for a in self.cell.atomdata:
+            for b in a:
                 tmpstring = ""
-                for k in range(3):
-                    x = improveprecision(pos[k],0.00001)
-                    tmpstring += "%19.15f " % x
-                if len(site[1]) > 1:
+                tmpstring += str(b.position)+" "
+                if len(b.species) > 1:
                     # don't know what to put for an alloy
                     tmpstring += "???"
                 else:
-                    for k in site[1]:
-                        tmpstring += "%3i" % ed.elementnr[k]
-                tmpstring += " l "+chr(site[3]+96)+"   # "
-                for k in site[1]:
+                    for k in b.species:
+                        tmpstring += "%3i"%ed.elementnr[k]
+                tmpstring += " l "+chr(it+96)+"   # "
+                for k in b.species:
                     tmpstring += k+"/"
                 tmpstring = tmpstring.rstrip("/")+"\n"
                 filestring += tmpstring
+            it += 1
         return filestring
 
 ################################################################################################
@@ -424,6 +425,7 @@ class SymtFile2(GeometryOutputFile):
         if self.mtradii != 0:
             filestring += "# Choice of MT radii\n"
             filestring += "mtradii\n"+str(self.mtradii)+"\n"
+        # RSPt reads the lattice vectors as columns...
         filestring += "# Lattice vectors (columns)\n"
         filestring += "latticevectors\n"
         tmpstring = ""
@@ -437,29 +439,28 @@ class SymtFile2(GeometryOutputFile):
         filestring += "%19.15f %19.15f %19.15f  l\n"%(self.spinaxis[0],self.spinaxis[1],self.spinaxis[2])
         # Get number of sites
         nosites = 0
-        for site in self.cell.sitedata:
-            for pos in site[2]:
-                nosites += 1
+        for a in self.cell.atomdata:
+            nosites += len(a)
         filestring += "# Sites\n"
         filestring += "atoms\n"
         filestring += str(nosites)+"\n"
-        for site in self.cell.sitedata:
-            for pos in site[2]:
+        it = 1
+        for a in self.cell.atomdata:
+            for b in a:
                 tmpstring = ""
-                for k in range(3):
-                    x = improveprecision(pos[k],0.00001)
-                    tmpstring += "%19.15f " % x
-                if len(site[1]) > 1:
+                tmpstring += str(b.position)+" "
+                if len(b.species) > 1:
                     # don't know what to put for an alloy
                     tmpstring += "???"
                 else:
-                    for k in site[1]:
-                        tmpstring += "%3i" % ed.elementnr[k]
-                tmpstring += " l "+chr(site[3]+96)+"   # "
-                for k in site[1]:
+                    for k in b.species:
+                        tmpstring += "%3i"%ed.elementnr[k]
+                tmpstring += " l "+chr(it+96)+"   # "
+                for k in b.species:
                     tmpstring += k+"/"
                 tmpstring = tmpstring.rstrip("/")+"\n"
                 filestring += tmpstring
+            it += 1
         return filestring
 
 ################################################################################################
