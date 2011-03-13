@@ -105,13 +105,12 @@ class Vector(list,GeometryObject):
     * Supports testing for equality using the self.compeps parameter inherited
     from the parent class GeometryObject
     * Supports testing for < using the euclidean norm (length) of the vector
-    * Supports addition with another LatticeVector, in which case the
-      vectors are added component-wise and then translated back into
-      the interval defined by self.interval (default=[0,1[)
+    * Supports addition with another Vector, in which case the
+      vectors are added component-wise.
     More methods:
     length            : returns the euclidean norm of the vector
     transform(matrix) : returns matrix*vector
-    set_interval      : change the definition interval for the lattice vector
+    improveprecision  : identify some conspicuous numbers and improve precision
     """
     def __init__(self, vec):
         GeometryObject.__init__(self)
@@ -165,6 +164,7 @@ class LatticeVector(Vector):
         # In practice either [0,1] or [-.5, 0.5]
         self.interval = [0.0, 1.0]
         self.intocell()
+        self.improveprecision()
     # Addition of two vectors, putting the result back
     # into the cell if necessary
     def __add__(self, other):
@@ -1182,9 +1182,8 @@ class CellData(GeometryObject):
                     self.ineqsites[i].append(float(removeerror(j)))
                 except:
                     raise PositionError("Invalid atomic position value : "+j)
-            # Improve precision 
-            for k in range(3):
-                self.ineqsites[i][k] = improveprecision(self.ineqsites[i][k],self.coordepsilon)
+            # Improve precision
+            self.ineqsites[i] = LatticeVector(self.ineqsites[i])
             # dictionary of elements and occupancies
             k = elements[i]
             try:

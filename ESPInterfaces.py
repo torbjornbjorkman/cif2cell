@@ -531,26 +531,25 @@ class Crystal09File(GeometryOutputFile):
         else:
             return "ERROR: Could not determine crystal system corresponding to space group "+str(self.spacegroupnr)+"."
         # Number of atoms
-        filestring += str(len(self.cell.sitedata))+"\n"
-        # Atomic numbers and positions
-        for site in self.cell.sitedata:
+        filestring += str(len(self.cell.ineqsites))+"\n"
+        # Atomic numbers and representative positions
+        occ = self.cell.occupations
+        for i in range(len(self.cell.ineqsites)):
             spcstring = ""
-            if len(site[1]) > 1:
-                # Don't know what to put for alloy
+            if len(occ[i]) > 1:
+                # don't know what to put for alloy
                 filestring += "??"
-                for k in site[1]:
+                for k in occ[i]:
                     spcstring += str(ed.elementnr[k])+"/"
                 spcstring = spcstring.rstrip("/")+"  "
-                for k in site[1]:
+                for k in occ[i]:
                     spcstring += k+"/"
                 spcstring = spcstring.rstrip("/")
             else:
-                for k in site[1]:
+                for k in occ[i]:
                     filestring += str(ed.elementnr[k]).rjust(2)
                     spcstring = k
-            for coord in site[0]:
-                filestring += " %13.10f"%coord
-            filestring += "      ! "+spcstring+"\n"
+            filestring += str(self.cell.ineqsites[i])+"      ! "+spcstring+"\n"
         filestring += "END\n"
         return filestring
 
