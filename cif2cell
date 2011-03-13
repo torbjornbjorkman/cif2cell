@@ -334,33 +334,27 @@ if verbose or not options.program and not options.quiet:
     # w3 = width of the occupancy column
     if cell.alloy:
         w1 = 0
-        # Find atom column width
-        for site in cell.sitedata:
-            tmpstring = ""
-            for k in site[1]:
-                tmpstring += k+"/"
-            tmpstring = tmpstring.rstrip("/")
-            w1 = max(w1,len(tmpstring))
-        w1 = w1 + 1
-        # find occupation column width
         w3 = 0
-        for site in cell.sitedata:
-            tmpstring = ""
-            for (k,v) in site[1].iteritems():
-                tmpstring += str(v).rstrip('0.')+"/"
-            tmpstring = tmpstring.rstrip("/")
-            w3 = max(w3,len(tmpstring))
+        # Find atom and occupation column widths
+        for a in cell.atomdata:
+            for b in a:
+                tmpstring1 = ""
+                tmpstring2 = ""
+                for k,v in b.species.iteritems():
+                    tmpstring1 += k+"/"
+                    tmpstring2 += str(v).rstrip("0.")+"/"
+                tmpstring1 = tmpstring1.rstrip("/")
+                tmpstring2 = tmpstring2.rstrip("/")
+                w1 = max(w1,len(tmpstring1))
+                w3 = max(w3,len(tmpstring2))
         # small aesthetic adjustment 
+        w1 = w1 + 1
         w3 = w3 + 2
     else:
         w1 = 5
         w2 = decpos
         w3 = 0
-    tmpstring = "Representative sites "
-    if options.printcart:
-        tmpstring += "(cartesian coordinates):"
-    else:
-        tmpstring += "(lattice coordinates):"
+    tmpstring = "Representative sites :"
     print tmpstring
     siteheader = "Atom".ljust(w1)+" "
     if options.printcart:
@@ -387,17 +381,15 @@ if verbose or not options.program and not options.quiet:
     # Representative sites
     for i in range(len(cell.ineqsites)):
         tmpstring = ""
-        for k in cell.sitedata[i][1]:
+        occstring = ""
+        for k,v in cell.occupations[i].iteritems():
             tmpstring += k+"/"
+            occstring += str(v)+"/"
         tmpstring = tmpstring.rstrip("/")
+        occstring = occstring.rstrip("/")
         v = [t for t in cell.ineqsites[i]]
-        v = mvmult3(transmtx,v)
-        tmpstring = tmpstring.ljust(w1) + threedecs % (v[0], v[1], v[2])
+        tmpstring = tmpstring.ljust(w1) + threedecs % (v[0],v[1],v[2])
         if cell.alloy:
-            occstring = ""
-            for (k,v) in cell.sitedata[i][1].iteritems():
-                occstring += str(v).rstrip('0.') + "/"
-            occstring = occstring.rstrip("/")
             tmpstring += " "+occstring.rjust(w3)
         print tmpstring
     print "\n OUTPUT CELL INFORMATION"
@@ -420,20 +412,19 @@ if verbose or not options.program and not options.quiet:
         tmpstring += "(lattice coordinates):"
     print tmpstring
     print siteheader
-    for site in cell.sitedata:
-        spcsstring = ""
-        for k in site[1]:
-            spcsstring = spcsstring+k+"/"
-        spcsstring = spcsstring.rstrip("/")
-        occstring = ""
-        if cell.alloy:
-            for (k,v) in site[1].iteritems():
-                occstring = occstring + str(v).rstrip('0.') + "/"
+    for a in cell.atomdata:
+        for b in a:
+            spcsstring = ""
+            occstring = ""
+            for k,v in b.species.iteritems():
+                spcsstring += k+"/"
+                occstring += str(v).rstrip("0.")+"/"
+            spcsstring = spcsstring.rstrip("/")
             occstring = occstring.rstrip("/")
-        for j in range(len(site[2])):
-            v = mvmult3(transmtx,site[2][j])
-            tmpstring = spcsstring.ljust(w1)+threedecs % (v[0], v[1], v[2])
-            tmpstring += " "+occstring.rjust(w3)
+            v = mvmult3(transmtx,b.position)
+            tmpstring = spcsstring.ljust(w1)+threedecs%(v[0],v[1],v[2])
+            if cell.alloy:
+                tmpstring += " "+occstring.rjust(w3)
             print tmpstring
     if printsymops:
         print "\nSymmetry operations : "
@@ -489,20 +480,19 @@ if makesupercell:
             tmpstring += "(lattice coordinates):"
         print tmpstring
         print siteheader
-        for site in supercell.sitedata:
-            spcsstring = ""
-            for k in site[1]:
-                spcsstring = spcsstring+k+"/"
-            spcsstring = spcsstring.rstrip("/")
-            occstring = ""
-            if supercell.alloy:
-                for (k,v) in site[1].iteritems():
-                    occstring = occstring + str(v).rstrip('0.') + "/"
+        for a in cell.atomdata:
+            for b in a:
+                spcsstring = ""
+                occstring = ""
+                for k,v in b.species.iteritems():
+                    spcsstring += k+"/"
+                    occstring += str(v).rstrip("0.")+"/"
+                spcsstring = spcsstring.rstrip("/")
                 occstring = occstring.rstrip("/")
-            for j in range(len(site[2])):
-                v = mvmult3(transmtx,site[2][j])
-                tmpstring = spcsstring.ljust(w1)+threedecs % (v[0], v[1], v[2])
-                tmpstring += " "+occstring.rjust(w3)
+                v = mvmult3(transmtx,b.position)
+                tmpstring = spcsstring.ljust(w1)+threedecs%(v[0],v[1],v[2])
+                if cell.alloy:
+                    tmpstring += " "+occstring.rjust(w3)
                 print tmpstring
         if printsymops:
             print "\nSymmetry operations : "
@@ -537,6 +527,7 @@ if makesupercell:
 # nothing wrong with the site data.
 try:
     cell.sitedata.sort(key = lambda site: ed.elementnr[max(site[1], key = site[1].get)], reverse=True)
+    cell.atomdata.sort(key = lambda a: ed.elementnr[max(a[0].species, key = a[0].species.get)], reverse=True)
 except:
     pass
 
@@ -679,6 +670,9 @@ def StandardDocstring():
 ################################################################################################
 # Output cell to new CIF file
 if outputprogram == 'cif':
+    if makesupercell:
+        print "Output of supercell to CIF not yet implemented."
+        sys.exit(0)
     f = open(outputfile,'w')
     cf = CifFile.CifFile()
     cb = CifFile.CifBlock()
@@ -702,16 +696,16 @@ if outputprogram == 'cif':
     fracty = []
     fractz = []
     occup = []
-    for site in cell.sitedata:
-        for pos in site[2]:
-            for k in site[1]:
+    for a in cell.atomdata:
+        for b in a:
+            for k in b.species:
                 labels.append(k)
                 symbols.append(k)
-                symmult.append(str(len(site[2])))
-                fractx.append(str(pos[0]))
-                fracty.append(str(pos[1]))
-                fractz.append(str(pos[2]))
-                occup.append(str(site[1][k]))
+                symmult.append(str(len(a)))
+                fractx.append(str(b.position[0]))
+                fracty.append(str(b.position[1]))
+                fractz.append(str(b.position[2]))
+                occup.append(str(b.species[k]))
     #
     cb.AddCifItem(([['_atom_site_label',
                     '_atom_site_type_symbol',

@@ -376,6 +376,8 @@ class CellData(GeometryObject):
         self.transvecs = [LatticeVector([zero, zero, zero])]
         self.eqsites = []
         self.symops = []
+        self.ineqsites = []
+        self.occupations = []
         self.sitedata = []
         self.atomdata = []
         self.a = 0
@@ -389,11 +391,8 @@ class CellData(GeometryObject):
         self.latticevectors = LatticeMatrix([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
         self.lengthscale = 1
         self.unit = "angstrom"
-        self.sitedata = []
         self.alloy = False
         self.numofineqsites = 0
-        self.ineqsites = []
-        self.occupations = []
         self.primcell=False
 
     def newunit(self,newunit="angstrom"):
@@ -724,12 +723,15 @@ class CellData(GeometryObject):
                             else:
                                 self.atomdata[i][0].species[k] = self.atomdata[j][0].species[k]
                                 removeindices.append(j)
+                        # ...also fix self.occupations
+                        self.occupations[i][self.occupations[j].keys()[0]] = self.occupations[j].values()[0]
             # Remove duplicate elements
             removeindices = list(set(removeindices))
             removeindices.sort(reverse=True)
             for i in removeindices:
                 self.atomdata.pop(i)
                 self.ineqsites.pop(i)
+                self.occupations.pop(i)
 
         # Get equivalent sites from tables if not present
         if self.eqsites == []:
