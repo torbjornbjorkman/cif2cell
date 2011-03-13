@@ -47,7 +47,7 @@ class GeometryOutputFile:
 class OldNCOLFile(GeometryOutputFile):
     """
     Class for storing the geometrical data needed in a [filename].dat file for the ncol program
-    and the method FileString that outputs the contents of the .dat file as a string.
+    and the method __str__ that outputs the contents of the .dat file as a string.
     """
     def __init__(self,crystalstructure,string):
         GeometryOutputFile.__init__(self,crystalstructure,string)
@@ -58,7 +58,7 @@ class OldNCOLFile(GeometryOutputFile):
         self.programdoc = ""
         # Set atomic units for length scale
         self.cell.newunit("bohr")
-    def FileString(self):
+    def __str__(self):
         # Element data
         ed = ElementData()
         # l quantum number setup (same as from bstr)
@@ -148,7 +148,7 @@ class OldNCOLFile(GeometryOutputFile):
 class BSTRFile(GeometryOutputFile):
     """
     Class for storing the geometrical data needed in a [filename].dat file for the bstr program
-    and the method FileString that outputs the contents of the .dat file as a string.
+    and the method __str__ that outputs the contents of the .dat file as a string.
     """
     def __init__(self,crystalstructure,string):
         GeometryOutputFile.__init__(self,crystalstructure,string)
@@ -160,7 +160,7 @@ class BSTRFile(GeometryOutputFile):
         self.c = 1
         # To be put on the first line
         self.programdoc = ""
-    def FileString(self):
+    def __str__(self):
         ed = ElementData()
         filestring = ""
         tmpstring = "BSTR      IDSYST=  7"
@@ -228,7 +228,7 @@ class BSTRFile(GeometryOutputFile):
 class CrystalFile(GeometryOutputFile):
     """
     Class for storing the geometrical data needed by Crystal and the method
-    FileString that outputs the contents of the input file as a string.
+    __str__ that outputs the contents of the input file as a string.
     """
     def __init__(self,crystalstructure,string):
         GeometryOutputFile.__init__(self,crystalstructure,string)
@@ -242,7 +242,7 @@ class CrystalFile(GeometryOutputFile):
         self.gamma = 90
         # Set unit for length scale
         self.cell.newunit("angstrom")
-    def FileString(self):
+    def __str__(self):
         filestring = ""
         
         
@@ -251,7 +251,7 @@ class CrystalFile(GeometryOutputFile):
 class CellgenFile(GeometryOutputFile):
     """
     Class for storing the geometrical data needed in a cellgen.inp file and the method
-    FileString that outputs the contents of an cellgen.inp file as a string.
+    __str__ that outputs the contents of an cellgen.inp file as a string.
     """
     def __init__(self,crystalstructure,string):
         GeometryOutputFile.__init__(self,crystalstructure,string)
@@ -267,7 +267,7 @@ class CellgenFile(GeometryOutputFile):
             string = string.lstrip("#")
             string = "#"+string+"\n"
             self.docstring += string
-    def FileString(self):
+    def __str__(self):
         # Initialize element data
         ed = ElementData()
         # Add docstring
@@ -324,7 +324,7 @@ class CellgenFile(GeometryOutputFile):
 class SymtFile(GeometryOutputFile):
     """
     Class for storing the geometrical data needed in an old format symt.inp file and the method
-    FileString that outputs the contents of an symt.inp file as a string.
+    __str__ that outputs the contents of an symt.inp file as a string.
     """
     def __init__(self,crystalstructure,string):
         GeometryOutputFile.__init__(self,crystalstructure,string)
@@ -340,7 +340,7 @@ class SymtFile(GeometryOutputFile):
             self.docstring += string
         # Default spin axis is [0,0,0]
         self.spinaxis = [0.0, 0.0, 0.0]
-    def FileString(self):
+    def __str__(self):
         # Initialize element data
         ed = ElementData()
         # Add docstring
@@ -386,7 +386,7 @@ class SymtFile(GeometryOutputFile):
 class SymtFile2(GeometryOutputFile):
     """
     Class for storing the geometrical data needed in a new format symt.inp file and the method
-    FileString that outputs the contents of an symt.inp file as a string.
+    __str__ that outputs the contents of an symt.inp file as a string.
     """
     def __init__(self,crystalstructure,string):
         GeometryOutputFile.__init__(self,crystalstructure,string)
@@ -406,7 +406,7 @@ class SymtFile2(GeometryOutputFile):
         self.spinpol = False
         self.relativistic = False
         self.mtradii = 0
-    def FileString(self):
+    def __str__(self):
         # Initialize element data
         ed = ElementData()
         # Add docstring
@@ -465,7 +465,7 @@ class SymtFile2(GeometryOutputFile):
 class Crystal09File(GeometryOutputFile):
     """
     Class for storing the geometrical data needed by Crystal09 and the method
-    FileString that outputs the contents of an Crystal09 input file as a string.
+    __str__ that outputs the contents of an Crystal09 input file as a string.
     Presently only handles standard settings (space group numbers, not H-M symbols)
     """
     def __init__(self,crystalstructure,string):
@@ -489,7 +489,7 @@ class Crystal09File(GeometryOutputFile):
             string = string.lstrip("!")
             string = "!"+string+"\n"
             self.docstring += string
-    def FileString(self):
+    def __str__(self):
         # Initialize element data
         ed = ElementData()
         # Add docstring
@@ -556,7 +556,7 @@ class Crystal09File(GeometryOutputFile):
 class SpacegroupFile(GeometryOutputFile):
     """
     Class for storing the geometrical data needed in a spacegroup.in file and the method
-    FileString that outputs the contents of an spacegroup.in file as a string.
+    __str__ that outputs the contents of an spacegroup.in file as a string.
     """
     def __init__(self,crystalstructure,string):
         GeometryOutputFile.__init__(self,crystalstructure,string)
@@ -578,7 +578,7 @@ class SpacegroupFile(GeometryOutputFile):
             string = string.lstrip("!")
             string = "!"+string+"\n"
             self.docstring += string
-    def FileString(self):
+    def __str__(self):
         filestring = ""
         tmpstring=' \''+self.HermannMauguin+'\''
         tmpstring = tmpstring.ljust(50)+': hrmg\n'
@@ -638,7 +638,7 @@ class SpacegroupFile(GeometryOutputFile):
 class ElkFile(GeometryOutputFile):
     """
     Class for storing the geometrical data needed in an elk.in file and the method
-    FileString that outputs the contents of an elk.in file as a string.
+    __str__ that outputs the contents of an elk.in file as a string.
     """
     def __init__(self,crystalstructure,string):
         GeometryOutputFile.__init__(self,crystalstructure,string)
@@ -652,7 +652,7 @@ class ElkFile(GeometryOutputFile):
             string = string.lstrip("!")
             string = "!"+string+"\n"
             self.docstring += string
-    def FileString(self):
+    def __str__(self):
         filestring = self.docstring
         # Lattice vectors
         filestring += "avec\n"
@@ -731,7 +731,7 @@ class ElkFile(GeometryOutputFile):
 class ExcitingFile(GeometryOutputFile):
     """
     Class for storing the geometrical data needed in an input.xml file and the method
-    FileString that outputs the contents of an input.xml file as a string.
+    __str__ that outputs the contents of an input.xml file as a string.
     """
     def __init__(self,crystalstructure,string):
         GeometryOutputFile.__init__(self,crystalstructure,string)
@@ -739,7 +739,7 @@ class ExcitingFile(GeometryOutputFile):
         self.cell.newunit("bohr")
         self.title = ""
         self.docstring = self.docstring.rstrip("\n")+"\n"
-    def FileString(self):
+    def __str__(self):
         filestring = "<input>\n"
         filestring += "  <title>\n"
         filestring += self.docstring
@@ -815,7 +815,7 @@ class FleurFile(GeometryOutputFile):
     """
     Class for storing the geometrical data needed in a Fleur input generator input file (how about
     that, we generate input for the generator of the input...) and the method
-    FileString that outputs the contents of an elk/exciting.in file as a string.
+    __str__ that outputs the contents of an elk/exciting.in file as a string.
     """
     def __init__(self,crystalstructure,string):
         GeometryOutputFile.__init__(self,crystalstructure,string)
@@ -825,7 +825,7 @@ class FleurFile(GeometryOutputFile):
         self.docstring = self.docstring.replace("\n"," ")
         if len(self.docstring) > 80:
             self.docstring = self.docstring[0:78]+"...\n"
-    def FileString(self):
+    def __str__(self):
         ed = ElementData()
         filestring = self.docstring+"\n"
         filestring += "&input cartesian=f oldfleur=f\n\n"
@@ -876,7 +876,7 @@ class FleurFile(GeometryOutputFile):
 class CASTEPFile(GeometryOutputFile):
     """
     Class for storing the geometrical data needed in a CASTEP run and the method
-    FileString that outputs to a .cell file as a string.
+    __str__ that outputs to a .cell file as a string.
     """
     def __init__(self, crystalstructure, string):
         GeometryOutputFile.__init__(self,crystalstructure,string)
@@ -889,7 +889,7 @@ class CASTEPFile(GeometryOutputFile):
             string = string.lstrip("#")
             string = "#"+string+"\n"
             self.docstring += string
-    def FileString(self):
+    def __str__(self):
         # Assign some local variables
         a = self.cell.lengthscale
         lattice = self.cell.latticevectors
@@ -952,13 +952,13 @@ class CASTEPFile(GeometryOutputFile):
 class CPMDFile(GeometryOutputFile):
     """
     Class for storing the geometrical data needed in a CPMD run and the method
-    FileString that outputs to a .inp file as a string.
+    __str__ that outputs to a .inp file as a string.
     """
     def __init__(self, crystalstructure, string):
         GeometryOutputFile.__init__(self,crystalstructure,string)
         self.cell.newunit("bohr")
         self.cutoff = 100.0
-    def FileString(self):
+    def __str__(self):
         # Assign some local variables
         a = self.cell.lengthscale
         lattice = self.cell.latticevectors
@@ -971,7 +971,7 @@ class CPMDFile(GeometryOutputFile):
                 transmtx[i].append(lattice[i][j] * a)
         # docstring
         filestring = self.docstring+"\n"
-        filestring += "%SYSTEM\n"
+        filestring += "&SYSTEM\n"
         # lattice
         filestring += " CELL VECTORS\n"
         for vec in transmtx:
@@ -1011,7 +1011,7 @@ class CPMDFile(GeometryOutputFile):
 class SiestaFile(GeometryOutputFile):
     """
     Class for storing the geometrical data needed in a Siesta run and the method
-    FileString that outputs to a .fdf file as a string.
+    __str__ that outputs to a .fdf file as a string.
     """
     def __init__(self, crystalstructure, string):
         GeometryOutputFile.__init__(self,crystalstructure,string)
@@ -1024,7 +1024,7 @@ class SiestaFile(GeometryOutputFile):
             string = string.lstrip("#")
             string = "#"+string+"\n"
             self.docstring += string
-    def FileString(self):
+    def __str__(self):
         # Assign some local variables
         a = self.cell.lengthscale
         lattice = self.cell.latticevectors
@@ -1089,7 +1089,7 @@ class SiestaFile(GeometryOutputFile):
 class ABINITFile(GeometryOutputFile):
     """
     Class for storing the geometrical data needed in an abinit run and the method
-    FileString that outputs the contents of a abinit input file as a string.
+    __str__ that outputs the contents of a abinit input file as a string.
     """
     def __init__(self, crystalstructure, string):
         GeometryOutputFile.__init__(self,crystalstructure,string)
@@ -1102,7 +1102,7 @@ class ABINITFile(GeometryOutputFile):
             string = string.lstrip("#")
             string = "#"+string+"\n"
             self.docstring += string
-    def FileString(self):
+    def __str__(self):
         # Assign some local variables
         a = self.cell.lengthscale
         lattice = self.cell.latticevectors
@@ -1165,7 +1165,7 @@ class ABINITFile(GeometryOutputFile):
 class POSCARFile(GeometryOutputFile):
     """
     Class for storing the geometrical data needed in a POSCAR file and the method
-    FileString that outputs the contents of a POSCAR file as a string.
+    __str__ that outputs the contents of a POSCAR file as a string.
     If you want POSCAR to be printed with the atomic positions in Cartesian form,
     then set
     POSCARFile.printcartpos = True
@@ -1198,7 +1198,7 @@ class POSCARFile(GeometryOutputFile):
                 returnstring += " "+spcstring
                 spcs = spcstring
         return returnstring
-    def FileString(self):
+    def __str__(self):
         # Assign some local variables
         a = self.cell.lengthscale
         lattice = self.cell.latticevectors
@@ -1263,7 +1263,7 @@ class POSCARFile(GeometryOutputFile):
 class KFCDFile(GeometryOutputFile):
     """
     Class for storing the geometrical data needed in a [filename].dat file for the kfcd program
-    and the method FileString that outputs the contents of the .dat file as a string.
+    and the method __str__ that outputs the contents of the .dat file as a string.
     """
     def __init__(self,crystalstructure,string):
         GeometryOutputFile.__init__(self,crystalstructure,string)
@@ -1272,7 +1272,7 @@ class KFCDFile(GeometryOutputFile):
         self.kstrjobnam = "default"
         # To be put on the first line
         self.programdoc = ""
-    def FileString(self):
+    def __str__(self):
         filestring = ""
         tmpstring = "KFCD      MSGL..=  0"
         tmpstring = tmpstring.ljust(25)+self.programdoc.replace("\n"," ")+"\n"
@@ -1293,7 +1293,7 @@ class KFCDFile(GeometryOutputFile):
 class KGRNFile(GeometryOutputFile):
     """
     Class for storing the geometrical data needed in a [filename].dat file for the kgrn program
-    and the method FileString that outputs the contents of the .dat file as a string.
+    and the method __str__ that outputs the contents of the .dat file as a string.
     """
     def __init__(self,crystalstructure,string):
         GeometryOutputFile.__init__(self,crystalstructure,string)
@@ -1305,7 +1305,7 @@ class KGRNFile(GeometryOutputFile):
         # Set atomic units for length scale
         self.cell.newunit("bohr")
         self.latticenr = "14"
-    def FileString(self):
+    def __str__(self):
         ed = ElementData()
         filestring = ""
         tmpstring = "KGRN"
@@ -1463,14 +1463,14 @@ class KGRNFile(GeometryOutputFile):
 class ShapeFile(GeometryOutputFile):
     """
     Class for storing the geometrical data needed in a [filename].dat file for the shape program
-    and the method FileString that outputs the contents of the .dat file as a string.
+    and the method __str__ that outputs the contents of the .dat file as a string.
     """
     def __init__(self,crystalstructure,string):
         GeometryOutputFile.__init__(self,crystalstructure,string)
         self.jobnam = "default"
         # To be put on the first line
         self.programdoc = ""
-    def FileString(self):
+    def __str__(self):
         filestring = ""
         tmpstring = "SHAPE     HP......=N"
         tmpstring = tmpstring.ljust(25)+self.programdoc.replace("\n"," ")+"\n"
@@ -1487,7 +1487,7 @@ class ShapeFile(GeometryOutputFile):
 class BMDLFile(GeometryOutputFile):
     """
     Class for storing the geometrical data needed in a [filename].dat file for the bmdl program
-    and the method FileString that outputs the contents of the .dat file as a string.
+    and the method __str__ that outputs the contents of the .dat file as a string.
     """
     def __init__(self,crystalstructure,string):
         GeometryOutputFile.__init__(self,crystalstructure,string)
@@ -1503,7 +1503,7 @@ class BMDLFile(GeometryOutputFile):
         self.gamma = 90
         # To be put on the first line
         self.programdoc = ""
-    def FileString(self):
+    def __str__(self):
         ed = ElementData()
         filestring = ""
         tmpstring = "BMDL      HP......=N"
@@ -1551,7 +1551,7 @@ class BMDLFile(GeometryOutputFile):
 class KSTRFile(GeometryOutputFile):
     """
     Class for storing the geometrical data needed in a [filename].dat file for the kstr program
-    and the method FileString that outputs the contents of the .dat file as a string.
+    and the method __str__ that outputs the contents of the .dat file as a string.
     """
     def __init__(self,crystalstructure,string):
         GeometryOutputFile.__init__(self,crystalstructure,string)
@@ -1570,7 +1570,7 @@ class KSTRFile(GeometryOutputFile):
         self.latticenr = 14
         # To be put on the first line
         self.programdoc = ""
-    def FileString(self):
+    def __str__(self):
         ed = ElementData()
         filestring = ""
         tmpstring = "KSTR      HP......=N"
