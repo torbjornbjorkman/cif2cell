@@ -82,8 +82,8 @@ class OldNCOLFile(GeometryOutputFile):
         filestring += "AMIX.....=     0.100 TOLE....= 0.0000100 TOLEL...= 0.0000010\n"
         # average wigner-seitz radius
         nosites = 0
-        for site in self.cell.sitedata:
-            nosites += len(site[2])
+        for a in self.cell.atomdata:
+            nosites += len(a)
         volume = abs(det3(self.cell.latticevectors))
         wsr = self.cell.lengthscale * (3*volume/(nosites * 4 * pi))**third
         filestring += "SWS......= %9f NP...=  1 SMIX.= 0.500 TMIX.= 0.0000\n" % wsr
@@ -91,27 +91,26 @@ class OldNCOLFile(GeometryOutputFile):
         filestring += "EFGS.....=    0.0000 EFGS....=   0.00000 FTMAG...=  0.000000\n"
         filestring += "DEO(l)...=     0.020     0.010     0.005     0.001      0.02\n"
         filestring += "Symb IQ IT NL IP NSP   SWP  QTRO  SPLT NFIX NDWF     Eny(spdf)\n"
+        # set first species
+        if len(self.cell.atomdata[0][0].species) > 1:
+            prevspecies = "??"
+        else:
+            for v in self.cell.atomdata[0][0].species:
+                prevspecies = v
+        # type loop
         iq = 1
         it = 1
         nsp = 1
-        if len(self.cell.sitedata[0][1]) > 1:
-            prevspecies = "??"
-        else:
-            for v in self.cell.sitedata[0][1]:
-                prevspecies = v
-        # type loop
-        for site in self.cell.sitedata:
-            # Check for alloy
-            if len(site[1]) > 1:
-                species = "??"
-            else:
-                for v in site[1]:
-                    species = v
-            if species != prevspecies:
-                prevspecies = species
-                nsp += 1
-            # site loop
-            for pos in site[2]:
+        for a in self.cell.atomdata:
+            for b in a:
+                if len(b.species) > 1:
+                    species = "??"
+                else:
+                    for v in b.species:
+                        species = v
+                if species != prevspecies:
+                    prevspecies = species
+                    nsp += 1
                 tmpstring = species.ljust(2)+"  "+"%3i%3i"%(iq,it)
                 try:
                     tmpstring += "%3i%3i"%(l[ed.elementblock[species]],1)
@@ -119,16 +118,16 @@ class OldNCOLFile(GeometryOutputFile):
                     tmpstring += "  ?  1"
                 tmpstring += "%3i"%nsp
                 tmpstring += "    1.000 .000 0.00 0000 1111   .0   .0   .0   .0"
-                if len(site[1]) > 1:
+                if len(b.species) > 1:
                     # print alloy components at the end of the line
                     tmpstring += "       "
-                    for comp in site[1]:
+                    for comp in b.species:
                         tmpstring += comp+"/"
                     tmpstring = tmpstring.rstrip("/")
                 filestring += tmpstring+"\n"
                 iq += 1
             it += 1
-        for site in self.cell.sitedata:
+        for a in self.cell.atomdata:
             filestring += "Theta....=     90.00 Phia....=      0.00 FIXMOM..=         N moment..=      0.0\n"
         filestring += "PQX......=      0.00 PQY.....=      0.00 PQZ.....=   0.00000 COORD...=L\n"
         filestring += "Atom: 4 lines + NT*6 lines\n"
@@ -136,8 +135,8 @@ class OldNCOLFile(GeometryOutputFile):
         filestring += "VMIX.....=  0.300000 RWAT....=  3.500000 RMAX....= 20.000000\n"
         filestring += "DPAS.....=  0.049000 DR1.....=  1.00E-08 TEST....=  1.00E-08\n"
         filestring += "TESTE....=  1.00E-07 TESTY...=  1.00E-08 TESTV...=  1.00E-07\n"
-        for site in self.cell.sitedata:
-            for comp in site[1]:
+        for a in self.cell.atomdata:
+            for comp in a[0].species:
                 filestring += comp+"\n"
                 try:
                     filestring += ed.emtoelements[comp]
@@ -174,9 +173,8 @@ class BSTRFile(GeometryOutputFile):
         filestring += self.docstring.replace("\n"," ")+"\n"
         # Get number of sites
         nosites = 0
-        for site in self.cell.sitedata:
-            for pos in site[2]:
-                nosites += 1
+        for a in self.cell.atomdata:
+            nosites += len(a)
         # Setting the real space summation cutoff to 4.5*(wigner-seitz radius)
         volume = abs(det3(self.cell.latticevectors))
         wsr = (3*volume/(nosites * 4 * pi))**third
@@ -187,40 +185,44 @@ class BSTRFile(GeometryOutputFile):
         filestring += tmpstring
         # Set up basis functions. Just setting lmax = 2 for s-/p-, 3 for d- and 4 for f- blocks
         tmpstring = "\nNLX(IQ)..="
-        for site in self.cell.sitedata:
-            for k in site[1]:
-                l = 1
-                if ed.elementblock[k] == 's' or ed.elementblock[k] == 'p':
-                    l = max(l,2)
-                elif ed.elementblock[k] == 'd':
-                    l = max(l,3)
-                elif ed.elementblock[k] == 'f':
-                    l = max(l,4)
-                lstring = " %1i" % l
-            for pos in site[2]:
-                tmpstring += lstring
+        for a in self.cell.atomdata:
+            for b in a:
+                for k in b.species:
+                    l = 1
+                    if ed.elementblock[k] == 's' or ed.elementblock[k] == 'p':
+                        l = max(l,2)
+                    elif ed.elementblock[k] == 'd':
+                        l = max(l,3)
+                    elif ed.elementblock[k] == 'f':
+                        l = max(l,4)
+                tmpstring += " %1i" % l
                 if len(tmpstring) % 69 == 0:
                     tmpstring += "\n          "
-        # Need to strip newline character if it the last line was 69 characters long...
+        # Need to strip newline character if the last line was 69 characters long...
         tmpstring = tmpstring.rstrip(string.whitespace)
         tmpstring = tmpstring+"\n"
         filestring += tmpstring
+        # Print lattice vectors
         coa = self.c / self.a
         boa = self.b / self.a
         filestring += "A........=  1.00000000 B.......=  1.00000000 C.......=  1.00000000\n"
         tmpstring = ""
+        lv = self.cell.latticevectors
         for i in range(3):
-            tmpstring += "BSX......=%12.7f BSY.....=%12.7f BSZ.....=%12.7f\n" % (self.cell.latticevectors[i][0],self.cell.latticevectors[i][1],self.cell.latticevectors[i][2])
+            tmpstring += "BSX......=%12.7f BSY.....=%12.7f BSZ.....=%12.7f\n" % (lv[i][0],lv[i][1],lv[i][2])
         filestring += tmpstring
-        for site in self.cell.sitedata:
-            for pos in site[2]:
-                pos = mvmult3(self.cell.latticevectors,pos)
+        # All positions
+        it = 1
+        for a in self.cell.atomdata:
+            for b in a:
+                pos = mvmult3(lv,b.position)
                 tmpstring = "QX.......=%12.7f QY......=%12.7f QZ......=%12.7f" % (pos[0],pos[1],pos[2])
                 tmpstring += "      "
-                for k in site[1]:
+                for k in b.species:
                     tmpstring += k+"/"
-                tmpstring = tmpstring.rstrip("/")+" "+str(site[3])+"\n"
+                tmpstring = tmpstring.rstrip("/")+"\n"
                 filestring += tmpstring
+            it += 1
         filestring += "LAMDA....=    2.5000 AMAX....=    5.5000 BMAX....=    5.5000\n"
         return filestring
     
@@ -283,28 +285,27 @@ class CellgenFile(GeometryOutputFile):
         filestring += tmpstring
         # Get number of sites
         nosites = 0
-        for site in self.cell.sitedata:
-            for pos in site[2]:
-                nosites += 1
+        for a in self.cell.atomdata:
+            nosites += len(a)
         filestring += "# Sites\n"
         filestring += str(nosites)+"\n"
-        for site in self.cell.sitedata:
-            for pos in site[2]:
+        it = 1
+        for a in self.cell.atomdata:
+            for b in a:
                 tmpstring = ""
-                for k in range(3):
-                    x = improveprecision(pos[k],0.00001)
-                    tmpstring += "%19.15f " % x
-                if len(site[1]) > 1:
+                tmpstring += str(b.position)+" "
+                if len(b.species) > 1:
                     # don't know what to put for an alloy
                     tmpstring += "???"
                 else:
-                    for k in site[1]:
-                        tmpstring += "%3i" % ed.elementnr[k]
-                tmpstring += " l "+chr(site[3]+96)+"   # "
-                for k in site[1]:
+                    for k in b.species:
+                        tmpstring += "%3i"%ed.elementnr[k]
+                tmpstring += " l "+chr(it+96)+"   # "
+                for k in b.species:
                     tmpstring += k+"/"
                 tmpstring = tmpstring.rstrip("/")+"\n"
                 filestring += tmpstring
+            it += 1
         filestring += "# Supercell map\n"
         tmpstring = ""
         for i in self.supercellmap:
