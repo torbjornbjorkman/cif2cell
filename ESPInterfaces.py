@@ -1236,12 +1236,13 @@ class KGRNFile(GeometryOutputFile):
         filestring += tmpstring
         filestring += self.docstring.replace("\n"," ")+"\n"
         filestring += "Band: 10 lines\n"
-        tmpstring = "NITER.= 50 NLIN.= 31 NPRN.=  0 NCPA.= 20 NT...=%3i"%len(self.cell.sitedata)+" MNTA.="
+        tmpstring = "NITER.= 50 NLIN.= 31 NPRN.=  0 NCPA.= 20 NT...=%3i"%len(self.cell.atomdata)+" MNTA.="
         # Work out maximal number of species occupying a site
         mnta = 1
-        for site in self.cell.sitedata:
-            mnta = max(mnta,len(site[1]))
-        tmpstring += "%2i"%mnta+"\n"
+        for a in self.cell.atomdata:
+            for b in a:
+                mnta = max(mnta,len(b.species))
+        tmpstring += "%3i"%mnta+"\n"
         filestring += tmpstring
         filestring += "MODE..= 3D FRC..=  N DOS..=  N OPS..=  N AFM..=  P CRT..=  M\n"
         filestring += "Lmaxh.=  8 Lmaxt=  4 NFI..= 31 FIXG.=  2 SHF..=  0 SOFC.=  N\n"
@@ -1311,43 +1312,42 @@ class KGRNFile(GeometryOutputFile):
         filestring += "TOLE...= 1.d-07 TOLEF.= 1.d-07 TOLCPA= 1.d-06 TFERMI=  500.0 (K)\n"
         # Get number of sites
         nosites = 0
-        for site in self.cell.sitedata:
-            for pos in site[2]:
-                nosites += 1
+        for a in self.cell.atomdata:
+            nosites += len(a)
         # average wigner-seitz radius
         volume = abs(det3(self.cell.latticevectors))
         wsr = self.cell.lengthscale * 3*volume/(nosites * 4 * pi)**third
         filestring += "SWS......=%8f   NSWS.=  1 DSWS..=   0.05 ALPCPA= 0.9020\n"%wsr
         filestring += "Setup: 2 + NQ*NS lines\n"
         filestring += "EFGS...=  0.000 HX....=  0.100 NX...= 11 NZ0..=  6 STMP..= Y\n"
+        # atom info
         filestring += "Symb   IQ IT ITA NZ  CONC   Sm(s)  S(ws) WS(wst) QTR SPLT\n"
         iq = 1
         it = 1
-        # type loop
-        for site in self.cell.sitedata:
-            # alloy component loop
+        for a in self.cell.atomdata:
             ita = 1
-            for comp in site[1]:
-                # site loop
-                for pos in site[2]:
-                    tmpstring = comp.ljust(4)+"  "+"%3i%3i%3i"%(iq,it,ita)
-                    tmpstring += "%4i"%ed.elementnr[comp]
-                    tmpstring += "%7.3f%7.3f%7.3f%7.3f"%(site[1][comp],1,1,1)
-                    tmpstring += "%5.2f%5.2f"%(0,0)
-                    tmpstring += "\n"
-                    filestring += tmpstring
-                    iq += 1
+            # THIS MAKES ASSUMPTIONS ABOUT THE ORDERING OF ATOMDATA
+            # But we're OK for all orderings implemented so far
+            for comp in a[0].spcstring().split("/"):
+                for b in a:
+                    if comp in b.species:
+                        tmpstring = comp.ljust(4)+"  "+"%3i%3i%3i"%(iq,it,ita)
+                        tmpstring += "%4i"%ed.elementnr[comp]
+                        tmpstring += "%7.3f%7.3f%7.3f%7.3f"%(a[0].species[comp],1,1,1)
+                        tmpstring += "%5.2f%5.2f\n"%(0,0)
+                        filestring += tmpstring
+                        iq += 1
                 ita += 1
-                iq -= len(site[2])
-            iq += len(site[2])
+                iq -= len(a)
+            iq += len(a)
             it += 1
         filestring += "Atom:  4 lines + NT*NTA*6 lines\n"
         filestring += "IEX...=  4 NP..= 251 NES..= 15 NITER=100 IWAT.=  0 NPRNA=  0\n"
         filestring += "VMIX.....=  0.300000 RWAT....=  3.500000 RMAX....= 20.000000\n"
         filestring += "DX.......=  0.030000 DR1.....=  0.002000 TEST....=  1.00E-12\n"
         filestring += "TESTE....=  1.00E-12 TESTY...=  1.00E-12 TESTV...=  1.00E-12\n"
-        for site in self.cell.sitedata:
-            for comp in site[1]:
+        for a in self.cell.atomdata:
+            for comp in a[0].species:
                 filestring += comp+"\n"
                 try:
                     filestring += ed.emtoelements[comp]
