@@ -942,62 +942,54 @@ class SiestaFile(GeometryOutputFile):
             self.docstring += string
     def __str__(self):
         # Assign some local variables
-        a = self.cell.lengthscale
         lattice = self.cell.latticevectors
         ed = ElementData()
         # docstring
         filestring = self.docstring
-        # The atom position info
         filestring += "AtomicCoordinatesFormat".ljust(28)+"Fractional\n"
-        Alloy = False
+        species = set([])
         natom = 0
-        nspcs = 0
-        spcs = ""
-        coordstring = ""
-        specieslabels = ""
-        for site in self.cell.sitedata:
-            spcstring = ""
-            for k in site[1]:
-                spcstring += k+"/"
-            spcstring = spcstring.rstrip("/")
-            natom += len(site[2])
-            if spcs != spcstring:
-                nspcs += 1
-                specieslabels += str(nspcs).ljust(4)+"   "
-                # Check for alloy
-                if len(site[1]) > 1:
-                    species = "    ??    # "+spcstring
-                    specieslabels += "??".rjust(4)+"??".rjust(7)+"     # "
-                    for k in site[1]:
-                        specieslabels += str(ed.elementnr[k])+"/"
-                    specieslabels = specieslabels.rstrip("/")
-                    specieslabels += "   "+spcstring+"\n"
-                else:
-                    for k in site[1]:
-                        species = "  "+k.rjust(4)
-                    specieslabels += str(ed.elementnr[species.lstrip()]).rjust(4)+" "+species+"\n"
-            for pos in site[2]:
-                for coord in pos:
-                    coordstring += "%19.15f "%coord
-                coordstring += species.rjust(2)+"\n"
-            spcs = spcstring
-        filestring += "LatticeConstant".ljust(28)+str(a)+" Ang\n"
+        for a in self.cell.atomdata:
+            natom += len(a)
+            for b in a:
+                species.add(b.spcstring())
+        species = list(species)
+        nspcs = len(species)
+        filestring += "LatticeConstant".ljust(28)+str(self.cell.lengthscale)+" Ang\n"
         filestring += "NumberOfAtoms".ljust(28)+str(natom)+"\n"
         filestring += "NumberOfSpecies".ljust(28)+str(nspcs)+"\n"
         # lattice
         filestring += "%block LatticeVectors\n"
         for vec in lattice:
-            for coord in vec:
-                filestring += "%19.15f "%coord
-            filestring += "\n"
+            filestring += str(vec)+"\n"
         filestring += "%endblock LatticeVectors\n"
         # Atomic coordinates
         filestring += "%block AtomicCoordinatesAndAtomicSpecies\n"
-        filestring += coordstring
+        for sp in species:
+            for a in self.cell.atomdata:
+                for b in a:
+                    if b.spcstring() == sp:
+                        filestring += str(b.position)
+                        if b.alloy():
+                            filestring += "   ??   # "+b.spcstring()+"\n"
+                        else:
+                            filestring += "   "+b.spcstring()+"\n"
         filestring += "%endblock AtomicCoordinatesAndAtomicSpecies\n"
         # Chemical species
         filestring += "%block ChemicalSpeciesLabel\n"
-        filestring += specieslabels
+        i = 1
+        for sp in species:
+            filestring += str(i).ljust(8)
+            if len(sp) > 2:
+                filestring += "??      ??    # "
+                tsp = sp.split("/")
+                for t in tsp:
+                    filestring += str(ed.elementnr[t])+"/"
+                filestring = filestring.rstrip("/")
+                filestring += "      "+sp+"\n"
+            else:
+                filestring += str(ed.elementnr[sp]).ljust(8)+sp.ljust(8)+"\n"
+            i += 1
         filestring += "%endblock ChemicalSpeciesLabel\n"
         return filestring
 
@@ -1093,8 +1085,7 @@ class POSCARFile(GeometryOutputFile):
         self.docstring = self.docstring.replace("\n"," ")
     def SpeciesOrder(self):
         """
-        Return a string with the species in the cell in the order they come in the
-        input CrystalStructure.sitedata.
+        Return a string with the species in the order they appear in POSCAR.
         """
         returnstring = ""
         for sp in self.species:
@@ -1399,6 +1390,7 @@ class BMDLFile(GeometryOutputFile):
         # To be put on the first line
         self.programdoc = ""
     def __str__(self):
+        lv = self.cell.latticevectors
         ed = ElementData()
         filestring = ""
         tmpstring = "BMDL      HP......=N"
@@ -1413,9 +1405,8 @@ class BMDLFile(GeometryOutputFile):
         filestring += "LAMDA....=    2.5000 AMAX....=    4.5000 BMAX....=    4.5000\n"
         # Get number of sites
         nosites = 0
-        for site in self.cell.sitedata:
-            for pos in site[2]:
-                nosites += 1
+        for a in self.cell.atomdata:
+            nosites += len(a)
         if self.latticenr == 0:
             tmpstring = "NQ3...=%3i LAT...= 0 IPRIM.= 0 NGHBP.=13 NQR2..= 0\n" % (nosites,self.latticenr)
         else:
@@ -1427,20 +1418,15 @@ class BMDLFile(GeometryOutputFile):
         tmpstring = ""
         if self.latticenr == 0:
             for i in range(3):
-                tmpstring += "BSX......=%10f BSY.....=%10f BSZ.....=%10f\n" % (self.cell.latticevectors[i][0],self.cell.latticevectors[i][1],self.cell.latticevectors[i][2])
+                tmpstring += "BSX......=%10f BSY.....=%10f BSZ.....=%10f\n" % (lv[i][0],lv[i][1],lv[i][2])
         else:
             tmpstring +=  "ALPHA....=%10f BETA....=%10f GAMMA...=%10f\n" % (self.alpha, self.beta, self.gamma)
         filestring += tmpstring
-        v = [0.0,0.0,0.0]
-        for site in self.cell.sitedata:
-            for pos in site[2]:
-                v = mvmult3(self.cell.latticevectors,pos)
-                tmpstring = "QX(IQ)...=%10f QY......=%10f QZ......=%10f" % (v[0],v[1],v[2])
-                tmpstring +=  "      "
-                for k in site[1]:
-                    tmpstring += k+"/"
-                tmpstring = tmpstring.rstrip("/")+" "+str(site[3])+"\n"
-                filestring += tmpstring
+        for a in self.cell.atomdata:
+            for b in a:
+                v = mvmult3(lv,b.position)
+                filestring += "QX(IQ)...=%10f QY......=%10f QZ......=%10f" % (v[0],v[1],v[2])
+                filestring += "      "+b.spcstring()+"\n"
         return filestring
 
 class KSTRFile(GeometryOutputFile):
@@ -1466,6 +1452,7 @@ class KSTRFile(GeometryOutputFile):
         # To be put on the first line
         self.programdoc = ""
     def __str__(self):
+        lv = self.cell.latticevectors
         ed = ElementData()
         filestring = ""
         tmpstring = "KSTR      HP......=N"
@@ -1478,23 +1465,23 @@ class KSTRFile(GeometryOutputFile):
         filestring += self.docstring.replace("\n"," ")+"\n"
         # NL = maximal l from element blocks
         maxl = 1
-        for site in self.cell.sitedata:
-            for i in site[1]:
-                if ed.elementblock[i] == "p":
-                    maxl = max(maxl,2)
-                elif ed.elementblock[i] == "d":
-                    maxl = max(maxl,3)
-                elif ed.elementblock[i] == "f":
-                    maxl = max(maxl,4)
+        for a in self.cell.atomdata:
+            for b in a:
+                for i in b.species:
+                    if ed.elementblock[i] == "p":
+                        maxl = max(maxl,2)
+                    elif ed.elementblock[i] == "d":
+                        maxl = max(maxl,3)
+                    elif ed.elementblock[i] == "f":
+                        maxl = max(maxl,4)
         tmpstring = "NL.....= %1i NLH...=11 NLW...= 9 NDER..= 6 ITRANS= 3 NPRN..= 0\n" % maxl
         filestring += tmpstring
         # Get number of sites
         nosites = 0
-        for site in self.cell.sitedata:
-            for pos in site[2]:
-                nosites += 1
+        for a in self.cell.atomdata:
+            nosites += len(a)
         # Setting the real space summation cutoff to 4.5*(wigner-seitz radius)
-        volume = abs(det3(self.cell.latticevectors))
+        volume = abs(det3(lv))
         wsr = (3*volume/(nosites * 4 * pi))**third
         tmpstring = "(K*W)^2..=  0.000000 DMAX....=%10f RWATS...=      0.10\n" % (wsr*4.5)
         filestring += tmpstring
@@ -1506,20 +1493,15 @@ class KSTRFile(GeometryOutputFile):
         tmpstring = ""
         if self.iprim == 0:
             for i in range(3):
-                tmpstring += "BSX......=%10f BSY.....=%10f BSZ.....=%10f\n" % (self.cell.latticevectors[i][0],self.cell.latticevectors[i][1],self.cell.latticevectors[i][2])
+                tmpstring += "BSX......=%10f BSY.....=%10f BSZ.....=%10f\n" % (lv[i][0],lv[i][1],lv[i][2])
         else:
             tmpstring +=  "ALPHA....=%10f BETA....=%10f GAMMA...=%10f\n" % (self.alpha, self.beta, self.gamma)
         filestring += tmpstring
-        v = [0.0,0.0,0.0]
-        for site in self.cell.sitedata:
-            for pos in site[2]:
-                v = mvmult3(self.cell.latticevectors,pos)
-                tmpstring = "QX(IQ)...=%10f QY......=%10f QZ......=%10f" % (v[0],v[1],v[2])
-                tmpstring +=  "      "
-                for k in site[1]:
-                    tmpstring += k+"/"
-                tmpstring = tmpstring.rstrip("/")+" "+str(site[3])+"\n"
-                filestring += tmpstring
+        for a in self.cell.atomdata:
+            for b in a:
+                v = mvmult3(lv,b.position)
+                filestring += "QX(IQ)...=%10f QY......=%10f QZ......=%10f" % (v[0],v[1],v[2])
+                filestring += "      "+b.spcstring()+"\n"
         for i in range(nosites):
             filestring += "a/w(IQ)..="
             for i in range(4):
