@@ -27,16 +27,6 @@
 #  Affiliation: COMP, Aaalto University School of
 #               Science and Technology, Department of
 #               Applied Physics, Espoo, Finland
-#
-# TODO:
-#   - Make a lot of things inherit from GeometryObject
-#   - More output formats (always)
-#   - Improve exception handling (probably also always...)
-#   - Make the getSuperCell method to also set proper symmetries
-#     of the new cell (probably requires using some more advanced
-#     symmetry library like computational crystallographics toolbox).
-#
-# KNOWN BUGS:
 #******************************************************************************************
 from __future__ import division
 import os
@@ -269,21 +259,21 @@ class SymmetryOperation(GeometryObject):
         GeometryObject.__init__(self)
         self.eqsite = eqsite
         if self.eqsite != None:
-            self.rotation_matrix = self.rotmat()
+            self.rotation = self.rotmat()
             self.translation = self.transvec()
         else:
-            self.rotation_matrix = None
+            self.rotation = None
             self.translation = None
     # This way of printing was useful for outputting to CASTEP.
     def __str__(self):
-        return str(self.rotation_matrix)+str(self.translation)+"\n"
+        return str(self.rotation)+str(self.translation)+"\n"
     # Two symmetry operations are equal if rotation matrices and translation vector
     # differ by at most compeps
     def __eq__(self, other):
         eq = True
         for i in range(3):
             for j in range(3):
-                eq = eq and abs(self.rotation_matrix[i][j] - other.rotation_matrix[i][j]) < self.compeps
+                eq = eq and abs(self.rotation[i][j] - other.rotation[i][j]) < self.compeps
             eq = eq and self.translation == other.translation
         return eq
     # comparison between operations made by comparing lengths of translation vectors
@@ -314,12 +304,12 @@ class SymmetryOperation(GeometryObject):
         return LatticeVector(vec)
     # True if the operation is diagonal
     def diagonal(self):
-        if abs(self.rotation_matrix[0][1]) < self.compeps and \
-           abs(self.rotation_matrix[0][2]) < self.compeps and \
-           abs(self.rotation_matrix[1][0]) < self.compeps and \
-           abs(self.rotation_matrix[1][2]) < self.compeps and \
-           abs(self.rotation_matrix[2][0]) < self.compeps and \
-           abs(self.rotation_matrix[2][1]) < self.compeps:
+        if abs(self.rotation[0][1]) < self.compeps and \
+           abs(self.rotation[0][2]) < self.compeps and \
+           abs(self.rotation[1][0]) < self.compeps and \
+           abs(self.rotation[1][2]) < self.compeps and \
+           abs(self.rotation[2][0]) < self.compeps and \
+           abs(self.rotation[2][1]) < self.compeps:
             return True
         else:
             return False
@@ -374,7 +364,6 @@ class CellData(GeometryObject):
         self.spacegroupsetting = ""
         self.lattrans = LatticeMatrix([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
         self.transvecs = [LatticeVector([zero, zero, zero])]
-        self.eqsites = []
         self.symops = []
         self.ineqsites = []
         self.occupations = []
@@ -559,7 +548,7 @@ class CellData(GeometryObject):
                 pass
         if self.a!=0 and self.b!=0 and self.c!=0 and self.alpha!=0 and self.beta!=0 and self.gamma!=0:
             if self.spacegroupnr == -1:
-                if len(self.eqsites) >= 1:
+                if len(self.symops) >= 1:
                     if self.primcell == True:
                         if self.spacegroupsetting == 'P':
                             self.spacegroupnr = 0
@@ -686,6 +675,48 @@ class CellData(GeometryObject):
         # Find inverse lattice transformation matrix
         invlattrans = LatticeMatrix(minv3(self.lattrans))
         
+        #################################
+        #       SYMMETRY OPERATIONS     #
+        #################################
+        # Get equivalent sites from tables if not present
+        if self.symops == []:
+            for op in SpaceGroupData().EquivalentPositions[self.spacegroupnr]:
+                self.symops.append(SymmetryOperation(op))
+
+        # sort the symmetry operations
+        # 1. by length of translation vectors
+        self.symops.sort()
+        # 2. by determinant (1 first then -1)
+        self.symops.sort(key = lambda op : det3(op.rotation), reverse=True)
+        # 3. put identity first
+        identity = SymmetryOperation(['x','y','z'])
+        self.symops.remove(identity)
+        self.symops.insert(0,identity)
+        
+        # If we reduce the cell, remove the symmetry operations that are the
+        # same up to an induced lattice translation
+        if self.primcell:
+            if len(self.transvecs) > 1:
+                removelist = []
+                for j in range(len(self.symops)):
+                    for i in range(j+1,len(self.symops)):
+                        for vec in self.transvecs:
+                            if self.symops[i].translation+vec == self.symops[j].translation:
+                                if self.symops[i].rotation == self.symops[j].rotation:
+                                    removelist.append(i)
+                removelist = list(set(removelist))
+                removelist.sort(reverse=True)
+                for i in removelist:
+                    self.symops.pop(i)
+
+        # To cartesian representation
+        lv = self.conventional_latticevectors()
+        for op in self.symops:
+            op.rotation = lv.transform(op.rotation)
+            op.rotation = op.rotation.transform(minv3(lv))
+            # transform translations
+            op.translation = op.translation.transform(minv3(self.lattrans))
+                                
         #########################
         #    CELL GENERATION    # 
         #########################
@@ -731,15 +762,11 @@ class CellData(GeometryObject):
                 self.ineqsites.pop(i)
                 self.occupations.pop(i)
 
-        # Get equivalent sites from tables if not present
-        if self.eqsites == []:
-            self.eqsites = SpaceGroupData().EquivalentPositions[self.spacegroupnr]
-
         # Work out all sites in the cell for atomdata
         for a in self.atomdata:
-            for eqsite in self.eqsites:
+            for op in self.symops:
                 # position expression string
-                posexpr = [s for s in eqsite]
+                posexpr = [s for s in op.eqsite]
                 for k in range(3):
                     # position expression string, replacing x,y,z with numbers
                     posexpr[k] = posexpr[k].replace('x',str(a[0].position[0]))
@@ -760,49 +787,8 @@ class CellData(GeometryObject):
                     a.append(b)
         for a in self.atomdata:
             for b in a:
-                b.position = b.position.transform(invlattrans)
+                b.position = LatticeVector(mvmult3(invlattrans,b.position))
                     
-        #################################
-        #       SYMMETRY OPERATIONS     #
-        #################################
-        for eqsite in self.eqsites:
-            self.symops.append(SymmetryOperation(eqsite=eqsite))
-        # sort the symmetry operations
-        # 1. by length of translation vectors
-        self.symops.sort()
-        # 2. by determinant (1 first then -1)
-        self.symops.sort(key = lambda op : det3(op.rotation_matrix), reverse=True)
-        # 3. put identity first
-        identity = SymmetryOperation(['x','y','z'])
-        self.symops.remove(identity)
-        self.symops.insert(0,identity)
-        
-        # If we reduce the cell, remove the symmetry operations that are the
-        # same up to an induced lattice translation
-        if self.primcell:
-            if len(self.transvecs) > 1:
-                removelist = []
-                for j in range(len(self.symops)):
-                    for i in range(j+1,len(self.symops)):
-                        for vec in self.transvecs:
-                            if self.symops[i].translation+vec == self.symops[j].translation:
-                                if self.symops[i].rotation_matrix == self.symops[j].rotation_matrix:
-                                    removelist.append(i)
-                removelist = list(set(removelist))
-                removelist.sort(reverse=True)
-                for i in removelist:
-                    self.symops.pop(i)
-
-        # To cartesian representation
-        lv = self.conventional_latticevectors()
-        for op in self.symops:
-            # Rotations relate to conventional cell
-            # axes, we need them w.r.t. cartesian axes
-            op.rotation_matrix = lv.transform(op.rotation_matrix)
-            op.rotation_matrix = op.rotation_matrix.transform(minv3(lv))
-            # transform translations
-            op.translation = op.translation.transform(minv3(self.lattrans))
-                                
         ######################
         #    MISCELLANEOUS   #
         ######################
@@ -905,7 +891,7 @@ class CellData(GeometryObject):
         for vec in newtranslations[1:]:
             for op in self.symops:
                 newops.append(SymmetryOperation())
-                newops[i].rotation_matrix = op.rotation_matrix
+                newops[i].rotation = op.rotation
                 newops[i].translation = vec + op.translation
                 i += 1 
         for op in newops:
@@ -926,7 +912,7 @@ class CellData(GeometryObject):
                 i = SymmetryOperation(["-x","-y","-z"])
                 j = 0
                 for op in self.symops:
-                    if op.rotation_matrix == e.rotation_matrix or op.rotation_matrix == i.rotation_matrix:
+                    if op.rotation == e.rotation or op.rotation == i.rotation:
                         pass
                     else:
                         removelist.append(j)
@@ -940,7 +926,7 @@ class CellData(GeometryObject):
                 i = SymmetryOperation(["-x","-y","-z"])
                 j = 0
                 for op in self.symops:
-                    if op.rotation_matrix == e.rotation_matrix or op.rotation_matrix == i.rotation_matrix:
+                    if op.rotation == e.rotation or op.rotation == i.rotation:
                         pass
                     else:
                         removelist.append(j)
@@ -953,7 +939,7 @@ class CellData(GeometryObject):
                     pass
                 else:
                     for vec in lv:
-                        t = Vector(mvmult3(op.rotation_matrix,vec))
+                        t = Vector(mvmult3(op.rotation,vec))
                         r = Vector([-u for u in t])
                         # Symmetry operation OK if it maps a lattice vector into one of the other lattice vectors
                         equivalent = t == lv[0] or t == lv[1] or t == lv[2] or \
@@ -1040,18 +1026,19 @@ class CellData(GeometryObject):
             eqsitedata = cifblock.GetLoop('_symmetry_equiv_pos_as_xyz')
             try:
                 eqsitestrs = eqsitedata.get('_symmetry_equiv_pos_as_xyz')
-                # funny exception which will occur if there is only one position and there is still a loop
+                # funny exception which will occur for the P1 space group
                 if type(eqsitestrs) == StringType:
                     eqsitestrs = [eqsitestrs]
-                self.eqsites = []
+                self.symops = []
                 for i in range(len(eqsitestrs)):
-                    self.eqsites.append(eqsitestrs[i].split(','))
-                    for j in range(len(self.eqsites[i])):
-                        self.eqsites[i][j] = self.eqsites[i][j].strip().lower()
+                    tmp = eqsitestrs[i].split(',')
+                    for j in range(len(tmp)):
+                        tmp[j] = tmp[j].strip().lower()
+                    self.symops.append(SymmetryOperation(tmp))
             except KeyError:
-                self.eqsites = []
+                self.symops = []
         except KeyError:
-            self.eqsites = []
+            self.symops = []
         # Get cell
         try:
             self.a      = float(removeerror(cifblock['_cell_length_a']))

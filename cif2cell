@@ -406,7 +406,7 @@ if verbose or not options.program and not options.quiet:
             tmpstring = ""
             for j in range(3):
                 for k in range(3):
-                    tmpstring += "%19.14f "%op.rotation_matrix[j][k]
+                    tmpstring += "%19.14f "%op.rotation[j][k]
                 tmpstring += "%19.14f \n"%op.translation[j]
             tmpstring += "%19.14f %19.14f %19.14f %19.14f "%(0,0,0,1)
             print tmpstring
@@ -474,7 +474,7 @@ if makesupercell:
                 tmpstring = ""
                 for j in range(3):
                     for k in range(3):
-                        tmpstring += "%19.14f "%op.rotation_matrix[j][k]
+                        tmpstring += "%19.14f "%op.rotation[j][k]
                     tmpstring += "%19.14f \n"%op.translation[j]
                 tmpstring += "%19.14f %19.14f %19.14f %19.14f "%(0,0,0,1)
                 print tmpstring
