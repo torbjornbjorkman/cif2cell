@@ -488,7 +488,6 @@ if makesupercell:
 # if the Python version supports this form of the max function and there is
 # nothing wrong with the site data.
 try:
-    cell.sitedata.sort(key = lambda site: ed.elementnr[max(site[1], key = site[1].get)], reverse=True)
     cell.atomdata.sort(key = lambda a: ed.elementnr[max(a[0].species, key = a[0].species.get)], reverse=True)
 except:
     pass
