@@ -213,10 +213,17 @@ class AtomSite(GeometryObject):
     """
     Class for describing an atomic site.
 
+    Contains data:
     position  : a vector that gives the position
     species   : a dictionary with element-occupancy pairs (e.g. {Fe : 0.2, Co : 0.8})
     label     : any label
     index     : any integer
+
+    Functions:
+        __eq__    : compare equality
+        __str__   : one line with species and position info
+        spcstring : species string ('Mn', 'La/Sr' ...)
+        alloy     : true if there are more than one species occupying the site
     """
     def __init__(self,position=None,species=None,label="",index=None):
         GeometryObject.__init__(self)
@@ -232,13 +239,20 @@ class AtomSite(GeometryObject):
         self.index = index
     def __eq__(self,other):
         return self.position == other.position and self.species == other.species
-    # print site data in some informative way
-    def __str__(self):
-        # Element symbol
+    # Species string
+    def spcstring(self):
         tmp = ""
         for k in self.species:
             tmp += k+"/"
-        tmp = tmp.rstrip("/").ljust(8)
+        tmp = tmp.rstrip("/")
+        return tmp
+    # Is there more than one species on this site?
+    def alloy(self):
+        return len(self.species) > 1
+    # print site data in some informative way
+    def __str__(self):
+        # Element symbol
+        tmp = self.spcstring().ljust(8)
         # Position
         tmp += " %19.15f %19.15f %19.15f   "%(self.position[0],self.position[1],self.position[2])
         # occupancy
