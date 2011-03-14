@@ -1030,49 +1030,37 @@ class ABINITFile(GeometryOutputFile):
         filestring += "acell   3*"+str(a)+"\n\n"
         filestring += "rprim   "
         for vec in lattice:
-            for coord in vec:
-                filestring += "%19.15f "%coord
-            filestring += "\n        "
+            filestring += str(vec)+"\n        "
         filestring += "\n"
         # The atom position info
         alloy = False
         spcs = ""
-        typatstring = "typat   "
+        typatstring = "typat    "
         natom = 0
         ntypat = 0
-        znuclstring = "znucl   "
+        znuclstring = "znucl    "
         alloystring = ""
         xredstring = "xred   "
-        for site in self.cell.sitedata:
-            spcstring = ""
-            for k in site[1]:
-                spcstring += k+"/"
-            spcstring = spcstring.rstrip("/")
-            if spcs == spcstring:
-                natom += len(site[2])
-            else:
-                natom += len(site[2])
-                ntypat += 1
-                # Check for alloy
-                if len(site[1]) > 1:
-                    alloy = True
-                    znuclstring += "?? "
-                    alloystring += spcstring+" "
-                else:
-                    for k in site[1]:
-                        znuclstring += str(ed.elementnr[k])+" "
-            for pos in site[2]:
+        for a in self.cell.atomdata:
+            for b in a:
+                natom += 1
+                if spcs != b.spcstring():
+                    ntypat += 1
+                    if b.alloy():
+                        znuclstring += "?? "
+                        alloystring += b.spcstring()+" "
+                        alloy = True
+                    else:
+                        znuclstring += str(ed.elementnr[b.spcstring()])+" "
                 typatstring += str(ntypat)+" "
-                for coord in pos:
-                    xredstring += "%19.15f "%coord
-                xredstring += "\n       "
-            spcs = spcstring
-        filestring += "natom   "+str(natom)+"\n"
-        filestring += "ntypat  "+str(ntypat)+"\n"
+                xredstring += str(b.position)+"\n       "
+                spcs = b.spcstring()
+        filestring += "natom    "+str(natom)+"\n"
+        filestring += "ntypat   "+str(ntypat)+"\n"
         filestring += typatstring+"\n"
         filestring += znuclstring
         if alloy:
-            filestring += " # "+alloystring
+            filestring += "    # "+alloystring
         filestring += "\n"
         filestring += xredstring+"\n"
         return filestring
@@ -1094,6 +1082,13 @@ class POSCARFile(GeometryOutputFile):
         self.cell.newunit("angstrom")
         self.printcartvecs = False
         self.printcartpos = False
+        self.vasp5format = False
+        # set up species list
+        tmp = set([])
+        for a in self.cell.atomdata:
+            for b in a:
+                tmp.add(b.spcstring())
+        self.species = list(tmp)
         # make sure the docstring goes on one line
         self.docstring = self.docstring.replace("\n"," ")
     def SpeciesOrder(self):
@@ -1102,17 +1097,8 @@ class POSCARFile(GeometryOutputFile):
         input CrystalStructure.sitedata.
         """
         returnstring = ""
-        spcs = ""
-        for site in self.cell.sitedata:
-            spcstring = ""
-            for k in site[1]:
-                spcstring += k+"/"
-            spcstring = spcstring.rstrip("/")
-            if spcs == spcstring:
-                pass
-            else:
-                returnstring += " "+spcstring
-                spcs = spcstring
+        for sp in self.species:
+            returnstring += sp+" "
         return returnstring
     def __str__(self):
         # Assign some local variables
@@ -1132,33 +1118,12 @@ class POSCARFile(GeometryOutputFile):
                         [0, 1, 0],
                         [0, 0, 1]]
         # The first line with info from input docstring
-        firstline = self.docstring+" Species order: "
-        # loop over sites incrementing the position string, number of sites for each species and
-        # collect information about the species at the end of the firstline string
-        spcs = ""
-        nsitestring = ""
-        for site in self.cell.sitedata:
-            spcstring = ""
-            for k in site[1]:
-                spcstring += k+"/"
-            spcstring = spcstring.rstrip("/")
-            if spcs == spcstring:
-                nsites += len(site[2])
-            else:
-                if spcs != "":
-                    nsitestring += " "+str(nsites)
-                nsites = len(site[2])
-                firstline += " "+spcstring
-                spcs = spcstring
-            for pos in site[2]:
-                v = mvmult3(transmtx,pos)
-                for coord in v:
-                    positionunits += "%19.15f "%coord
-                positionunits += "\n"
-        nsitestring += " "+str(nsites)+"\n"
-        firstline += "\n"
-        # Write first string
-        filestring = firstline
+        filestring = self.docstring
+        if not self.vasp5format:
+            filestring += " Species order: "
+            for sp in self.species:
+                filestring += sp+" "
+        filestring += "\n"
         # Lattice parameter and vectors
         if self.printcartvecs:
             latticestring = " 1.0\n"
@@ -1169,10 +1134,24 @@ class POSCARFile(GeometryOutputFile):
             for i in range(3):
                 latticestring += "%19.15f %19.15f %19.15f\n" % (lattice[i][0], lattice[i][1], lattice[i][2])
         filestring += latticestring
-        # Species info
-        filestring += nsitestring
-        # All the sites
-        filestring += positionunits
+        # print species here if vasp 5 format
+        if self.vasp5format:
+            for sp in self.species:
+                filestring += (" "+sp).rjust(4)
+            filestring += "\n"
+        # positions and number of species
+        nspstring = ""
+        positionstring = ""
+        for sp in self.species:
+            nsp = 0
+            for a in self.cell.atomdata:
+                for b in a:
+                    if b.spcstring() == sp:
+                        nsp += 1
+                        positionstring += str(b.position)+"\n"
+            nspstring += (" "+str(nsp)).rjust(4)
+        filestring += nspstring+"\n"
+        filestring += positionstring
         return filestring
 
 ################################################################################################

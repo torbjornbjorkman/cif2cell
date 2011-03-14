@@ -89,6 +89,7 @@ progspec.add_option("--cpmd-cutoff",dest="cpmdcutoff",help="Set the cutoff writt
 # spacegroup
 progspec.add_option("--spacegroup-supercell",dest="spacegroupsupercell",help="Three integers separated with commas and enclosed in square brackets that specify the dimensions of a supercell to be output to the elk input generator 'spacegroup'.",metavar="[k,l,m]")
 # VASP
+progspec.add_option("--vasp-format",dest="vaspformat",help="Format of the generated POSCAR file, either 4 or 5. Default is 4.")
 progspec.add_option("--vasp-print-species",dest="vaspprintspcs",help="Print the atomic species to screen in the order they are put in the POSCAR file (useful for scripting).",action="store_true")
 progspec.add_option("--vasp-cartesian",dest="vaspcart",help="Write lattice vectors and positions to POSCAR file in cartesian coordinates and set length to 1.",action="store_true")
 progspec.add_option("--vasp-cartesian-lattice-vectors",dest="vaspcartvecs",help="Write lattice vectors to POSCAR file in cartesian coordinates and set the length scale to 1.",action="store_true")
@@ -782,6 +783,8 @@ if outputprogram == 'vasp':
     if options.vaspcart:
         poscar.printcartpos = True
         poscar.printcartvecs = True
+    if options.vaspformat == "5":
+        poscar.vasp5format = True
     f = open(outputfile, outmode)
     f.write(str(poscar))
     f.close()
