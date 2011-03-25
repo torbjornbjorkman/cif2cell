@@ -70,6 +70,7 @@ parser.add_option("--no-reduce",dest="noreduce",help="Do not reduce to the primi
 parser.add_option("--supercell",dest="supercellmap",help="Three integers separated with commas and enclosed in square brackets that specify the dimensions of a supercell to be constructed from the primitive cell. If combined with the --no-reduce option the supercell will instead be generated based on the conventional cell.",metavar="[k,l,m]")
 parser.add_option("--supercell-vacuum",dest="supercellvacuum",help="Three numbers >=0 separated with commas and enclosed in square brackets that specify a number of unit cell units of vacuum to be added along the first, second or third of the generated lattice vectors.",metavar="[k,l,m]")
 parser.add_option("--supercell-translation-vector",dest="supercelltransvec",help="Three numbers separated with commas and enclosed in square brackets that specify a final shift of all atomic positions in the final cell (in units of the lattice vectors of the new cell).",metavar="[k,l,m]")
+parser.add_option("--supercell-sort",dest="supercellsort",help="Sort the atom positions by some scheme. Currently available are:     1) By cartesian coordinate - example: xzy will sort first on x then on z then on y.     2) by lattice vector - example: 132 will sort first by lattice vector 1 then by lattice vector 3 and last by lattice vector 2.")
 # PROGRAM SPECIFIC OPTIONS
 progspec = OptionGroup(parser, "Program specific options")
 # emto
@@ -192,6 +193,11 @@ if options.supercellmap or options.supercellvacuum or options.supercelltransvec:
         supercelltransvec = eval(options.supercelltransvec)
     else:
         supercelltransvec = [0,0,0]
+    # 
+    if options.supercellsort:
+        supercellsort = options.supercellsort.lower()
+    else:
+        supercellsort = ""
 else:
     makesupercell = False
 
@@ -417,7 +423,7 @@ if verbose or not options.program and not options.quiet:
 # Generate supercell
 if makesupercell:
     try:
-        supercell = cd.getSuperCell(supercellmap,supercellvacuum,supercelltransvec)
+        supercell = cd.getSuperCell(supercellmap,supercellvacuum,supercelltransvec,sort=supercellsort)
     except CellError, e:
         sys.stderr.write("***Error: Supercell setup: "+e.value+"\n")
         sys.exit(2)

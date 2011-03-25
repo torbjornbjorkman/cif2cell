@@ -796,7 +796,7 @@ class CellData(GeometryObject):
         self.initialized = True
         return self
 
-    def getSuperCell(self, supercellmap, vacuum, transvec):
+    def getSuperCell(self, supercellmap, vacuum, transvec, sort=""):
         """
         Returns a supercell based on the input supercell map, vacuum layers and translation vector.
         The cell must have been initialized prior to calling getSuperCell.
@@ -976,7 +976,37 @@ class CellData(GeometryObject):
                 for k in range(3):
                     while abs(b.position[k]) >= 1:
                         b.position[k] = b.position[k] - copysign(1,b.position[k])
-        
+
+        # Sort the atomic positions in some way
+        if sort != "":
+            # remove previous ordering
+            tempdata = []
+            i = 0
+            for a in self.atomdata:
+                for b in a:
+                    tempdata.append([])
+                    tempdata[i].append(b)
+                    i += 1
+            self.atomdata = tempdata
+            # Identify and sort by z-layers
+            if sort == "zlayer":
+                pass
+            elif len(sort) == 3:
+                # check if the string contains only 'x', 'y' or 'z'
+                allbutxyz = string.printable.replace("x","").replace("y","").replace("z","")
+                # check if the string contains only '1', '2' or '3'
+                allbut123 = string.printable.replace("1","").replace("2","").replace("3","")
+                # dummy table to work in python < 2.6
+                table = string.maketrans("a","a")
+                if len(string.translate(sort,table,allbutxyz)) == 3:
+                    # Sort atoms by cartesian coordinate
+                    sortnum = string.translate(sort,string.maketrans("xyz","012"))
+                    for i in sortnum:
+                        self.atomdata.sort(key = lambda a: a[0].position.transform(self.latticevectors)[int(i)])
+                elif len(string.translate(sort,table,allbut123)) == 3:
+                    # sort atoms by lattice coordinates
+                    for i in sort:
+                        self.atomdata.sort(key = lambda a: a[0].position[int(i)-1])
         return self
 
     # Get lattice information from CIF block
