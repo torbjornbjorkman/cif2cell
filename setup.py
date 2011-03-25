@@ -16,9 +16,11 @@
 #
 from distutils.core import setup
 from glob import glob
+from subprocess import call
 
 # Get list of the cif example files
 ciffiles = glob('cifs/*.cif')
+docfiles = ['docs/cif2cell.pdf']
 
 setup(name='cif2cell',
       version='0.3.0',
@@ -31,6 +33,7 @@ setup(name='cif2cell',
       scripts=['cif2cell'],
       requires=['CifFile'],
       data_files=[('./', ['LICENSE']),
-                  ('lib/cif2cell/sample_cifs', ciffiles)],
+                  ('lib/cif2cell/sample_cifs', ciffiles),
+                  ('lib/docs',docfiles)],
       license='GNU General Public License version 3'
       )

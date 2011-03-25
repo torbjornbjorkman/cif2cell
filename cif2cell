@@ -247,15 +247,32 @@ else:
 if verbose or not options.program and not options.quiet:
     print string.upper(programname)+" "+version
     print datestring
+    # Print compound
+    compoundstring = "Output for "
     if ref.cpd == "" and ref.compound == "":
-        print "Output for unknown compound"
-    else:
-        print "Output for "+ref.cpd+" ("+ref.compound+")"
+        compoundstring += "unknown compound"
+    if ref.cpd != "":
+        compoundstring += ref.cpd
+    if ref.compound != "":
+        compoundstring += " ("+ref.compound+")"
+    print compoundstring
+    # Print database
     print ref.databasestring
     if cell.alloy and options.forcealloy and options.program:
         print "\nEnforcing generation of file(s) for "+outputprogram+" for an alloy."
     print "\n BIBLIOGRAPHIC INFORMATION"
-    print ref.referencestring()
+    refstrings = ref.referencestring().split()
+    tmpstring = ""
+    i = 0
+    while i < len(refstrings):
+        if len(tmpstring+refstrings[i]+" ") < 70:
+            tmpstring += refstrings[i]+" "
+            i += 1
+        else:
+            print tmpstring
+            tmpstring = ""
+    if tmpstring != "":
+        print tmpstring
     print "\n SYMMETRY INFORMATION"
     if cd.spacegroupnr >= 0:
         if 0 < cd.spacegroupnr <=230:
