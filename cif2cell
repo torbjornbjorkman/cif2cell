@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with cif2cell.  If not, see <http://www.gnu.org/licenses/>.
 #
-#**********************************************************************************
+#************************************************************************************
 #  Description: A command-line tool to generate the geometrical setup
 #               for various electronic structure codes from a CIF format file.
 #  Author: Torbjorn Bjorkman
@@ -135,6 +135,7 @@ else:
 # format string for outputting decimal numbers to screen
 decform = "%"+str(decpos)+"."+str(decpos-4)+"f"
 threedecs = " "+decform+" "+decform+" "+decform
+fourdecs = " "+decform+" "+decform+" "+decform+" "+decform
 # For printing time
 today = datetime.today()
 datestring = str(today.year)+"-"+str(today.month).rjust(2,'0')+"-"+str(today.day).rjust(2,'0')+' '+str(today.hour)+":"+str(today.minute).rjust(2,'0')
@@ -265,8 +266,31 @@ if verbose or not options.program and not options.quiet:
     # only print these if verbose
     if verbose:
         print "Symmetry equivalent sites:"
-        for i in range(len(cd.eqsites)):
-            print "%4i  %8s, %8s, %8s" % (i+1, cd.eqsites[i][0], cd.eqsites[i][1], cd.eqsites[i][2])
+        for i in range(len(cd.symops)):
+            print "%4i  %8s, %8s, %8s" % (i+1, cd.symops[i].eqsite[0], cd.symops[i].eqsite[1], cd.symops[i].eqsite[2])
+    if printsymops or verbose:
+        print "\nSymmetry operations : "
+        print "  3x3 rotation matrix +"
+        print "  3x1 translation vector"
+        i = 1
+        for op in cell.symops:
+            print "Operation "+str(i)
+            for v in op.rotation:
+                print threedecs%(v[0],v[1],v[2])
+            print threedecs%(op.translation[0],op.translation[1],op.translation[2])
+            i += 1
+    if printseitz:
+        print "\nSymmetry operations :"
+        print "  In Seitz matrix form"
+        i = 1
+        for op in cell.symops:
+            print "Operation "+str(i)
+            tmpstring = ""
+            for j in range(3):
+                tmpstring += fourdecs%(op.rotation[j][0],op.rotation[j][1],op.rotation[j][2],op.translation[j])+"\n"
+            tmpstring += fourdecs%(0,0,0,1)
+            print tmpstring
+            i += 1    
     print "\n INPUT CELL INFORMATION"
     print "Lattice parameters:"
     tmpstring = ""
@@ -388,30 +412,7 @@ if verbose or not options.program and not options.quiet:
             if cell.alloy:
                 tmpstring += " "+occstring.rjust(w3)
             print tmpstring
-    if printsymops:
-        print "\nSymmetry operations : "
-        print "  3x3 rotation matrix +"
-        print "  3x1 translation vector"
-        i = 1
-        for op in cell.symops:
-            print "Operation "+str(i)
-            print str(op).rstrip("\n")
-            i += 1
-    if printseitz:
-        print "\nSymmetry operations :"
-        print "  In Seitz matrix form"
-        i = 1
-        for op in cell.symops:
-            print "Operation "+str(i)
-            tmpstring = ""
-            for j in range(3):
-                for k in range(3):
-                    tmpstring += "%19.14f "%op.rotation[j][k]
-                tmpstring += "%19.14f \n"%op.translation[j]
-            tmpstring += "%19.14f %19.14f %19.14f %19.14f "%(0,0,0,1)
-            print tmpstring
-            i += 1
-    
+
 ##############################################
 # Generate supercell
 if makesupercell:
@@ -456,14 +457,16 @@ if makesupercell:
                 if cell.alloy:
                     tmpstring += " "+occstring.rjust(w3)
                 print tmpstring
-        if printsymops:
+        if printsymops or verbose:
             print "\nSymmetry operations : "
             print "  3x3 rotation matrix +"
             print "  3x1 translation vector"
             i = 1
             for op in cell.symops:
                 print "Operation "+str(i)
-                print str(op).rstrip("\n")
+                for v in op.rotation:
+                    print threedecs%(v[0],v[1],v[2])
+                print threedecs%(op.translation[0],op.translation[1],op.translation[2])
                 i += 1
         if printseitz:
             print "\nSymmetry operations :"
@@ -473,10 +476,8 @@ if makesupercell:
                 print "Operation "+str(i)
                 tmpstring = ""
                 for j in range(3):
-                    for k in range(3):
-                        tmpstring += "%19.14f "%op.rotation[j][k]
-                    tmpstring += "%19.14f \n"%op.translation[j]
-                tmpstring += "%19.14f %19.14f %19.14f %19.14f "%(0,0,0,1)
+                    tmpstring += fourdecs%(op.rotation[j][0],op.rotation[j][1],op.rotation[j][2],op.translation[j])+"\n"
+                tmpstring += fourdecs%(0,0,0,1)
                 print tmpstring
                 i += 1
                 
