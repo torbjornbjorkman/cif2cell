@@ -1142,6 +1142,7 @@ class POSCARFile(GeometryOutputFile):
                         positionstring += str(b.position)+"\n"
             nspstring += (" "+str(nsp)).rjust(4)
         filestring += nspstring+"\n"
+        filestring += positionunits
         filestring += positionstring
         return filestring
 

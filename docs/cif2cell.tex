@@ -4,6 +4,7 @@
 \usepackage{graphicx}
 \usepackage{amssymb}
 \usepackage{epstopdf}
+\usepackage{multirow}
 \DeclareGraphicsRule{.tif}{png}{.png}{`convert #1 `dirname #1`/`basename #1 .tif`.png}
 
 \newcommand{\ciftocell}{\texttt{cif2cell}}
@@ -38,6 +39,7 @@ python setup.py --help
 
 
 \section{Basic running}
+
 The program comes with a small set of sample CIF files which can be found either in the source distribution or in the directory \texttt{[prefix]/lib/cif2cell/sample\_cifs}, where \texttt{[prefix]} is the path where you installed \ciftocell. The examples below assume that you stand in a directory containing these sample files.
 
 \subsection{Help!}
@@ -45,7 +47,7 @@ The most immediate way to get help in \ciftocell{} is to simply type
 \begin{verbatim}
 cif2cell -h
 \end{verbatim}
-This will list all available input options along with a description of their use. 
+This will list all available input options along with a description.
 
 \subsection{The first run}
 There is only one required piece of input, and that is the CIF file itself which is given with the \texttt{-f} flag. Try this for the sample file with data for Si in the diamond structure
@@ -96,5 +98,35 @@ First there is some information about the program itself and a description of th
 Then follows the things we actually want -- the Bravais lattice vectors and all positions of the atoms.  In the case of Si in the diamond structure the result is probably familiar:  the standard fcc lattice vectors and two atoms in the basis, one at $(0,0,0)$ and another in $(\frac{1}{4},\frac{1}{4},\frac{1}{4})$. 
 
 By default, \ciftocell{} will reduce the cell to the primitive cell, anticipating that the user wants to calculate something as small as possible, but we can also get the conventional cell. The diamond structure is a cubic system, and the primitive cell has only two atoms. Now try to also give the program the option \texttt{--no-reduce}. You should now get 8 atoms and cubic lattice vectors. Note that the conventional and primitive cell are the same in many systems.\footnote{In all systems which has a space group (or Hermann-Mauguin) symbol that starts with ''P'', for ''primitive'', see the output above.}
+
+\subsection{Output to your electronic structure program}
+
+\begin{table}[htdp]
+\caption{Supported Electronic structure programs and the files output by \ciftocell.}
+\begin{center}
+\begin{tabular}{l|c|c}
+Code  & Alloy support & Output file(s)\\ \hline
+VASP & no  &POSCAR \\
+ABINIT & no & [compoundname].in\\
+Siesta & no & [compoundname].fdf\\
+CPMD & no & [compoundname].inp\\
+CASTEP & no & [compoundname].cell\\
+Crystal09 & no & [compoundname].d12\\
+RSPt & no & symt.inp\\
+Fleur & no & inp\_[compoundname]\\
+cellgen & no & cellgen.inp\\
+elk & no & GEOMETRY.OUT\\
+exciting & no & input.xml\\
+spacegroup & no & spacegroup.in\\
+\multirow{2}{*}{ncol} & no & [spacegroupname/compoundname].dat \\
+ &  &  for bstr and ncol. \\
+\multirow{3}{*}{emto} & & [spacegroupname/compoundname].dat \\ 
+ & yes & for kstr, bmdl, shape, kgrn and kfcd \\
+ &  & in separate directories.
+\end{tabular}
+\end{center}
+\label{default}
+\end{table}%
+
 
 \end{document}  

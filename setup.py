@@ -23,7 +23,7 @@ ciffiles = glob('cifs/*.cif')
 docfiles = ['docs/cif2cell.pdf']
 
 setup(name='cif2cell',
-      version='0.3.0',
+      version='0.3.1',
       description='Construct a unit cell from CIF data',
       long_description='A command-line tool to generate the geometrical setup for various electronic structure codes from a CIF format file.',
       author='Torbjorn Bjorkman',

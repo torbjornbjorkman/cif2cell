@@ -105,6 +105,7 @@ class Vector(list,GeometryObject):
     def __init__(self, vec):
         GeometryObject.__init__(self)
         list.__init__(self, vec)
+        self.improveprecision()
     def __eq__(self,other):
         for i in range(3):
             if abs(self[i]-other[i]) > self.compeps:
@@ -118,7 +119,7 @@ class Vector(list,GeometryObject):
         return sl < ol
     # Addition of two vectors
     def __add__(self, other):
-        t = LatticeVector([self[i]+other[i] for i in range(3)])
+        t = Vector([self[i]+other[i] for i in range(3)])
         return t
     def __str__(self):
         return "%19.15f %19.15f %19.15f"%(self[0],self[1],self[2])
@@ -129,20 +130,15 @@ class Vector(list,GeometryObject):
         return self
     # coordinate transformation
     def transform(self, matrix):
-        t = LatticeVector(mvmult3(matrix, self))
+        t = Vector(mvmult3(matrix, self))
         return t
-    # Change interval
-    def change_interval(self, interval):
-        self.interval = interval
-        t = LatticeVector([0,0,0])
-        t.interval = interval
-        self = self + t
     def improveprecision(self):
-        for p in self:
+        for i in range(3):
             for f in floatlist:
-                if abs(p-f) <= self.compeps:
+                if abs(self[i]-f) <= self.compeps:
                     # 0
-                    p = f
+                    self[i] = f
+                    break
 
 class LatticeVector(Vector):
     """
@@ -163,6 +159,12 @@ class LatticeVector(Vector):
         t = LatticeVector([self[i]+other[i] for i in range(3)])
         t.intocell()
         return t
+    # Change interval
+    def change_interval(self, interval):
+        self.interval = interval
+        t = LatticeVector([0,0,0])
+        t.interval = interval
+        self = self + t
     # coordinate transformation
     def transform(self, matrix):
         t = LatticeVector(mvmult3(matrix, self))
@@ -814,14 +816,16 @@ class CellData(GeometryObject):
         if len(supercellmap) != 3 or type(supercellmap[0]) != IntType or type(supercellmap[1]) != IntType \
                or type(supercellmap[2]) != IntType or supercellmap[0] <= 0 or supercellmap[1] <= 0 \
                or supercellmap[2] <= 0:
-            raise CellError("The supercell map must be an array of three positive integers.")
-        if len(supercellmap) != 3 or vacuum[0] < 0 or vacuum[1] < 0 or vacuum[2] < 0:
-            raise CellError("The vacuum padding must be an array of three integers >= 0.")
+            raise CellError("The supercell map must be an array of three positive integers\n"+\
+                            "or three arrays of three integers.")
+        if len(vacuum) != 3 or vacuum[0] < 0 or vacuum[1] < 0 or vacuum[2] < 0:
+            raise CellError("The vacuum padding must be an array of three numbers >= 0.")
         vectors = self.latticevectors
 
         # map matrix
         mapmatrix = LatticeMatrix([[supercellmap[0],0,0],[0,supercellmap[1],0],[0,0,supercellmap[2]]])
         invmapmatrix = LatticeMatrix(minv3(mapmatrix))
+        volratio = det3(mapmatrix)
         
         # previous length of lattice vectors
         oldlatlen = [vec.length() for vec in self.latticevectors]
@@ -990,7 +994,9 @@ class CellData(GeometryObject):
             self.atomdata = tempdata
             # Identify and sort by z-layers
             if sort == "zlayer":
-                pass
+                # sort atoms by z-coordinate
+                self.atomdata.sort(key = lambda a: a[0].position.transform(self.latticevectors)[2])
+                #
             elif len(sort) == 3:
                 # check if the string contains only 'x', 'y' or 'z'
                 allbutxyz = string.printable.replace("x","").replace("y","").replace("z","")
