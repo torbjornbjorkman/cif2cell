@@ -29,8 +29,10 @@
 #               Applied Physics, Espoo, Finland
 #******************************************************************************************
 import copy
+import os
 from elementdata import *
 from uctools import *
+from math import fsum
 
 ################################################################################################
 class GeometryOutputFile:
@@ -1139,12 +1141,172 @@ class POSCARFile(GeometryOutputFile):
                 for b in a:
                     if b.spcstring() == sp:
                         nsp += 1
-                        positionstring += str(b.position)+"\n"
+                        p = Vector(mvmult3(transmtx,b.position))
+                        positionstring += str(p)+"\n"
             nspstring += (" "+str(nsp)).rjust(4)
         filestring += nspstring+"\n"
         filestring += positionunits
         filestring += positionstring
         return filestring
+
+class POTCARFile():
+    """
+    Class for representing and outputting a POTCAR file for VASP.
+    """
+    def __init__(self, crystalstructure, directory=""):
+        self.cell = crystalstructure
+        if directory != "":
+            self.dir = directory
+        else:
+            try:
+                self.dir = os.environ['VASP_PSEUDOLIB']
+            except:
+                try:
+                    self.dir = os.environ['VASP_PAWLIB']
+                except:
+                    self.dir = ""
+        # check directory
+        if self.dir == "":
+            raise SetupError("No path to the VASP pseudopotential library specified.\n")
+        if not os.path.exists(self.dir):
+            raise SetupError("The specified path to the VASP pseudopotential library does not exist.\n"+self.dir)
+        # set up species list
+        tmp = set([])
+        for a in self.cell.atomdata:
+            for b in a:
+                tmp.add(b.spcstring())
+        self.species = list(tmp)
+    def __str__(self):
+        # Make good selection of potcars
+        prioritylist = ["_d", "_pv", "_sv", "", "_h", "_s"]
+        # get all files
+        potcarlist = []
+        for a in self.species:
+            for version in prioritylist:
+                potcarfile = self.dir+"/"+a+version+"/POTCAR"
+                if os.path.exists(potcarfile):
+                    potcarlist.append(potcarfile)
+                    break
+        # read potcar files and put in outstring
+        outstring = ""
+        for f in potcarlist:
+            potcar = open(f,"r")
+            outstring += potcar.read()
+            potcar.close()
+        return outstring
+
+class KPOINTSFile():
+    """
+    Class for representing and outputting a KPOINTS file for VASP.
+    """
+    def __init__(self, crystalstructure, docstring="",kresolution=0.2):
+        self.docstring = docstring
+        self.kresolution = kresolution
+        # set reciprocal lattice vectors in reciprocal angstroms
+        reclatvect = crystalstructure.reciprocal_latticevectors()
+        for j in range(3):
+            for i in range(3):
+                reclatvect[j][i] = reclatvect[j][i] / crystalstructure.a
+        # Lengths of reciprocal lattice vectors
+        reclatvectlen = [sqrt(fsum(map(lambda x: x**2, elem))) for elem in reclatvect]
+        self.kgrid = [max(1,int(round(elem/self.kresolution))) for elem in reclatvectlen]
+    def __str__(self):
+        tmp = self.docstring
+        tmp += " k-space resolution ~"+str(self.kresolution)+"/A\n"
+        tmp += " 0\n"
+        tmp += "Monkhorst-Pack\n"
+        tmp += str(self.kgrid[0])+" "+str(self.kgrid[1])+" "+str(self.kgrid[2])+"\n"
+        tmp += "0 0 0\n"
+        return tmp
+        
+class INCARFile():
+    """
+    Class for representing and outputting a INCAR file for VASP.
+    """
+    def __init__(self, crystalstructure, docstring="",potcardir=""):
+        self.cell = crystalstructure
+        self.docstring = "# "+docstring.lstrip("#").rstrip("\n")+"\n"
+        # we need the potcar directory
+        if potcardir != "":
+            self.potcardir = potcardir
+        else:
+            try:
+                self.potcardir = os.environ['VASP_PSEUDOLIB']
+            except:
+                try:
+                    self.potcardir = os.environ['VASP_PAWLIB']
+                except:
+                    self.potcardir = ""
+        # check directory
+        if self.potcardir == "":
+            raise SetupError("No path to the VASP pseudopotential library specified.\n")
+        if not os.path.exists(self.potcardir):
+            raise SetupError("The specified path to the VASP pseudopotential library does not exist.\n"+self.dir)
+        # set up species list
+        self.species = dict([])
+        for a in self.cell.atomdata:
+            for b in a:
+                spcstr = b.spcstring()
+                if spcstr in self.species:
+                    t = self.species[spcstr] + 1
+                    self.species[spcstr] = t
+                else:
+                    self.species[spcstr] = 1
+        # get potcar list
+        prioritylist = ["_d", "_pv", "_sv", "", "_h", "_s"]
+        potcarlist = []
+        for a in self.species:
+            for version in prioritylist:
+                potcarfile = self.potcardir+"/"+a+version+"/POTCAR"
+                if os.path.exists(potcarfile):
+                    potcarlist.append(potcarfile)
+                    break        
+        # get maximal encut from potcars
+        self.maxencut = 0.0
+        for f in potcarlist:
+            potcar = open(f,"r")
+            for line in potcar:
+                words = line.split()
+                if len(words) > 0:
+                    if words[0] == "ENMAX":
+                        self.maxencut = max(float(words[2].rstrip(";")), self.maxencut)
+                        break
+            potcar.close()
+        # ecut = max(encuts found in potcars)*encutfac
+        self.encutfac = 1.5
+        # do we suspect that this might be magnetic?
+        self.magnetic = False
+        self.magmomlist = []
+        suspiciouslist = set(["Cr", "Mn", "Fe", "Co", "Ni"])
+        initialmoments = {"Cr" : 3, "Mn" : 3, "Fe" : 3, "Co" : 3, "Ni" : 1}
+        for s in self.species:
+            if s in suspiciouslist:
+                self.magnetic = True
+                for i in range(self.species[s]):
+                    self.magmomlist.append(str(initialmoments[s]))
+            else:
+                for i in range(self.species[s]):
+                    self.magmomlist.append("0")
+    def __str__(self):
+        tmp = self.docstring
+        tmp += "ENCUT = "+str(self.maxencut*self.encutfac)+"\n"
+        ## tmp += "IBRION = 1\n"
+        ## tmp += "POTIM = 0.4\n"
+        ## tmp += "ISIF = 2\n"
+        ## tmp += "NSW = 30\n"
+        ## tmp += "NELMIN = 4\n"
+        tmp += "PREC = Accurate\n"
+        tmp += "LREAL = Auto\n"
+        tmp += "ISMEAR = 0\n"
+        tmp += "SIGMA = 0.1\n"
+        if self.magnetic:
+            tmp += "ISPIN = 2\n"
+            tmp += "MAGMOM = "
+            for species in self.magmomlist:
+                tmp += species+" "
+            tmp += "\n"
+        return tmp
+        
 
 ################################################################################################
 class KFCDFile(GeometryOutputFile):
