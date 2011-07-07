@@ -95,6 +95,28 @@ class GeometryObject:
     def __init__(self):
         self.compeps = 0.0002
 
+class Charge(float):
+    """
+    Class for representing the charge state/oxidation number of an atom (ion).
+    It is just an integer, except for a modified routine for turning into a string,
+    viz. a two plus ion gets the string representation '2+'
+    """
+    def __init__(self,i):
+        float.__init__(self)
+    def __str__(self):
+        if abs(self-int(self)) < 0.0001:
+            if int(self) == 0:
+                return '0'
+            elif self > 0:
+                return str(abs(int(self)))+'+'
+            elif self < 0:
+                return str(abs(int(self)))+'-'
+        else:
+            if self > 0:
+                return str(abs(self))+"+"
+            else:
+                return str(abs(self))+"-"
+
 class Vector(list,GeometryObject):
     """
     Floating point vector describing a lattice point. Assumed to have length three.
@@ -215,6 +237,7 @@ class AtomSite(GeometryObject):
     position  : a vector that gives the position
     species   : a dictionary with element-occupancy pairs (e.g. {Fe : 0.2, Co : 0.8})
     label     : any label
+    charge    : the charge state (oxidation number) of the species (e.g. '2-' for oxygen in most compounds)
     index     : any integer
 
     Functions:
@@ -223,7 +246,7 @@ class AtomSite(GeometryObject):
         spcstring : species string ('Mn', 'La/Sr' ...)
         alloy     : true if there are more than one species occupying the site
     """
-    def __init__(self,position=None,species=None,label="",index=None):
+    def __init__(self,position=None,species=None,label="",charge=0,index=None):
         GeometryObject.__init__(self)
         if position != None:
             self.position = LatticeVector(position)
@@ -234,6 +257,7 @@ class AtomSite(GeometryObject):
         else:
             self.species = {}
         self.label = label
+        self.charge = Charge(charge)
         self.index = index
     def __eq__(self,other):
         return self.position == other.position and self.species == other.species
@@ -736,6 +760,8 @@ class CellData(GeometryObject):
             # Add species and occupations to atomdata
             for k,v in self.occupations[i].iteritems():
                 self.atomdata[i][0].species[k] = v
+            # Add charge state
+            self.atomdata[i][0].charge = self.charges[i]
             # Determine if we have an alloy
             for element in self.occupations[i]:
                 v = self.occupations[i][element]
@@ -781,7 +807,7 @@ class CellData(GeometryObject):
                     posexpr[k] = posexpr[k].replace('y',str(a[0].position[1]))
                     posexpr[k] = posexpr[k].replace('z',str(a[0].position[2]))
                 position = LatticeVector([eval(pos) for pos in posexpr])
-                b = AtomSite(position=position,species=a[0].species)
+                b = AtomSite(position=position,species=a[0].species,charge=a[0].charge)
                 append = True
                 for site in a:
                     for vec in self.transvecs:
@@ -1114,20 +1140,49 @@ class CellData(GeometryObject):
         except KeyError:
             raise PositionError("Irreducible positions not found.")
         # Element names
-        elements = tmpdata.get('_atom_site_type_symbol')
-        if type(elements) == NoneType:
-            elements = tmpdata.get('_atom_site_label')
-            if type(elements) == NoneType:
+        elementsymbs = tmpdata.get('_atom_site_type_symbol')
+        if type(elementsymbs) == NoneType:
+            elementsymbs = tmpdata.get('_atom_site_label')
+            if type(elementsymbs) == NoneType:
                 # Fill up with question marks if not found
                 print "***Warning: Could not find element names."
-                elements = []
-                elements[:] = ["??" for site in sitexer]
-        # Remove junk from strings
-        for i in range(len(elements)):
-            elements[i] = elements[i].strip(string.punctuation).strip(string.digits).strip(string.punctuation)
+                elementsymbs = ["??" for site in sitexer]
+        # Find charge state
+        try:
+            # This is usually encoded in _atom_site_type_symbol, but we go by _atom_type_oxidation_number first.
+            tmpdata2 = cifblock.GetLoop('_atom_type_oxidation_number')
+            symbs = tmpdata2.get('_atom_type_symbol')
+            oxnums = tmpdata2.get('_atom_type_oxidation_number')
+            self.chargedict = dict([])
+            self.charges = []
+            for element in elementsymbs:
+                i = 0
+                for symb in symbs:
+                    if symb == element:
+                        self.chargedict[element] = Charge(oxnums[i])
+                        self.charges.append(Charge(oxnums[i]))
+                    i+=1
+        except:
+            # Try _atom_site_type_symbol
+            try:
+                oxnums = [elem.strip(string.letters) for elem in elementsymbs]
+                self.charges = []
+                for i in range(len(oxnums)):
+                    if oxnums[i].strip(string.digits) == '+':
+                        self.charges.append(Charge(float(oxnums[i].strip(string.punctuation))))
+                    elif oxnums[i].strip(string.digits) == '-':
+                        self.charges.append(Charge(-float(oxnums[i].strip(string.punctuation))))
+            except:
+                self.charges = [Charge(0) for element in elementsymbs]
+        # Remove stuff (usually charge state specification) from element symbol strings
+        elements = []
+        i = 0
+        for elem in elementsymbs:
+            elements.append(elem.strip(string.punctuation+string.digits))
             # Make it ?? if there was nothing left after removing junk
             if elements[i] == "":
                 elements[i] = "??"
+            i += 1
         # Make element name start with capital and then have lower case letters
         elements[:] = [element[0].upper()+element[1:].lower() for element in elements]
         for element in elements:

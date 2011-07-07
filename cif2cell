@@ -65,6 +65,7 @@ parser.add_option("--print-atomic-units",dest="printau",help="Output lattice par
 parser.add_option("--print-cartesian",dest="printcart",help="Atomic sites printed to screen in cartesian rather than lattice coordinates.",action="store_true")
 parser.add_option("--print-symmetry-operations",dest="printsymops",help="Print symmetry operations of the generated cell.",action="store_true")
 parser.add_option("--print-seitz-matrices",dest="printseitz",help="Print symmetry operations of the generated cell in Seitz matrix form.",action="store_true")
+parser.add_option("--print-charge-state","--print-oxidation-numbers",dest="printcharges",help="Print information about the oxidation state from the CIF file.",action="store_true")
 # CELL GENERATION OPTIONS
 #cellgenopts = OptionGroup(parser, "Cell generation options")
 parser.add_option("--no-reduce",dest="noreduce",help="Do not reduce to the primitive cell.",action="store_true")
@@ -154,6 +155,11 @@ if options.printseitz:
 else:
     printseitz = False
 
+if options.printcharges:
+    printcharges = True
+else:
+    printcharges = False
+
 # complete setup options
 if options.setupall:
     setupall = True
@@ -176,10 +182,11 @@ if options.file:
     else:
         cif_grammar = '1.1'
     # Skip validation for now... it causes too much trouble.
-#    cdic = CifFile.CifDic("cif_core.dic",grammar='1.1')     
-#    val_results = CifFile.validate(cif_file,dic=cdic)
-#    print validate_report(val_results)
-#    val_report = CifFile.ValidationResult(val_results)
+    ## cdic = CifFile.CifDic("cif_core.dic",grammar='1.1')     
+    ## val_results = CifFile.validate(cif_file,dic=cdic)
+    ## print validate_report(val_results)
+    ## val_report = CifFile.ValidationResult(val_results)
+    cf = CifFile.CifFile(cif_file,grammar=cif_grammar)
     try:
         cf = CifFile.CifFile(cif_file,grammar=cif_grammar)
     except IOError:
@@ -355,28 +362,44 @@ if verbose or not options.program and not options.quiet:
     # w1 = width of the atomic species column
     # w2 = width of a decimal column
     # w3 = width of the occupancy column
+    # w4 = width of the charge state column
     if cell.alloy:
         w1 = 0
         w3 = 0
+        w4 = 0
         # Find atom and occupation column widths
         for a in cell.atomdata:
             for b in a:
                 tmpstring1 = ""
                 tmpstring2 = ""
+                tmpstring3 = ""
                 for k,v in b.species.iteritems():
                     tmpstring1 += k+"/"
                     tmpstring2 += str(v).rstrip("0.")+"/"
+                    # charge output
+                    for k2,v2 in cell.chargedict.iteritems():
+                        if k2.strip(string.punctuation+string.digits) == k:
+                            tmpstring3 += str(v2)+"/"
                 tmpstring1 = tmpstring1.rstrip("/")
                 tmpstring2 = tmpstring2.rstrip("/")
+                tmpstring3 = tmpstring3.rstrip("/")
                 w1 = max(w1,len(tmpstring1))
                 w3 = max(w3,len(tmpstring2))
+                w4 = max(w4,len(tmpstring3))
         # small aesthetic adjustment 
         w1 = w1 + 1
         w3 = w3 + 2
+        w4 = max(w4 + 2, 8)
     else:
         w1 = 5
         w2 = decpos
         w3 = 0
+        # width of charge column
+        if printcharges:
+            w4 = 7
+        else:
+            w4 = 0
+    # Now for the output...
     tmpstring = "Representative sites :"
     print tmpstring
     siteheader = "Atom".ljust(w1)+" "
@@ -400,20 +423,30 @@ if verbose or not options.program and not options.quiet:
             siteheader += "occupancies".rjust(w3)
         else:
             siteheader += "occ.".rjust(w3)
+    if printcharges:
+        siteheader += " "+"charge".rjust(w4)
     print siteheader
     # Representative sites
     for i in range(len(cell.ineqsites)):
         tmpstring = ""
         occstring = ""
+        chargestring = ""
         for k,v in cell.occupations[i].iteritems():
             tmpstring += k+"/"
             occstring += str(v)+"/"
+            # charge output
+            for k2,v2 in cell.chargedict.iteritems():
+                if k2.strip(string.punctuation+string.digits) == k:
+                    chargestring += str(v2)+"/"
         tmpstring = tmpstring.rstrip("/")
         occstring = occstring.rstrip("/")
+        chargestring = chargestring.rstrip("/")
         v = [t for t in cell.ineqsites[i]]
         tmpstring = tmpstring.ljust(w1) + threedecs % (v[0],v[1],v[2])
         if cell.alloy:
             tmpstring += " "+occstring.rjust(w3)
+        if printcharges:
+            tmpstring += " "+chargestring.rjust(w4)
         print tmpstring
     print "\n OUTPUT CELL INFORMATION"
     tmpstring = "Bravais lattice vectors :"
@@ -439,15 +472,23 @@ if verbose or not options.program and not options.quiet:
         for b in a:
             spcsstring = ""
             occstring = ""
+            chargestring = ""
             for k,v in b.species.iteritems():
                 spcsstring += k+"/"
                 occstring += str(v).rstrip("0.")+"/"
+                # charge output
+                for k2,v2 in cell.chargedict.iteritems():
+                    if k2.strip(string.punctuation+string.digits) == k:
+                        chargestring += str(v2)+"/"
             spcsstring = spcsstring.rstrip("/")
             occstring = occstring.rstrip("/")
+            chargestring = chargestring.rstrip("/")
             v = mvmult3(transmtx,b.position)
             tmpstring = spcsstring.ljust(w1)+threedecs%(v[0],v[1],v[2])
             if cell.alloy:
                 tmpstring += " "+occstring.rjust(w3)
+            if printcharges:
+                tmpstring += " "+chargestring.rjust(w4)
             print tmpstring
 
 ##############################################
