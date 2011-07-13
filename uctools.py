@@ -133,7 +133,6 @@ class Vector(list,GeometryObject):
     def __init__(self, vec):
         GeometryObject.__init__(self)
         list.__init__(self, vec)
-        self.improveprecision()
     def __eq__(self,other):
         for i in range(3):
             if abs(self[i]-other[i]) > self.compeps:
@@ -156,6 +155,12 @@ class Vector(list,GeometryObject):
         for i in range(3):
             self[i] *= a
         return self
+    # dot product
+    def dot(self,a):
+        t = 0.0
+        for i in range(3):
+            t += self[i]*a[i]
+        return t
     # coordinate transformation
     def transform(self, matrix):
         t = Vector(mvmult3(matrix, self))
@@ -1532,12 +1537,13 @@ def minv3(m):
 
 # matrix-vector multiplication
 def mvmult3(mat,vec):
-    w = []
+    w = [0.,0.,0.]
+    t = 0
     for i in range(3):
-        t = 0
+        r = mat[i]
         for j in range(3):
-            t += mat[j][i]*vec[j]
-        w.append(t)
+            t += r[j]*vec[j]
+        w[i],t = t,0
     return w
 
 # matrix-matrix multiplication
