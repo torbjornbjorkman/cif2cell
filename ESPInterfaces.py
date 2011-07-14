@@ -844,19 +844,17 @@ class CASTEPFile(GeometryOutputFile):
         filestring += "\n"
         filestring += "%BLOCK SPECIES_POT\n"
         filestring += "%ENDBLOCK SPECIES_POT\n"
-        # Put the symmetry operations
+        # Put in the symmetry operations
         filestring += "\n%BLOCK SYMMETRY_OPS\n"
         latvect = self.cell.conventional_latticevectors()
-        # make sure that identity comes first
-        identity = SymmetryOperation(["x","y","z"])
-        if self.cell.symops[0] != identity:
-            symops = copy.deepcopy(self.cell.symops)
-            symops.remove(identity)
-            symops.insert(0,identity)
-        else:
-            symops = self.cell.symops
+        # make list and make sure that identity comes first
+        symoplist = sorted(list(cell.symops))
+        symoplist.sort(key = lambda op: det3(op.rotation), reverse=True)
+        identity = SymmetryOperation(['x','y','z'])
+        symoplist.remove(identity)
+        symoplist.insert(identity,0)
         k = 1
-        for op in symops:
+        for op in symoplist:
             filestring += "# Symm. op. %i\n"%k
             filestring += str(op)
             k += 1

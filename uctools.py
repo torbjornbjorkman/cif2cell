@@ -184,6 +184,8 @@ class LatticeVector(Vector):
         self.interval = [0.0, 1.0]
         self.intocell()
         self.improveprecision()
+    def __hash__(self):
+        return hash(1.1*self[0]+1.2*self[1]+1.3*self[2])
     # Addition of two vectors, putting the result back
     # into the cell if necessary
     def __add__(self, other):
@@ -219,6 +221,12 @@ class LatticeMatrix(GeometryObject, list):
         for vec in mat:
             t.append(Vector(vec))
         list.__init__(self, t)
+    # no idea whether this is a clever choice of hash function...
+    def __hash__(self):
+        t = 0.1*self[0][0] + 0.2*self[0][1] + 0.3*self[0][2] +\
+            0.4*self[0][0] + 0.5*self[0][1] + 0.6*self[0][2] +\
+            0.7*self[0][0] + 0.8*self[0][1] + 0.9*self[0][2]
+        return hash(t)
     def __str__(self):
         matstr = ""
         for l in self:
@@ -301,6 +309,12 @@ class SymmetryOperation(GeometryObject):
         else:
             self.rotation = None
             self.translation = None
+    def __hash__(self):
+        t = 0.1*self.rotation[0][0] + 0.2*self.rotation[0][1] + 0.3*self.rotation[0][2] +\
+            0.4*self.rotation[0][0] + 0.5*self.rotation[0][1] + 0.6*self.rotation[0][2] +\
+            0.7*self.rotation[0][0] + 0.8*self.rotation[0][1] + 0.9*self.rotation[0][2] +\
+            1.1*self.translation[0] + 1.2*self.translation[1] + 1.3*self.translation[2]
+        return hash(t)
     # This way of printing was useful for outputting to CASTEP.
     def __str__(self):
         return str(self.rotation)+str(self.translation)+"\n"
@@ -401,7 +415,7 @@ class CellData(GeometryObject):
         self.spacegroupsetting = ""
         self.lattrans = LatticeMatrix([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
         self.transvecs = [LatticeVector([zero, zero, zero])]
-        self.symops = []
+        self.symops = set([])
         self.ineqsites = []
         self.occupations = []
         self.atomdata = []
@@ -716,35 +730,24 @@ class CellData(GeometryObject):
         #       SYMMETRY OPERATIONS     #
         #################################
         # Get equivalent sites from tables if not present
-        if self.symops == []:
+        if len(self.symops) == 0:
             for op in SpaceGroupData().EquivalentPositions[self.spacegroupnr]:
-                self.symops.append(SymmetryOperation(op))
+                self.symops.add(SymmetryOperation(op))
 
-        # sort the symmetry operations
-        # 1. by length of translation vectors
-        self.symops.sort()
-        # 2. by determinant (1 first then -1)
-        self.symops.sort(key = lambda op : det3(op.rotation), reverse=True)
-        # 3. put identity first
-        identity = SymmetryOperation(['x','y','z'])
-        self.symops.remove(identity)
-        self.symops.insert(0,identity)
-        
         # If we reduce the cell, remove the symmetry operations that are the
         # same up to an induced lattice translation
         if self.primcell:
             if len(self.transvecs) > 1:
-                removelist = []
-                for j in range(len(self.symops)):
-                    for i in range(j+1,len(self.symops)):
+                redundant = set([])
+                for op1 in self.symops:
+                    for op2 in self.symops:
                         for vec in self.transvecs:
-                            if self.symops[i].translation+vec == self.symops[j].translation:
-                                if self.symops[i].rotation == self.symops[j].rotation:
-                                    removelist.append(i)
-                removelist = list(set(removelist))
-                removelist.sort(reverse=True)
-                for i in removelist:
-                    self.symops.pop(i)
+                            if op1.translation+vec == op2.translation:
+                                if op1.rotation == op2.rotation:
+                                    if op1 < op2:
+                                        redundant.add(op2)
+                
+                self.symops -= redundant
 
         # To cartesian representation
         lv = self.conventional_latticevectors()
@@ -936,11 +939,11 @@ class CellData(GeometryObject):
                 newops[i].translation = vec + op.translation
                 i += 1 
         for op in newops:
-            self.symops.append(op)
+            self.symops.add(op)
 
         # Weed out rotations that are broken by supercell map
         lv = self.latticevectors
-        removelist = []
+        removeset = set([])
         # Ugly set of if's and special cases
         # THIS WILL NOT WORK WITH GENERAL SUPERCELL MAP MATRIX 
         if self.crystal_system()=="hexagonal" or (self.crystal_system()=="trigonal" and not self.primcell):
@@ -951,29 +954,26 @@ class CellData(GeometryObject):
                 # if a and b are different, all rotation symmetries except inversion are broken
                 e = SymmetryOperation(["x","y","z"])
                 i = SymmetryOperation(["-x","-y","-z"])
-                j = 0
                 for op in self.symops:
                     if op.rotation == e.rotation or op.rotation == i.rotation:
                         pass
                     else:
-                        removelist.append(j)
-                    j += 1
+                        removeset.add(op)
         elif self.crystal_system()=="trigonal" and self.primcell:
             # if any latticevector has different length, all symmetries except inversion are broken
-            if lv[0].length() == lv[1].length() == lv[2].length():
+            if abs(lv[0].length()-lv[1].length()) < lv.compeps and \
+               abs(lv[1].length()-lv[2].length()) < lv.compeps and \
+               abs(lv[0].length()-lv[2].length()) < lv.compeps:
                 pass
             else:
                 e = SymmetryOperation(["x","y","z"])
                 i = SymmetryOperation(["-x","-y","-z"])
-                j = 0
                 for op in self.symops:
                     if op.rotation == e.rotation or op.rotation == i.rotation:
                         pass
                     else:
-                        removelist.append(j)
-                    j += 1
+                        removeset.add(op)
         else:
-            i = 0
             for op in self.symops:
                 # diagonal operations always ok (since we only have diagonal map for now)
                 if op.diagonal():
@@ -986,21 +986,16 @@ class CellData(GeometryObject):
                         equivalent = t == lv[0] or t == lv[1] or t == lv[2] or \
                                      r == lv[0] or r == lv[1] or r == lv[2]
                         if not equivalent:
-                            removelist.append(i)
-                i += 1
+                            removeset.add(op)
         # Weed out translations broken by the vacuum
-        j = 0
         for op in self.symops:
             # check if vacuum padding destroys this translation
             t = op.translation
             for i in range(3):
                 if abs(t[i]) > self.compeps and abs(vacuum[i]) > self.compeps:
-                    removelist.append(j)
-            j += 1
+                    removeset.add(op)
         # Remove broken symmetries
-        removelist = sorted(list(set(removelist)), reverse=True)
-        for i in removelist:
-            self.symops.pop(i)
+        self.symops -= removeset
 
         # Move all atoms by transvec 
         if reduce(lambda x,y: x+y, transvec) != 0:
@@ -1102,16 +1097,16 @@ class CellData(GeometryObject):
                 # funny exception which will occur for the P1 space group
                 if type(eqsitestrs) == StringType:
                     eqsitestrs = [eqsitestrs]
-                self.symops = []
+                self.symops = set([])
                 for i in range(len(eqsitestrs)):
                     tmp = eqsitestrs[i].split(',')
                     for j in range(len(tmp)):
                         tmp[j] = tmp[j].strip().lower()
-                    self.symops.append(SymmetryOperation(tmp))
+                    self.symops.add(SymmetryOperation(tmp))
             except KeyError:
-                self.symops = []
+                self.symops = set([])
         except KeyError:
-            self.symops = []
+            self.symops = set([])
         # Get cell
         try:
             self.a      = float(removeerror(cifblock['_cell_length_a']))
@@ -1153,13 +1148,13 @@ class CellData(GeometryObject):
                 print "***Warning: Could not find element names."
                 elementsymbs = ["??" for site in sitexer]
         # Find charge state
+        self.chargedict = dict([])
+        self.charges = []
         try:
             # This is usually encoded in _atom_site_type_symbol, but we go by _atom_type_oxidation_number first.
             tmpdata2 = cifblock.GetLoop('_atom_type_oxidation_number')
             symbs = tmpdata2.get('_atom_type_symbol')
             oxnums = tmpdata2.get('_atom_type_oxidation_number')
-            self.chargedict = dict([])
-            self.charges = []
             for element in elementsymbs:
                 i = 0
                 for symb in symbs:
@@ -1171,14 +1166,19 @@ class CellData(GeometryObject):
             # Try _atom_site_type_symbol
             try:
                 oxnums = [elem.strip(string.letters) for elem in elementsymbs]
-                self.charges = []
                 for i in range(len(oxnums)):
+                    if oxnums[i] == '':
+                        raise ValueError("Empty string found.")
                     if oxnums[i].strip(string.digits) == '+':
                         self.charges.append(Charge(float(oxnums[i].strip(string.punctuation))))
                     elif oxnums[i].strip(string.digits) == '-':
                         self.charges.append(Charge(-float(oxnums[i].strip(string.punctuation))))
+                    self.chargedict[elementsymbs[i]] = self.charges[i]
             except:
+                # if all else fails, just fill up with zeros
                 self.charges = [Charge(0) for element in elementsymbs]
+                for element in elementsymbs:
+                    self.chargedict[element] = Charge(0)
         # Remove stuff (usually charge state specification) from element symbol strings
         elements = []
         i = 0
@@ -1529,10 +1529,10 @@ def det3(m):
 
 # Inverse of 3x3 dimensional matrix
 def minv3(m):
-    det = det3(m)
-    w = [[(m[1][1]*m[2][2]-m[1][2]*m[2][1])/det, (m[0][2]*m[2][1]-m[0][1]*m[2][2])/det, (m[0][1]*m[1][2]-m[0][2]*m[1][1])/det],
-         [(m[1][2]*m[2][0]-m[1][0]*m[2][2])/det, (m[0][0]*m[2][2]-m[0][2]*m[2][0])/det, (m[0][2]*m[1][0]-m[0][0]*m[1][2])/det],
-         [(m[1][0]*m[2][1]-m[1][1]*m[2][0])/det, (m[0][1]*m[2][0]-m[0][0]*m[2][1])/det, (m[0][0]*m[1][1]-m[0][1]*m[1][0])/det]]
+    di = 1/det3(m)
+    w = [[(m[1][1]*m[2][2]-m[1][2]*m[2][1])*di, (m[0][2]*m[2][1]-m[0][1]*m[2][2])*di, (m[0][1]*m[1][2]-m[0][2]*m[1][1])*di],
+         [(m[1][2]*m[2][0]-m[1][0]*m[2][2])*di, (m[0][0]*m[2][2]-m[0][2]*m[2][0])*di, (m[0][2]*m[1][0]-m[0][0]*m[1][2])*di],
+         [(m[1][0]*m[2][1]-m[1][1]*m[2][0])*di, (m[0][1]*m[2][0]-m[0][0]*m[2][1])*di, (m[0][0]*m[1][1]-m[0][1]*m[1][0])*di]]
     return w
 
 # matrix-vector multiplication
