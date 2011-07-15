@@ -133,6 +133,8 @@ class Vector(list,GeometryObject):
     def __init__(self, vec):
         GeometryObject.__init__(self)
         list.__init__(self, vec)
+    def __hash__(self):
+        return hash(1.1*self[0]+1.2*self[1]+1.3*self[2])
     def __eq__(self,other):
         for i in range(3):
             if abs(self[i]-other[i]) > self.compeps:
@@ -149,7 +151,13 @@ class Vector(list,GeometryObject):
         t = Vector([self[i]+other[i] for i in range(3)])
         return t
     def __str__(self):
-        return "%19.15f %19.15f %19.15f"%(self[0],self[1],self[2])
+        s = ""
+        for e in self:
+            if type(e) == type(1):
+                s += "%2i "%e
+            else:
+                s+= "%19.15f "%e
+        return s
     # multiplication by scalar
     def scalmult(self, a):
         for i in range(3):
@@ -184,8 +192,6 @@ class LatticeVector(Vector):
         self.interval = [0.0, 1.0]
         self.intocell()
         self.improveprecision()
-    def __hash__(self):
-        return hash(1.1*self[0]+1.2*self[1]+1.3*self[2])
     # Addition of two vectors, putting the result back
     # into the cell if necessary
     def __add__(self, other):
@@ -272,6 +278,8 @@ class AtomSite(GeometryObject):
         self.label = label
         self.charge = Charge(charge)
         self.index = index
+    def __hash__(self):
+        return hash(self.position)+hash(''.join(sorted(self.species.keys())))+hash(sum(self.species.values()))
     def __eq__(self,other):
         return self.position == other.position and self.species == other.species
     # Species string
@@ -419,6 +427,7 @@ class CellData(GeometryObject):
         self.ineqsites = []
         self.occupations = []
         self.atomdata = []
+        self.atomset = set([])
         self.a = 0
         self.b = 0
         self.c = 0
@@ -786,7 +795,8 @@ class CellData(GeometryObject):
                         # Add the dictionary of site j to that of site i and schedule index j for
                         # removal. If there is already an instance of the species on this site,
                         # then add the occupancies (this happens when different valencies has been
-                        # recorded)
+                        # recorded).
+                        # Now that the charge is stored, maybe this should be redone.
                         for k in self.atomdata[j][0].species:
                             if k in self.atomdata[i][0].species:
                                 v = self.atomdata[j][0].species[k] + self.atomdata[i][0].species[k]
@@ -804,7 +814,7 @@ class CellData(GeometryObject):
                 self.ineqsites.pop(i)
                 self.occupations.pop(i)
 
-        # Work out all sites in the cell for atomdata
+        # Work out all sites in the cell for atomdata/atomset
         for a in self.atomdata:
             for op in self.symops:
                 # position expression string
@@ -816,6 +826,7 @@ class CellData(GeometryObject):
                     posexpr[k] = posexpr[k].replace('z',str(a[0].position[2]))
                 position = LatticeVector([eval(pos) for pos in posexpr])
                 b = AtomSite(position=position,species=a[0].species,charge=a[0].charge)
+                self.atomset.add(b)
                 append = True
                 for site in a:
                     for vec in self.transvecs:
@@ -830,7 +841,8 @@ class CellData(GeometryObject):
         for a in self.atomdata:
             for b in a:
                 b.position = LatticeVector(mvmult3(invlattrans,b.position))
-                    
+        for a in self.atomset:
+            a.position = LatticeVector(mvmult3(invlattrans,a.position))
         ######################
         #    MISCELLANEOUS   #
         ######################
@@ -883,7 +895,7 @@ class CellData(GeometryObject):
                 for i in range(supercellmap[0]):
                     offsets.append([i,j,k])
                     multfac += 1
-        # Transform to new coordinates
+        # Transform translation group to new basis
         newtranslations = []
         for trans in offsets:
             t = LatticeVector(mvmult3(minv3(mapmatrix),trans))
@@ -910,6 +922,7 @@ class CellData(GeometryObject):
         for a in newsites:
             for b in a:
                 self.atomdata[i].append(b)
+                self.atomset.add(b)
             i += 1
 
         # previous length of lattice vectors
