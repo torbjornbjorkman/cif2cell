@@ -150,6 +150,12 @@ class Vector(list,GeometryObject):
     def __add__(self, other):
         t = Vector([self[i]+other[i] for i in range(3)])
         return t
+    # Subtraction of two vectors
+    def __sub__(self, other):
+        t = Vector([self[i]-other[i] for i in range(3)])
+        return t
+    def __neg__(self):
+        return Vector([-t for t in self])
     def __str__(self):
         s = ""
         for e in self:
@@ -340,7 +346,7 @@ class SymmetryOperation(GeometryObject):
         return self.translation < other.translation
     # Return a rotation matrix from "x,y,z" representation of a symmetry operation
     def rotmat(self):
-        mat = [[0,0,0],[0,0,0],[0,0,0]]
+        mat = [[0.,0.,0.],[0.,0.,0.],[0.,0.,0.]]
         for j in range(len(self.eqsite)):
             xyz = self.eqsite[j].replace('+',' +').replace('-',' -').split()
             for i in xyz:
