@@ -524,8 +524,17 @@ if makesupercell:
         tmpstring = "All sites, "
         if options.printcart:
             tmpstring += "(cartesian coordinates):"
+            transmtx = []
+            for i in range(3):
+                transmtx.append([])
+                for j in range(3):
+                    transmtx[i].append(cell.latticevectors[i][j]*cd.a)
+                i += 1
         else:
             tmpstring += "(lattice coordinates):"
+            transmtx = [[1, 0, 0],
+                        [0, 1, 0],
+                        [0, 0, 1]]
         print tmpstring
         print siteheader
         for a in cell.atomdata:

@@ -253,6 +253,12 @@ class LatticeMatrix(GeometryObject, list):
     # coordinate transformation
     def transform(self, matrix):
         return LatticeMatrix(mmmult3(matrix, self))
+    # transpose
+    def transpose(self):
+        t = [[self[0][0], self[1][0], self[2][0]],
+             [self[0][1], self[1][1], self[2][1]],
+             [self[0][2], self[1][2], self[2][2]]]
+        return t
 
 class AtomSite(GeometryObject):
     """
@@ -262,7 +268,7 @@ class AtomSite(GeometryObject):
     position  : a vector that gives the position
     species   : a dictionary with element-occupancy pairs (e.g. {Fe : 0.2, Co : 0.8})
     label     : any label
-    charge    : the charge state (oxidation number) of the species (e.g. '2-' for oxygen in most compounds)
+    charges   : a dictionary with the charge states (oxidation numbers) of the different species
     index     : any integer
 
     Functions:
@@ -270,8 +276,9 @@ class AtomSite(GeometryObject):
         __str__   : one line with species and position info
         spcstring : species string ('Mn', 'La/Sr' ...)
         alloy     : true if there are more than one species occupying the site
+        
     """
-    def __init__(self,position=None,species=None,label="",charge=0,index=None):
+    def __init__(self,position=None,species=None,label="",charges=None,index=None):
         GeometryObject.__init__(self)
         if position != None:
             self.position = LatticeVector(position)
@@ -281,8 +288,17 @@ class AtomSite(GeometryObject):
             self.species = species
         else:
             self.species = {}
+        if charges != None:
+            self.charges = charges
+        else:
+            if self.species != None:
+                self.charges = {}
+                for k in self.species.keys():
+                    self.charges[k] = charge(0)
+            else:
+                self.charges = {}
         self.label = label
-        self.charge = Charge(charge)
+        ## self.charge = Charge(charge)
         self.index = index
     def __hash__(self):
         return hash(self.position)+hash(''.join(sorted(self.species.keys())))+hash(sum(self.species.values()))
@@ -309,7 +325,33 @@ class AtomSite(GeometryObject):
             tmp += str(v)+"/"
         tmp = tmp.rstrip("/")
         return tmp
-        
+    def CIradius(self,size="max",covalent=False):
+        """
+        Return maximal/minimal Covalent/Ionic radius of the site.
+        'size' controls whether the maximal or minimal radius is returned
+        'covalent' will enforce the covalent radius.
+        """
+        t = []
+        if covalent:
+            for sp in self.species.keys():
+                try:
+                    t.append(ElementData().CovalentRadius[sp])
+                except:
+                    pass
+        else:
+            for sp,ch in self.charges.iteritems():
+                try:
+                    t.append(ElementData().IonicRadius[sp+str(ch)])
+                except:
+                    try:
+                        t.append(ElementData().CovalentRadius[sp])
+                    except:
+                        pass
+        if size == "min":
+            return min(t)
+        else:
+            return max(t)
+
 class SymmetryOperation(GeometryObject):
     """
     Class describing a symmetry operation, with a rotation matrix and a translation.
@@ -740,7 +782,7 @@ class CellData(GeometryObject):
 
         # Find inverse lattice transformation matrix
         invlattrans = LatticeMatrix(minv3(self.lattrans))
-        
+
         #################################
         #       SYMMETRY OPERATIONS     #
         #################################
@@ -783,8 +825,11 @@ class CellData(GeometryObject):
             # Add species and occupations to atomdata
             for k,v in self.occupations[i].iteritems():
                 self.atomdata[i][0].species[k] = v
-            # Add charge state
-            self.atomdata[i][0].charge = self.charges[i]
+                # Add charge state
+                for k2,v2 in self.chargedict.iteritems():
+                    if k2.strip(string.punctuation+string.digits) == k:
+                        self.atomdata[i][0].charges[k] = v2
+            ## self.atomdata[i][0].charge = self.charges[i]
             # Determine if we have an alloy
             for element in self.occupations[i]:
                 v = self.occupations[i][element]
@@ -831,7 +876,7 @@ class CellData(GeometryObject):
                     posexpr[k] = posexpr[k].replace('y',str(a[0].position[1]))
                     posexpr[k] = posexpr[k].replace('z',str(a[0].position[2]))
                 position = LatticeVector([eval(pos) for pos in posexpr])
-                b = AtomSite(position=position,species=a[0].species,charge=a[0].charge)
+                b = AtomSite(position=position,species=a[0].species,charges=a[0].charges)
                 self.atomset.add(b)
                 append = True
                 for site in a:
@@ -922,7 +967,10 @@ class CellData(GeometryObject):
             for b in a:
                 for translation in newtranslations[1:]:
                     position = b.position + translation
-                    newsites[i].append(AtomSite(position=position,species=b.species))
+                    ## newsites[i].append(AtomSite(position=position,species=b.species))
+                    t = copy.deepcopy(b)
+                    t.position = position
+                    newsites[i].append(t)
             i += 1
         i = 0
         for a in newsites:
@@ -1025,7 +1073,6 @@ class CellData(GeometryObject):
                         b.position[k] = b.position[k] + fac*transvec[k]
                         
         # Put stuff back in ]-1,1[ interval
-        # THIS SHOULD BE DONE BETTER USING THE INTERVAL OF LATTICEVECTOR CLASS
         for a in self.atomdata:
             for b in a:
                 for k in range(3):
@@ -1557,13 +1604,23 @@ def minv3(m):
 # matrix-vector multiplication
 def mvmult3(mat,vec):
     w = [0.,0.,0.]
-    t = 0
     for i in range(3):
-        r = mat[i]
+        t = 0
         for j in range(3):
-            t += r[j]*vec[j]
-        w[i],t = t,0
+            t = t + mat[j][i]*vec[j]
+        w[i] = t
     return w
+
+# more efficient, but goes the other way...
+## def mvmult3(mat,vec):
+##     w = [0.,0.,0.]
+##     t = 0
+##     for i in range(3):
+##         r = mat[i]
+##         for j in range(3):
+##             t += r[j]*vec[j]
+##         w[i],t = t,0
+##     return w
 
 # matrix-matrix multiplication
 def mmmult3(m1,m2):
