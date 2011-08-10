@@ -982,6 +982,21 @@ class CellData(GeometryObject):
         # previous length of lattice vectors
         oldlatlen = [vec.length() for vec in self.latticevectors]
             
+        # Move all atoms by transvec 
+        if reduce(lambda x,y: x+y, transvec) != 0:
+            for a in self.atomdata:
+                for b in a:
+                    for k in range(3):
+                        fac = oldlatlen[k]/self.latticevectors[k].length()
+                        b.position[k] = b.position[k] + fac*transvec[k]
+                        
+        # Put stuff back in ]-1,1[ interval
+        for a in self.atomdata:
+            for b in a:
+                for k in range(3):
+                    while abs(b.position[k]) >= 1:
+                        b.position[k] = b.position[k] - copysign(1,b.position[k])
+
         # Put positions in cartesian coordinates
         for a in self.atomdata:
             for b in a:
@@ -1067,21 +1082,6 @@ class CellData(GeometryObject):
                     removeset.add(op)
         # Remove broken symmetries
         self.symops -= removeset
-
-        # Move all atoms by transvec 
-        if reduce(lambda x,y: x+y, transvec) != 0:
-            for a in self.atomdata:
-                for b in a:
-                    for k in range(3):
-                        fac = oldlatlen[k]/self.latticevectors[k].length()
-                        b.position[k] = b.position[k] + fac*transvec[k]
-                        
-        # Put stuff back in ]-1,1[ interval
-        for a in self.atomdata:
-            for b in a:
-                for k in range(3):
-                    while abs(b.position[k]) >= 1:
-                        b.position[k] = b.position[k] - copysign(1,b.position[k])
 
         # Sort the atomic positions in some way
         if sort != "":
