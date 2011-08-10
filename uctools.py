@@ -982,7 +982,11 @@ class CellData(GeometryObject):
         # previous length of lattice vectors
         oldlatlen = [vec.length() for vec in self.latticevectors]
             
-        # New latticevectors after vacuum padding
+        # Put positions in cartesian coordinates
+        for a in self.atomdata:
+            for b in a:
+                b.position = Vector(mvmult3(self.latticevectors,b.position))
+        # New latticevectors after vacuum padding        
         vacuummapmatrix = LatticeMatrix([[1,0,0],[0,1,0],[0,0,1]])
         if reduce(lambda x,y: x+y, vacuum) > 0:
             # add the given number of unit cell units along the lattice vectors
@@ -990,11 +994,11 @@ class CellData(GeometryObject):
                 for i in range(len(self.latticevectors[j])):
                     self.latticevectors[j][i] = self.latticevectors[j][i] + vectors[j][i]*vacuum[j]
                 vacuummapmatrix[j][j] = vacuummapmatrix[j][j] + vacuum[j]
-        invvacmat = LatticeMatrix(minv3(vacuummapmatrix))
-        # Rescale coordinates after padding
+        # Remap coordinates after padding
+        invlatvect = LatticeMatrix(minv3(self.latticevectors))
         for a in self.atomdata:
             for b in a:
-                b.position = LatticeVector(mvmult3(invvacmat, b.position))
+                b.position = LatticeVector(mvmult3(invlatvect, b.position))
 
         # Multiply group by new translation group
         newops = []
