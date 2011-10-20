@@ -385,6 +385,20 @@ class SymmetryOperation(GeometryObject):
         return eq
     # comparison between operations made by comparing lengths of translation vectors
     def __lt__(self, other):
+        if self.translation < other.translation:
+            return True
+        if other.translation < self.translation:
+            return False
+        if self.diagonal():
+            # prefer diagonal matrices
+            if not other.diagonal():
+                return True
+            # prefer identity over anything else
+            if self.rotation[0][0] == self.rotation[1][1] == self.rotation[2][2] == 1:
+                return True
+            return False
+        else:
+            return False
         return self.translation < other.translation
     # Return a rotation matrix from "x,y,z" representation of a symmetry operation
     def rotmat(self):
@@ -545,20 +559,12 @@ class CellData(GeometryObject):
                                             [zero, self.boa, zero], 
                                             [self.coa*cos(betar), zero, self.coa*sin(betar)]])
         elif self.crystal_system() == 'trigonal':
-            # Hexagonal cell normally used
-            if abs(self.gamma-120) < self.coordepsilon:
-                latticevectors = LatticeMatrix([[sin(gammar), cos(gammar), zero],
-                                                [zero, one, zero],
-                                                [zero, zero, self.coa]])
-            else:
-                # Symmetric rhombohedral cell (stretching a cube along the main diagonal)
-                c = sqrt((1 + 2*cos(alphar))/(1 - cos(alphar)))
-                a = pow(1/c, 1/3)
-                t = a * (c + 2) / 3
-                u = a * (c - 1) / 3
-                latticevectors = LatticeMatrix([[t, u, u],
-                                                [u, t, u],
-                                                [u, u, t]])
+            # Hexagonal cell taken as conventional
+            if not abs(self.gamma-120) < self.coordepsilon:
+                gammar = 120*pi/180
+            latticevectors = LatticeMatrix([[sin(gammar), cos(gammar), zero],
+                                            [zero, one, zero],
+                                            [zero, zero, self.coa]])
         elif self.crystal_system() == 'triclinic' or self.crystal_system() == 'unknown':
             angfac1 = (cos(alphar) - cos(betar)*cos(gammar))/sin(gammar)
             angfac2 = sqrt(sin(gammar)**2 - cos(betar)**2 - cos(alphar)**2 
@@ -791,6 +797,16 @@ class CellData(GeometryObject):
             for op in SpaceGroupData().EquivalentPositions[self.spacegroupnr]:
                 self.symops.add(SymmetryOperation(op))
 
+        # If rhombohedral setting and conventional cell, get tabulated symmetry operations (which are in hexagonal setting)
+        if self.crystal_system() == "trigonal" and self.alpha == self.beta == self.gamma and not self.primcell:
+            self.symops = set([])
+            for op in SpaceGroupData().EquivalentPositions[self.spacegroupnr]:
+                self.symops.add(SymmetryOperation(op))
+            # set coordinate transformation
+            rhomb2hexa = LatticeMatrix([[third, zero, third],
+                                        [-third, third, third],
+                                        [zero,  -third, third]])
+
         # If we reduce the cell, remove the symmetry operations that are the
         # same up to an induced lattice translation
         if self.primcell:
@@ -803,7 +819,6 @@ class CellData(GeometryObject):
                                 if op1.rotation == op2.rotation:
                                     if op1 < op2:
                                         redundant.add(op2)
-                
                 self.symops -= redundant
 
         # To cartesian representation
@@ -822,6 +837,9 @@ class CellData(GeometryObject):
             # Set up atomdata
             self.atomdata.append([])
             self.atomdata[i].append(AtomSite(position=self.ineqsites[i]))
+            # If rhombohedral setting and conventional cell, transform wyckoff sites to hexagonal basis
+            if self.crystal_system() == "trigonal" and self.alpha == self.beta == self.gamma and not self.primcell:
+                self.atomdata[i][0].position = LatticeVector(mvmult3(rhomb2hexa,self.atomdata[i][0].position))
             # Add species and occupations to atomdata
             for k,v in self.occupations[i].iteritems():
                 self.atomdata[i][0].species[k] = v

@@ -542,6 +542,8 @@ class SpacegroupFile(GeometryOutputFile):
             self.docstring += string
     def __str__(self):
         filestring = ""
+        if (self.HermannMauguin[-1] == 'R' or self.HermannMauguin[-1] == 'H') and self.HermannMauguin[-2] != ':':
+            self.HermannMauguin = self.HermannMauguin[0:len(self.HermannMauguin)-1]+':'+self.HermannMauguin[-1]
         tmpstring=" '"+self.HermannMauguin+"'"
         tmpstring = tmpstring.ljust(50)+": hrmg\n"
         filestring += tmpstring
@@ -581,7 +583,6 @@ class SpacegroupFile(GeometryOutputFile):
                 for k in occ:
                     spcstring += k+"/"
                 spcstring = spcstring.rstrip("/")
-                print spcstring, spcs
                 if spcstring == spcs:
                     spcsites += 1
                     positionstring += str(self.cell.ineqsites[i])+"\n"
