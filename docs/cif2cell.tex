@@ -18,13 +18,13 @@
 \begin{document}
 \maketitle
 \section{Of CIF's and Cells}
-An electronic structure program needs atomic positions and, at least in the case of band structure programs, unit cell vectors to calculate the electronic structure of a crystal. Experimental data on the other hand tends to be given as a space group and a set of irreducible, or wyckoff positions, and are often distributed in the form of CIF files. There is a wide range of sources of CIF files -- it is actually used for communication of crystallographic data by virtually everyone outside of the electronic structure community. Yet far from all electronic structure programs can read the CIF format, and from this circumstance a small set of convenience scripts one day turned into the program \ciftocell. I hope you find it useful.
+An electronic structure program needs atomic positions and, at least in the case of band structure programs, unit cell vectors to calculate the electronic structure of a crystal. Experimental data on the other hand tends to be given as a space group and a set of irreducible, or wyckoff positions, and are often distributed in the form of CIF files. There is a wide range of sources of CIF files -- it is actually used for communication of crystallographic data by virtually everyone outside of the electronic structure community! Yet far from all electronic structure programs can read the CIF format, and from this circumstance a small set of convenience scripts one day turned into the program \ciftocell. I hope you find it useful.
 
 \section{Installation}
 \subsection{Requirements}
 \ciftocell{} requires Python 2.4 or higher and the PyCIFRW python package\footnote{Available from \texttt{http://pycifrw.berlios.de}.}. Note however that the output may be slightly different (but equivalent) with Python 2.4 than with later versions due to differences in the internal sorting routines of different Python distributions.
 
-To install the program in your systems standard location, simply type:
+To install the program in your systems standard location, type:
 \begin{verbatim}
 python setup.py install 
 \end{verbatim}
@@ -40,25 +40,29 @@ python setup.py --help
 
 \section{Basic running}
 
-The program comes with a small set of sample CIF files which can be found either in the source distribution or in the directory \texttt{[prefix]/lib/cif2cell/sample\_cifs}, where \texttt{[prefix]} is the path where you installed \ciftocell. The examples below assume that you stand in a directory containing these sample files.
+The program comes with a small set of sample CIF files which can be found either in the source distribution or in the directory \texttt{[prefix]/lib/cif2cell/sample\_cifs}, where \texttt{[prefix]} is the path where you installed \ciftocell. The examples below assume that you stand in a directory containing these sample files. In the following, some arbitrary command line input will be specified within brackets \texttt{[like this]}.
 
 \subsection{Help!}
-The most immediate way to get help in \ciftocell{} is to simply type
+The most immediate way to get help in \ciftocell{} is to type
 \begin{verbatim}
 cif2cell -h
 \end{verbatim}
 This will list all available input options along with a description.
 
 \subsection{The first run}
-There is only one required piece of input, and that is the CIF file itself which is given with the \texttt{-f} flag. Try this for the sample file with data for Si in the diamond structure
+There is only one required piece of input, and that is the CIF file itself which is given either as the first argument to the program:
 \begin{verbatim}
-cif2cell -f Si.cif
+cif2cell Si.cif [options]
+\end{verbatim}
+or anywhere in the argument list with the \texttt{-f} flag:
+\begin{verbatim}
+cif2cell [someoptions] -f Si.cif [otheroptions]
 \end{verbatim}
 and if no output program is specified, the cell information is output to screen:
 
 \newpage
 \begin{verbatim}
-CIF2CELL 0.3.0
+CIF2CELL 0.4.0
 2011-03-25 16:35
 Output for Si (Silicon)
 CIF file exported from Inorganic Crystal Structure Database.

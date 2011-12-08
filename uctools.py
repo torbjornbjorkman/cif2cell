@@ -258,7 +258,7 @@ class LatticeMatrix(GeometryObject, list):
         t = [[self[0][0], self[1][0], self[2][0]],
              [self[0][1], self[1][1], self[2][1]],
              [self[0][2], self[1][2], self[2][2]]]
-        return t
+        return LatticeMatrix(t)
 
 class AtomSite(GeometryObject):
     """
@@ -490,6 +490,16 @@ class CellData(GeometryObject):
         self.occupations = []
         self.atomdata = []
         self.atomset = set([])
+        # initial lattice parameters
+        self.ainit = 0
+        self.binit = 0
+        self.cinit = 0
+        self.alphainit = 0
+        self.betainit = 0
+        self.gammainit = 0
+        self.coainit = 1
+        self.boainit = 1
+        # lattice parameters used in generating the cell
         self.a = 0
         self.b = 0
         self.c = 0
@@ -503,7 +513,8 @@ class CellData(GeometryObject):
         self.unit = "angstrom"
         self.alloy = False
         self.numofineqsites = 0
-        self.primcell=False
+        self.primcell = False
+        self.rhomb2hex = False
 
     def newunit(self,newunit="angstrom"):
         """ Set new unit for the length scale. Valid choices are:
@@ -674,6 +685,26 @@ class CellData(GeometryObject):
                         self.spacegroupnr = 0
         else:
             raise CellError("No crystallographic parameter may be zero.")
+
+        ############################
+        #    INITIALIZE LATTICE    #
+        ############################
+        # Special case: trigonal systems in rhombohedral setting
+        # are first transformed to hexagonal setting
+        if self.spacegroupsetting == "R" and abs(self.gamma - 120) > self.coordepsilon:
+            self.rhomb2hex = True
+            self.c = self.a * sqrt(3 + 6*cos(self.alpha*pi/180))
+            self.a = 2 * self.a * sin(self.alpha*pi/360)
+            self.b = self.a
+            self.alpha = 90.0
+            self.beta = 90.0
+            self.gamma = 120.0
+            rhomb2hextrans= LatticeMatrix([[2*third, third, third],
+                                                   [-third, third, third],
+                                                   [-third, -2*third, third]])
+            for i in range(len(self.ineqsites)):
+                self.ineqsites[i] = LatticeVector(mvmult3(rhomb2hextrans,self.ineqsites[i]))
+        # set primitive lattice vectors
         self.latticevectors = self.conventional_latticevectors()
         self.lengthscale = self.a
         self.alloy = False
@@ -752,6 +783,7 @@ class CellData(GeometryObject):
                                                [half, half, zero],
                                                [zero, zero, one]])
             elif self.spacegroupsetting == 'R':
+                print "Gamma = ", self.gamma
                 if abs(self.gamma - 120) < self.coordepsilon:
                     # rhombohedral from hexagonal setting
                     self.transvecs = [LatticeVector([zero,zero,zero]),
@@ -798,14 +830,14 @@ class CellData(GeometryObject):
                 self.symops.add(SymmetryOperation(op))
 
         # If rhombohedral setting and conventional cell, get tabulated symmetry operations (which are in hexagonal setting)
-        if self.crystal_system() == "trigonal" and self.alpha == self.beta == self.gamma and not self.primcell:
+        if self.rhomb2hex:
             self.symops = set([])
             for op in SpaceGroupData().EquivalentPositions[self.spacegroupnr]:
                 self.symops.add(SymmetryOperation(op))
-            # set coordinate transformation
-            rhomb2hexa = LatticeMatrix([[third, zero, third],
-                                        [-third, third, third],
-                                        [zero,  -third, third]])
+            ## # set coordinate transformation
+            ## rhomb2hextrans = LatticeMatrix([[third, zero, third],
+            ##                             [-third, third, third],
+            ##                             [zero,  -third, third]])
 
         # If we reduce the cell, remove the symmetry operations that are the
         # same up to an induced lattice translation
@@ -837,9 +869,9 @@ class CellData(GeometryObject):
             # Set up atomdata
             self.atomdata.append([])
             self.atomdata[i].append(AtomSite(position=self.ineqsites[i]))
-            # If rhombohedral setting and conventional cell, transform wyckoff sites to hexagonal basis
-            if self.crystal_system() == "trigonal" and self.alpha == self.beta == self.gamma and not self.primcell:
-                self.atomdata[i][0].position = LatticeVector(mvmult3(rhomb2hexa,self.atomdata[i][0].position))
+            ## # If rhombohedral setting and conventional cell, transform wyckoff sites to hexagonal basis
+            ## if self.crystal_system() == "trigonal" and self.alpha == self.beta == self.gamma and not self.primcell:
+            ##     self.atomdata[i][0].position = LatticeVector(mvmult3(rhomb2hextrans,self.atomdata[i][0].position))
             # Add species and occupations to atomdata
             for k,v in self.occupations[i].iteritems():
                 self.atomdata[i][0].species[k] = v
@@ -997,17 +1029,20 @@ class CellData(GeometryObject):
                 self.atomset.add(b)
             i += 1
 
+        # Move all atoms by transvec 
+        if reduce(lambda x,y: x+y, transvec) != 0:
+            ## for a in self.atomdata:
+            ##     for b in a:
+            for i in range(len(self.atomdata)):
+                for j in range(len(self.atomdata[i])):
+                    for k in range(3):
+                        fac = oldlatlen[k]/self.latticevectors[k].length()
+                        self.atomdata[i][j].position[k] = self.atomdata[i][j].position[k] + transvec[k]*fac
+                        ## b.position[k] = b.position[k] + fac*transvec[k]
+                        
         # previous length of lattice vectors
         oldlatlen = [vec.length() for vec in self.latticevectors]
             
-        # Move all atoms by transvec 
-        if reduce(lambda x,y: x+y, transvec) != 0:
-            for a in self.atomdata:
-                for b in a:
-                    for k in range(3):
-                        fac = oldlatlen[k]/self.latticevectors[k].length()
-                        b.position[k] = b.position[k] + fac*transvec[k]
-                        
         # Put stuff back in ]-1,1[ interval
         for a in self.atomdata:
             for b in a:
@@ -1197,22 +1232,32 @@ class CellData(GeometryObject):
             self.symops = set([])
         # Get cell
         try:
-            self.a      = float(removeerror(cifblock['_cell_length_a']))
-            self.b      = float(removeerror(cifblock['_cell_length_b']))
-            self.c      = float(removeerror(cifblock['_cell_length_c']))
-            self.alpha  = float(removeerror(cifblock['_cell_angle_alpha']))
-            self.beta   = float(removeerror(cifblock['_cell_angle_beta']))
-            self.gamma  = float(removeerror(cifblock['_cell_angle_gamma']))
-            self.coa = self.c / self.a
-            self.boa = self.b / self.a
+            # Set initial crystal parameters
+            self.ainit     = float(removeerror(cifblock['_cell_length_a']))
+            self.binit     = float(removeerror(cifblock['_cell_length_b']))
+            self.cinit     = float(removeerror(cifblock['_cell_length_c']))
+            self.alphainit = float(removeerror(cifblock['_cell_angle_alpha']))
+            self.betainit  = float(removeerror(cifblock['_cell_angle_beta']))
+            self.gammainit = float(removeerror(cifblock['_cell_angle_gamma']))
+            self.coainit = self.cinit / self.ainit
+            self.boainit = self.binit / self.ainit
         except:
-            self.a = 0
-            self.b = 0
-            self.c = 0
-            self.alpha = 0
-            self.beta = 0
-            self.gamma = 0
+            self.ainit = 0
+            self.binit = 0
+            self.cinit = 0
+            self.alphainit = 0
+            self.betainit = 0
+            self.gammainit = 0
             raise CellError("Unable to read crystallographic parameters")
+        # Set crystal parameters to be used (may be changed)
+        self.a = self.ainit
+        self.b = self.binit
+        self.c = self.cinit
+        self.alpha = self.alphainit
+        self.beta  = self.betainit
+        self.gamma = self.gammainit
+        self.coa = self.c / self.a
+        self.boa = self.b / self.a
         # Get info on atom positions
         try:
             tmpdata = cifblock.GetLoop('_atom_site_fract_x')

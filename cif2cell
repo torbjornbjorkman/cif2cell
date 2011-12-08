@@ -354,10 +354,16 @@ if verbose or not options.program and not options.quiet:
     print tmpstring
     formatstring = ""
     if options.printau:
+        ## aprint = cd.ainit*angtobohr
+        ## bprint = cd.binit*angtobohr
+        ## cprint = cd.cinit*angtobohr
         aprint = cd.a*angtobohr
         bprint = cd.b*angtobohr
         cprint = cd.c*angtobohr
     else:
+        ## aprint = cd.ainit
+        ## bprint = cd.binit
+        ## cprint = cd.cinit
         aprint = cd.a
         bprint = cd.b
         cprint = cd.c
@@ -369,6 +375,7 @@ if verbose or not options.program and not options.quiet:
         tmpstring += i.rjust(decpos)+" "
     print tmpstring
     print formatstring % (cd.alpha, cd.beta, cd.gamma)
+    ## print formatstring % (cd.alphainit, cd.betainit, cd.gammainit)
     # Pretty printing in columns that need to have variable width
     # w1 = width of the atomic species column
     # w2 = width of a decimal column
@@ -737,24 +744,38 @@ def StandardDocstring():
 ################################################################################################
 # Output cell to new CIF file
 if outputprogram == 'cif':
-    if makesupercell:
-        print "Output of supercell to CIF not yet implemented."
-        sys.exit(0)
+    ## if makesupercell:
+    ##     print "Output of supercell to CIF not yet implemented."
+    ##     sys.exit(0)
     f = open(outputfile,'w')
     cf = CifFile.CifFile()
     cb = CifFile.CifBlock()
-    # Cell parameters
-    cb['_cell_length_a'] = cd.a
-    cb['_cell_length_b'] = cd.b
-    cb['_cell_length_c'] = cd.c
-    cb['_cell_angle_alpha'] = cd.alpha
-    cb['_cell_angle_beta']  = cd.beta
-    cb['_cell_angle_gamma'] = cd.gamma
-    cb['_space_group_IT_number'] = cd.spacegroupnr
-    if cd.spacegroupsymboltype == "(H-M)":
-        cb['_space_group_name_H-M_alt'] = cd.spacegroupsymbol
-    elif cd.spacegrousymboltype == "(Hall)":
-        cb['_space_group_name_Hall'] = cd.spacegroupsymbol        
+    if makesupercell:
+        a = cd.latticevectors[0].scalmult(cd.lengthscale)
+        b = cd.latticevectors[1].scalmult(cd.lengthscale)
+        c = cd.latticevectors[2].scalmult(cd.lengthscale)
+	cb['_cell_length_a'] = a.length() #sqrt(a[0]*a[0]+a[1]*a[1]+a[2]*a[2])
+	cb['_cell_length_b'] = b.length() #sqrt(b[0]*b[0]+b[1]*b[1]+b[2]*b[2])
+	cb['_cell_length_c'] = c.length() #sqrt(c[0]*c[0]+c[1]*c[1]+c[2]*c[2])
+	cb['_cell_angle_alpha'] = acos((b[0]*c[0]+b[1]*c[1]+b[2]*c[2])/(b.length()*c.length()))*180/pi
+	cb['_cell_angle_beta'] = acos((a[0]*c[0]+a[1]*c[1]+a[2]*c[2])/(a.length()*c.length()))*180/pi
+	cb['_cell_angle_gamma'] = acos((b[0]*a[0]+b[1]*a[1]+b[2]*a[2])/(a.length()*b.length()))*180/pi
+    # Supercell may have broken symmetry, so just put P1
+        cb['_space_group_IT_number'] = 1
+        cb['_space_group_name_H-M_alt'] = "P1"
+    else:
+        # Cell parameters
+        cb['_cell_length_a'] = cd.a
+        cb['_cell_length_b'] = cd.b
+        cb['_cell_length_c'] = cd.c
+        cb['_cell_angle_alpha'] = cd.alpha
+        cb['_cell_angle_beta']  = cd.beta
+        cb['_cell_angle_gamma'] = cd.gamma
+        cb['_space_group_IT_number'] = cd.spacegroupnr
+        if cd.spacegroupsymboltype == "(H-M)":
+            cb['_space_group_name_H-M_alt'] = cd.spacegroupsymbol
+        elif cd.spacegrousymboltype == "(Hall)":
+            cb['_space_group_name_Hall'] = cd.spacegroupsymbol        
     # Positions
     labels = []
     symbols = []
