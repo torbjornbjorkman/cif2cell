@@ -1,0 +1,132 @@
+\documentclass[11pt]{article}
+\usepackage{geometry}                % See geometry.pdf to learn the layout options. There are lots.
+\geometry{a4paper}
+\usepackage{graphicx}
+\usepackage{amssymb}
+\usepackage{epstopdf}
+\usepackage{multirow}
+\DeclareGraphicsRule{.tif}{png}{.png}{`convert #1 `dirname #1`/`basename #1 .tif`.png}
+
+\newcommand{\ciftocell}{\texttt{cif2cell}}
+
+
+
+\title{CIF2Cell manual}
+\author{Torbj\"orn Bj\"orkman}
+%\date{}                                           % Activate to display a given date or no date
+
+\begin{document}
+\maketitle
+\section{Of CIF's and Cells}
+An electronic structure program needs atomic positions and, at least in the case of band structure programs, unit cell vectors to calculate the electronic structure of a crystal. Experimental data on the other hand tends to be given as a space group and a set of irreducible, or wyckoff positions, and are often distributed in the form of CIF files. There is a wide range of sources of CIF files -- it is actually used for communication of crystallographic data by virtually everyone outside of the electronic structure community. Yet far from all electronic structure programs can read the CIF format, and from this circumstance a small set of convenience scripts one day turned into the program \ciftocell. I hope you find it useful.
+
+\section{Installation}
+\subsection{Requirements}
+\ciftocell{} requires Python 2.4 or higher and the PyCIFRW python package\footnote{Available from \texttt{http://pycifrw.berlios.de}.}. Note however that the output may be slightly different (but equivalent) with Python 2.4 than with later versions due to differences in the internal sorting routines of different Python distributions.
+
+To install the program in your systems standard location, simply type:
+\begin{verbatim}
+python setup.py install 
+\end{verbatim}
+To choose a different location, add 
+\begin{verbatim}
+--prefix=where/you/want/it 
+\end{verbatim}
+to the above line. For help and more options type
+\begin{verbatim}
+python setup.py --help
+\end{verbatim}
+
+
+\section{Basic running}
+
+The program comes with a small set of sample CIF files which can be found either in the source distribution or in the directory \texttt{[prefix]/lib/cif2cell/sample\_cifs}, where \texttt{[prefix]} is the path where you installed \ciftocell. The examples below assume that you stand in a directory containing these sample files.
+
+\subsection{Help!}
+The most immediate way to get help in \ciftocell{} is to simply type
+\begin{verbatim}
+cif2cell -h
+\end{verbatim}
+This will list all available input options along with a description.
+
+\subsection{The first run}
+There is only one required piece of input, and that is the CIF file itself which is given with the \texttt{-f} flag. Try this for the sample file with data for Si in the diamond structure
+\begin{verbatim}
+cif2cell -f Si.cif
+\end{verbatim}
+and if no output program is specified, the cell information is output to screen:
+
+\newpage
+\begin{verbatim}
+CIF2CELL 0.3.0
+2011-03-25 16:35
+Output for Si (Silicon)
+CIF file exported from Inorganic Crystal Structure Database.
+Database reference code: 51688.
+
+ BIBLIOGRAPHIC INFORMATION
+Toebbens, D.M. et al., Materials Science Forum 378, 288-293 (2001) 
+
+ SYMMETRY INFORMATION
+Space group number      : 227
+Space group symbol (H-M): Fd-3mS
+Cubic crystal system.
+
+ INPUT CELL INFORMATION
+Lattice parameters:
+          a           b           c 
+  5.4305300   5.4305300   5.4305300 
+      alpha        beta       gamma 
+ 90.0000000  90.0000000  90.0000000 
+Representative sites :
+Atom           a1          a2          a3 
+Si      0.0000000   0.0000000   0.0000000
+
+ OUTPUT CELL INFORMATION
+Bravais lattice vectors :
+  0.5000000   0.5000000   0.0000000 
+  0.5000000   0.0000000   0.5000000 
+  0.0000000   0.5000000   0.5000000 
+All sites, (lattice coordinates):
+Atom           a1          a2          a3 
+Si      0.0000000   0.0000000   0.0000000
+Si      0.2500000   0.2500000   0.2500000\end{verbatim}
+
+\newpage
+First there is some information about the program itself and a description of the compound derived from information in the CIF file. If the file comes from a databases known to \ciftocell, information about that is also printed. Then follows any bibliographic information found in the file. Then starts the actual crystal information with data about the space group. If the \texttt{-v} or \texttt{--print-symmetry-operations} flags are given, all symmetry operations will also be printed here. Next comes the lattice parameters and representative sites (occupied wyckoff positions), with the the chemical elements and, in case of an alloy, another column with the site occupancies.
+
+Then follows the things we actually want -- the Bravais lattice vectors and all positions of the atoms.  In the case of Si in the diamond structure the result is probably familiar:  the standard fcc lattice vectors and two atoms in the basis, one at $(0,0,0)$ and another in $(\frac{1}{4},\frac{1}{4},\frac{1}{4})$. 
+
+By default, \ciftocell{} will reduce the cell to the primitive cell, anticipating that the user wants to calculate something as small as possible, but we can also get the conventional cell. The diamond structure is a cubic system, and the primitive cell has only two atoms. Now try to also give the program the option \texttt{--no-reduce}. You should now get 8 atoms and cubic lattice vectors. Note that the conventional and primitive cell are the same in many systems.\footnote{In all systems which has a space group (or Hermann-Mauguin) symbol that starts with ''P'', for ''primitive'', see the output above.}
+
+\subsection{Output to your electronic structure program}
+
+\begin{table}[htdp]
+\caption{Supported Electronic structure programs and the files output by \ciftocell.}
+\begin{center}
+\begin{tabular}{l|c|c}
+Code  & Alloy support & Output file(s)\\ \hline
+VASP & no  &POSCAR \\
+ABINIT & no & [compoundname].in\\
+Siesta & no & [compoundname].fdf\\
+CPMD & no & [compoundname].inp\\
+CASTEP & no & [compoundname].cell\\
+Crystal09 & no & [compoundname].d12\\
+RSPt & no & symt.inp\\
+Fleur & no & inp\_[compoundname]\\
+cellgen & no & cellgen.inp\\
+elk & no & GEOMETRY.OUT\\
+exciting & no & input.xml\\
+spacegroup & no & spacegroup.in\\
+\multirow{2}{*}{ncol} & no & [spacegroupname/compoundname].dat \\
+ &  &  for bstr and ncol. \\
+\multirow{3}{*}{emto} & & [spacegroupname/compoundname].dat \\ 
+ & yes & for kstr, bmdl, shape, kgrn and kfcd \\
+ &  & in separate directories.
+\end{tabular}
+\end{center}
+\label{default}
+\end{table}%
+
+
+\end{document}  

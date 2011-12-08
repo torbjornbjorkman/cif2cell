@@ -16,12 +16,14 @@
 #
 from distutils.core import setup
 from glob import glob
+from subprocess import call
 
 # Get list of the cif example files
 ciffiles = glob('cifs/*.cif')
+docfiles = ['docs/cif2cell.pdf']
 
 setup(name='cif2cell',
-      version='0.2.6',
+      version='0.4.0',
       description='Construct a unit cell from CIF data',
       long_description='A command-line tool to generate the geometrical setup for various electronic structure codes from a CIF format file.',
       author='Torbjorn Bjorkman',
@@ -31,6 +33,7 @@ setup(name='cif2cell',
       scripts=['cif2cell'],
       requires=['CifFile'],
       data_files=[('./', ['LICENSE']),
-                  ('lib/cif2cell/sample_cifs', ciffiles)],
+                  ('lib/cif2cell/sample_cifs', ciffiles),
+                  ('lib/docs',docfiles)],
       license='GNU General Public License version 3'
       )

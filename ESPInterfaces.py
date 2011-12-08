@@ -29,8 +29,10 @@
 #               Applied Physics, Espoo, Finland
 #******************************************************************************************
 import copy
+import os
 from elementdata import *
 from uctools import *
+from math import fsum
 
 ################################################################################################
 class GeometryOutputFile:
@@ -47,7 +49,7 @@ class GeometryOutputFile:
 class OldNCOLFile(GeometryOutputFile):
     """
     Class for storing the geometrical data needed in a [filename].dat file for the ncol program
-    and the method FileString that outputs the contents of the .dat file as a string.
+    and the method __str__ that outputs the contents of the .dat file as a string.
     """
     def __init__(self,crystalstructure,string):
         GeometryOutputFile.__init__(self,crystalstructure,string)
@@ -58,7 +60,7 @@ class OldNCOLFile(GeometryOutputFile):
         self.programdoc = ""
         # Set atomic units for length scale
         self.cell.newunit("bohr")
-    def FileString(self):
+    def __str__(self):
         # Element data
         ed = ElementData()
         # l quantum number setup (same as from bstr)
@@ -82,8 +84,8 @@ class OldNCOLFile(GeometryOutputFile):
         filestring += "AMIX.....=     0.100 TOLE....= 0.0000100 TOLEL...= 0.0000010\n"
         # average wigner-seitz radius
         nosites = 0
-        for site in self.cell.sitedata:
-            nosites += len(site[2])
+        for a in self.cell.atomdata:
+            nosites += len(a)
         volume = abs(det3(self.cell.latticevectors))
         wsr = self.cell.lengthscale * (3*volume/(nosites * 4 * pi))**third
         filestring += "SWS......= %9f NP...=  1 SMIX.= 0.500 TMIX.= 0.0000\n" % wsr
@@ -91,27 +93,25 @@ class OldNCOLFile(GeometryOutputFile):
         filestring += "EFGS.....=    0.0000 EFGS....=   0.00000 FTMAG...=  0.000000\n"
         filestring += "DEO(l)...=     0.020     0.010     0.005     0.001      0.02\n"
         filestring += "Symb IQ IT NL IP NSP   SWP  QTRO  SPLT NFIX NDWF     Eny(spdf)\n"
+        # set first species
+        if self.cell.atomdata[0][0].alloy():
+            prevspecies = "??"
+        else:
+            for v in self.cell.atomdata[0][0].species:
+                prevspecies = v
+        # type loop
         iq = 1
         it = 1
         nsp = 1
-        if len(self.cell.sitedata[0][1]) > 1:
-            prevspecies = "??"
-        else:
-            for v in self.cell.sitedata[0][1]:
-                prevspecies = v
-        # type loop
-        for site in self.cell.sitedata:
-            # Check for alloy
-            if len(site[1]) > 1:
-                species = "??"
-            else:
-                for v in site[1]:
-                    species = v
-            if species != prevspecies:
-                prevspecies = species
-                nsp += 1
-            # site loop
-            for pos in site[2]:
+        for a in self.cell.atomdata:
+            for b in a:
+                if b.alloy():
+                    species = "??"
+                else:
+                    species = b.spcstring()
+                if species != prevspecies:
+                    prevspecies = species
+                    nsp += 1
                 tmpstring = species.ljust(2)+"  "+"%3i%3i"%(iq,it)
                 try:
                     tmpstring += "%3i%3i"%(l[ed.elementblock[species]],1)
@@ -119,16 +119,13 @@ class OldNCOLFile(GeometryOutputFile):
                     tmpstring += "  ?  1"
                 tmpstring += "%3i"%nsp
                 tmpstring += "    1.000 .000 0.00 0000 1111   .0   .0   .0   .0"
-                if len(site[1]) > 1:
+                if b.alloy():
                     # print alloy components at the end of the line
-                    tmpstring += "       "
-                    for comp in site[1]:
-                        tmpstring += comp+"/"
-                    tmpstring = tmpstring.rstrip("/")
+                    tmpstring += "       "+b.spcstring()
                 filestring += tmpstring+"\n"
                 iq += 1
             it += 1
-        for site in self.cell.sitedata:
+        for a in self.cell.atomdata:
             filestring += "Theta....=     90.00 Phia....=      0.00 FIXMOM..=         N moment..=      0.0\n"
         filestring += "PQX......=      0.00 PQY.....=      0.00 PQZ.....=   0.00000 COORD...=L\n"
         filestring += "Atom: 4 lines + NT*6 lines\n"
@@ -136,8 +133,8 @@ class OldNCOLFile(GeometryOutputFile):
         filestring += "VMIX.....=  0.300000 RWAT....=  3.500000 RMAX....= 20.000000\n"
         filestring += "DPAS.....=  0.049000 DR1.....=  1.00E-08 TEST....=  1.00E-08\n"
         filestring += "TESTE....=  1.00E-07 TESTY...=  1.00E-08 TESTV...=  1.00E-07\n"
-        for site in self.cell.sitedata:
-            for comp in site[1]:
+        for a in self.cell.atomdata:
+            for comp in a[0].species:
                 filestring += comp+"\n"
                 try:
                     filestring += ed.emtoelements[comp]
@@ -148,7 +145,7 @@ class OldNCOLFile(GeometryOutputFile):
 class BSTRFile(GeometryOutputFile):
     """
     Class for storing the geometrical data needed in a [filename].dat file for the bstr program
-    and the method FileString that outputs the contents of the .dat file as a string.
+    and the method __str__ that outputs the contents of the .dat file as a string.
     """
     def __init__(self,crystalstructure,string):
         GeometryOutputFile.__init__(self,crystalstructure,string)
@@ -160,7 +157,7 @@ class BSTRFile(GeometryOutputFile):
         self.c = 1
         # To be put on the first line
         self.programdoc = ""
-    def FileString(self):
+    def __str__(self):
         ed = ElementData()
         filestring = ""
         tmpstring = "BSTR      IDSYST=  7"
@@ -174,9 +171,8 @@ class BSTRFile(GeometryOutputFile):
         filestring += self.docstring.replace("\n"," ")+"\n"
         # Get number of sites
         nosites = 0
-        for site in self.cell.sitedata:
-            for pos in site[2]:
-                nosites += 1
+        for a in self.cell.atomdata:
+            nosites += len(a)
         # Setting the real space summation cutoff to 4.5*(wigner-seitz radius)
         volume = abs(det3(self.cell.latticevectors))
         wsr = (3*volume/(nosites * 4 * pi))**third
@@ -187,71 +183,50 @@ class BSTRFile(GeometryOutputFile):
         filestring += tmpstring
         # Set up basis functions. Just setting lmax = 2 for s-/p-, 3 for d- and 4 for f- blocks
         tmpstring = "\nNLX(IQ)..="
-        for site in self.cell.sitedata:
-            for k in site[1]:
-                l = 1
-                if ed.elementblock[k] == 's' or ed.elementblock[k] == 'p':
-                    l = max(l,2)
-                elif ed.elementblock[k] == 'd':
-                    l = max(l,3)
-                elif ed.elementblock[k] == 'f':
-                    l = max(l,4)
-                lstring = " %1i" % l
-            for pos in site[2]:
-                tmpstring += lstring
+        for a in self.cell.atomdata:
+            for b in a:
+                for k in b.species:
+                    l = 1
+                    if ed.elementblock[k] == "s" or ed.elementblock[k] == "p":
+                        l = max(l,2)
+                    elif ed.elementblock[k] == "d":
+                        l = max(l,3)
+                    elif ed.elementblock[k] == "f":
+                        l = max(l,4)
+                tmpstring += " %1i" % l
                 if len(tmpstring) % 69 == 0:
                     tmpstring += "\n          "
-        # Need to strip newline character if it the last line was 69 characters long...
+        # Need to strip newline character if the last line was 69 characters long...
         tmpstring = tmpstring.rstrip(string.whitespace)
         tmpstring = tmpstring+"\n"
         filestring += tmpstring
+        # Print lattice vectors
         coa = self.c / self.a
         boa = self.b / self.a
         filestring += "A........=  1.00000000 B.......=  1.00000000 C.......=  1.00000000\n"
         tmpstring = ""
+        lv = self.cell.latticevectors
         for i in range(3):
-            tmpstring += "BSX......=%12.7f BSY.....=%12.7f BSZ.....=%12.7f\n" % (self.cell.latticevectors[i][0],self.cell.latticevectors[i][1],self.cell.latticevectors[i][2])
+            tmpstring += "BSX......=%12.7f BSY.....=%12.7f BSZ.....=%12.7f\n" % (lv[i][0],lv[i][1],lv[i][2])
         filestring += tmpstring
-        for site in self.cell.sitedata:
-            for pos in site[2]:
-                pos = mvmult3(self.cell.latticevectors,pos)
+        # All positions
+        it = 1
+        for a in self.cell.atomdata:
+            for b in a:
+                pos = mvmult3(lv,b.position)
                 tmpstring = "QX.......=%12.7f QY......=%12.7f QZ......=%12.7f" % (pos[0],pos[1],pos[2])
-                tmpstring += "      "
-                for k in site[1]:
-                    tmpstring += k+"/"
-                tmpstring = tmpstring.rstrip("/")+" "+str(site[3])+"\n"
+                tmpstring += "      "+b.spcstring()+"\n"
                 filestring += tmpstring
+            it += 1
         filestring += "LAMDA....=    2.5000 AMAX....=    5.5000 BMAX....=    5.5000\n"
         return filestring
     
-################################################################################################
-class CrystalFile(GeometryOutputFile):
-    """
-    Class for storing the geometrical data needed by Crystal and the method
-    FileString that outputs the contents of the input file as a string.
-    """
-    def __init__(self,crystalstructure,string):
-        GeometryOutputFile.__init__(self,crystalstructure,string)
-        self.HermannMauguin = ""
-        self.spacegroupnr = 0
-        self.a = 1
-        self.b = 1
-        self.c = 1
-        self.alpha = 90
-        self.beta = 90
-        self.gamma = 90
-        # Set unit for length scale
-        self.cell.newunit("angstrom")
-    def FileString(self):
-        filestring = ""
-        
-        
 ################################################################################################
 # RSPT FILES
 class CellgenFile(GeometryOutputFile):
     """
     Class for storing the geometrical data needed in a cellgen.inp file and the method
-    FileString that outputs the contents of an cellgen.inp file as a string.
+    __str__ that outputs the contents of an cellgen.inp file as a string.
     """
     def __init__(self,crystalstructure,string):
         GeometryOutputFile.__init__(self,crystalstructure,string)
@@ -267,13 +242,14 @@ class CellgenFile(GeometryOutputFile):
             string = string.lstrip("#")
             string = "#"+string+"\n"
             self.docstring += string
-    def FileString(self):
+    def __str__(self):
         # Initialize element data
         ed = ElementData()
         # Add docstring
         filestring = self.docstring
         # Add lattice constant
         filestring += "# Lattice constant in a.u.: "+str(self.cell.lengthscale)+"\n"
+        # RSPt reads the lattice vectors as columns...
         filestring +="# Lattice vectors (columns)\n"
         tmpstring = ""
         for i in range(3):
@@ -283,28 +259,23 @@ class CellgenFile(GeometryOutputFile):
         filestring += tmpstring
         # Get number of sites
         nosites = 0
-        for site in self.cell.sitedata:
-            for pos in site[2]:
-                nosites += 1
+        for a in self.cell.atomdata:
+            nosites += len(a)
         filestring += "# Sites\n"
         filestring += str(nosites)+"\n"
-        for site in self.cell.sitedata:
-            for pos in site[2]:
+        it = 1
+        for a in self.cell.atomdata:
+            for b in a:
                 tmpstring = ""
-                for k in range(3):
-                    x = improveprecision(pos[k],0.00001)
-                    tmpstring += "%19.15f " % x
-                if len(site[1]) > 1:
+                tmpstring += str(b.position)+" "
+                if b.alloy():
                     # don't know what to put for an alloy
                     tmpstring += "???"
                 else:
-                    for k in site[1]:
-                        tmpstring += "%3i" % ed.elementnr[k]
-                tmpstring += " l "+chr(site[3]+96)+"   # "
-                for k in site[1]:
-                    tmpstring += k+"/"
-                tmpstring = tmpstring.rstrip("/")+"\n"
+                    tmpstring += "%3i"%ed.elementnr[b.spcstring()]
+                tmpstring += " l "+chr(it+96)+"   # "+b.spcstring()+"\n"
                 filestring += tmpstring
+            it += 1
         filestring += "# Supercell map\n"
         tmpstring = ""
         for i in self.supercellmap:
@@ -324,7 +295,7 @@ class CellgenFile(GeometryOutputFile):
 class SymtFile(GeometryOutputFile):
     """
     Class for storing the geometrical data needed in an old format symt.inp file and the method
-    FileString that outputs the contents of an symt.inp file as a string.
+    __str__ that outputs the contents of an symt.inp file as a string.
     """
     def __init__(self,crystalstructure,string):
         GeometryOutputFile.__init__(self,crystalstructure,string)
@@ -340,13 +311,14 @@ class SymtFile(GeometryOutputFile):
             self.docstring += string
         # Default spin axis is [0,0,0]
         self.spinaxis = [0.0, 0.0, 0.0]
-    def FileString(self):
+    def __str__(self):
         # Initialize element data
         ed = ElementData()
         # Add docstring
         filestring = self.docstring
         # Add lattice constant
         filestring += "# Lattice constant in a.u.: "+str(self.cell.lengthscale)+"\n"
+        # RSPt reads the lattice vectors as columns...
         filestring +="# Lattice vectors (columns)\n"
         tmpstring = ""
         for i in range(3):
@@ -358,35 +330,30 @@ class SymtFile(GeometryOutputFile):
         filestring += "%19.15f %19.15f %19.15f  l\n"%(self.spinaxis[0],self.spinaxis[1],self.spinaxis[2])
         # Get number of sites
         nosites = 0
-        for site in self.cell.sitedata:
-            for pos in site[2]:
-                nosites += 1
+        for a in self.cell.atomdata:
+            nosites += len(a)
         filestring += "# Sites\n"
         filestring += str(nosites)+"\n"
-        for site in self.cell.sitedata:
-            for pos in site[2]:
+        it = 1
+        for a in self.cell.atomdata:
+            for b in a:
                 tmpstring = ""
-                for k in range(3):
-                    x = improveprecision(pos[k],0.00001)
-                    tmpstring += "%19.15f " % x
-                if len(site[1]) > 1:
+                tmpstring += str(b.position)+" "
+                if b.alloy():
                     # don't know what to put for an alloy
                     tmpstring += "???"
                 else:
-                    for k in site[1]:
-                        tmpstring += "%3i" % ed.elementnr[k]
-                tmpstring += " l "+chr(site[3]+96)+"   # "
-                for k in site[1]:
-                    tmpstring += k+"/"
-                tmpstring = tmpstring.rstrip("/")+"\n"
+                    tmpstring +=  "%3i"%ed.elementnr[b.spcstring()]
+                tmpstring += " l "+chr(it+96)+"   # "+b.spcstring()+"\n"
                 filestring += tmpstring
+            it += 1
         return filestring
 
 ################################################################################################
 class SymtFile2(GeometryOutputFile):
     """
     Class for storing the geometrical data needed in a new format symt.inp file and the method
-    FileString that outputs the contents of an symt.inp file as a string.
+    __str__ that outputs the contents of an symt.inp file as a string.
     """
     def __init__(self,crystalstructure,string):
         GeometryOutputFile.__init__(self,crystalstructure,string)
@@ -406,7 +373,7 @@ class SymtFile2(GeometryOutputFile):
         self.spinpol = False
         self.relativistic = False
         self.mtradii = 0
-    def FileString(self):
+    def __str__(self):
         # Initialize element data
         ed = ElementData()
         # Add docstring
@@ -423,6 +390,7 @@ class SymtFile2(GeometryOutputFile):
         if self.mtradii != 0:
             filestring += "# Choice of MT radii\n"
             filestring += "mtradii\n"+str(self.mtradii)+"\n"
+        # RSPt reads the lattice vectors as columns...
         filestring += "# Lattice vectors (columns)\n"
         filestring += "latticevectors\n"
         tmpstring = ""
@@ -436,36 +404,31 @@ class SymtFile2(GeometryOutputFile):
         filestring += "%19.15f %19.15f %19.15f  l\n"%(self.spinaxis[0],self.spinaxis[1],self.spinaxis[2])
         # Get number of sites
         nosites = 0
-        for site in self.cell.sitedata:
-            for pos in site[2]:
-                nosites += 1
+        for a in self.cell.atomdata:
+            nosites += len(a)
         filestring += "# Sites\n"
         filestring += "atoms\n"
         filestring += str(nosites)+"\n"
-        for site in self.cell.sitedata:
-            for pos in site[2]:
+        it = 1
+        for a in self.cell.atomdata:
+            for b in a:
                 tmpstring = ""
-                for k in range(3):
-                    x = improveprecision(pos[k],0.00001)
-                    tmpstring += "%19.15f " % x
-                if len(site[1]) > 1:
+                tmpstring += str(b.position)+" "
+                if b.alloy():
                     # don't know what to put for an alloy
                     tmpstring += "???"
                 else:
-                    for k in site[1]:
-                        tmpstring += "%3i" % ed.elementnr[k]
-                tmpstring += " l "+chr(site[3]+96)+"   # "
-                for k in site[1]:
-                    tmpstring += k+"/"
-                tmpstring = tmpstring.rstrip("/")+"\n"
+                    tmpstring += "%3i"%ed.elementnr[b.spcstring()]
+                tmpstring += " l "+chr(it+96)+"   # "+b.spcstring()+"\n"
                 filestring += tmpstring
+            it += 1
         return filestring
 
 ################################################################################################
 class Crystal09File(GeometryOutputFile):
     """
     Class for storing the geometrical data needed by Crystal09 and the method
-    FileString that outputs the contents of an Crystal09 input file as a string.
+    __str__ that outputs the contents of an Crystal09 input file as a string.
     Presently only handles standard settings (space group numbers, not H-M symbols)
     """
     def __init__(self,crystalstructure,string):
@@ -489,7 +452,7 @@ class Crystal09File(GeometryOutputFile):
             string = string.lstrip("!")
             string = "!"+string+"\n"
             self.docstring += string
-    def FileString(self):
+    def __str__(self):
         # Initialize element data
         ed = ElementData()
         # Add docstring
@@ -529,26 +492,25 @@ class Crystal09File(GeometryOutputFile):
         else:
             return "ERROR: Could not determine crystal system corresponding to space group "+str(self.spacegroupnr)+"."
         # Number of atoms
-        filestring += str(len(self.cell.sitedata))+"\n"
-        # Atomic numbers and positions
-        for site in self.cell.sitedata:
+        filestring += str(len(self.cell.ineqsites))+"\n"
+        # Atomic numbers and representative positions
+        occ = self.cell.occupations
+        for i in range(len(self.cell.ineqsites)):
             spcstring = ""
-            if len(site[1]) > 1:
-                # Don't know what to put for alloy
+            if len(occ[i]) > 1:
+                # don't know what to put for alloy
                 filestring += "??"
-                for k in site[1]:
+                for k in occ[i]:
                     spcstring += str(ed.elementnr[k])+"/"
                 spcstring = spcstring.rstrip("/")+"  "
-                for k in site[1]:
+                for k in occ[i]:
                     spcstring += k+"/"
                 spcstring = spcstring.rstrip("/")
             else:
-                for k in site[1]:
+                for k in occ[i]:
                     filestring += str(ed.elementnr[k]).rjust(2)
                     spcstring = k
-            for coord in site[0]:
-                filestring += " %13.10f"%coord
-            filestring += "      ! "+spcstring+"\n"
+            filestring += str(self.cell.ineqsites[i])+"      ! "+spcstring+"\n"
         filestring += "END\n"
         return filestring
 
@@ -556,7 +518,7 @@ class Crystal09File(GeometryOutputFile):
 class SpacegroupFile(GeometryOutputFile):
     """
     Class for storing the geometrical data needed in a spacegroup.in file and the method
-    FileString that outputs the contents of an spacegroup.in file as a string.
+    __str__ that outputs the contents of an spacegroup.in file as a string.
     """
     def __init__(self,crystalstructure,string):
         GeometryOutputFile.__init__(self,crystalstructure,string)
@@ -578,19 +540,21 @@ class SpacegroupFile(GeometryOutputFile):
             string = string.lstrip("!")
             string = "!"+string+"\n"
             self.docstring += string
-    def FileString(self):
+    def __str__(self):
         filestring = ""
-        tmpstring=' \''+self.HermannMauguin+'\''
-        tmpstring = tmpstring.ljust(50)+': hrmg\n'
+        if (self.HermannMauguin[-1] == 'R' or self.HermannMauguin[-1] == 'H') and self.HermannMauguin[-2] != ':':
+            self.HermannMauguin = self.HermannMauguin[0:len(self.HermannMauguin)-1]+':'+self.HermannMauguin[-1]
+        tmpstring=" '"+self.HermannMauguin+"'"
+        tmpstring = tmpstring.ljust(50)+": hrmg\n"
         filestring += tmpstring
         tmpstring = ""
-        tmpstring += ' %15.11f' % (self.a)
-        tmpstring += ' %15.11f' % (self.b)
-        tmpstring += ' %15.11f' % (self.c)
-        tmpstring = tmpstring.ljust(50)+': a, b, c\n'
+        tmpstring += " %15.11f" % (self.a)
+        tmpstring += " %15.11f" % (self.b)
+        tmpstring += " %15.11f" % (self.c)
+        tmpstring = tmpstring.ljust(50)+": a, b, c\n"
         filestring += tmpstring
-        tmpstring = ' %15.9f %15.9f %15.9f'%(self.gamma,self.beta,self.alpha)
-        tmpstring = tmpstring.ljust(50)+': ab, ac, bc\n'
+        tmpstring = " %15.9f %15.9f %15.9f"%(self.gamma,self.beta,self.alpha)
+        tmpstring = tmpstring.ljust(50)+": ab, ac, bc\n"
         filestring += tmpstring
         tmpstring = ""
         for i in self.supercelldims:
@@ -598,37 +562,37 @@ class SpacegroupFile(GeometryOutputFile):
         tmpstring = tmpstring.ljust(50)
         tmpstring += ": ncell\n"
         filestring += tmpstring
-        filestring += '.true.'.ljust(50)+': primcell\n'
+        filestring += ".true.".ljust(50)+": primcell\n"
         # Get species info
         species = set([])
-        for site in self.cell.sitedata:
+        for occ in self.cell.occupations:
             spcstring = ""
-            for k in site[1]:
+            for k in occ:
                 spcstring += k+"/"
             spcstring = spcstring.rstrip("/")
             species.add(spcstring)
-        tmpstring = str(len(species)).ljust(50)+': nspecies\n'
+        tmpstring = str(len(species)).ljust(50)+": nspecies\n"
         filestring += tmpstring
         for spcs in species:
             # find number of representative sites for this species
             spcsites = 0
             positionstring = ""
-            for site in self.cell.sitedata:
+            i = 0
+            for occ in self.cell.occupations:
                 spcstring = ""
-                for k in site[1]:
+                for k in occ:
                     spcstring += k+"/"
                 spcstring = spcstring.rstrip("/")
                 if spcstring == spcs:
                     spcsites += 1
-                    for coord in site[0]:
-                        positionstring += " %15.11f" % coord
-                    positionstring += "\n"
+                    positionstring += str(self.cell.ineqsites[i])+"\n"
+                i += 1
             # output species info
             if len(spcs) > 2:
                 # alloy
-                spcsheader = '\'??\''.ljust(50)+'! '+spcs+'\n'+str(spcsites)+'\n'
+                spcsheader = "'??'".ljust(50)+"! "+spcs+"\n"+str(spcsites)+"\n"
             else:
-                spcsheader = '\''+spcs+'\'\n'+str(spcsites)+'\n'
+                spcsheader = "'"+spcs+"'\n"+str(spcsites)+"\n"
             filestring += spcsheader
             filestring += positionstring
         filestring += "\n"+self.docstring
@@ -638,7 +602,7 @@ class SpacegroupFile(GeometryOutputFile):
 class ElkFile(GeometryOutputFile):
     """
     Class for storing the geometrical data needed in an elk.in file and the method
-    FileString that outputs the contents of an elk.in file as a string.
+    __str__ that outputs the contents of an elk.in file as a string.
     """
     def __init__(self,crystalstructure,string):
         GeometryOutputFile.__init__(self,crystalstructure,string)
@@ -652,7 +616,7 @@ class ElkFile(GeometryOutputFile):
             string = string.lstrip("!")
             string = "!"+string+"\n"
             self.docstring += string
-    def FileString(self):
+    def __str__(self):
         filestring = self.docstring
         # Lattice vectors
         filestring += "avec\n"
@@ -670,59 +634,44 @@ class ElkFile(GeometryOutputFile):
         filestring += "atoms\n"
         # Get number of species
         species = set([])
-        for site in self.cell.sitedata:
-            spcstring = ""
-            for k in site[1]:
-                spcstring += k+"/"
-            spcstring = spcstring.rstrip("/")
-            species.add(spcstring)
-        tmpstring = "  "+str(len(species)).ljust(38)+': nspecies\n'
+        for a in self.cell.atomdata:
+            for b in a:
+                species.add(b.spcstring())
+        tmpstring = ("  "+str(len(species))).ljust(37)+": nspecies\n"
         filestring += tmpstring
         # local B-field string
         bfcmtstring = "   0.00000000  0.00000000  0.00000000"
         # initialize some stuff
         natoms = 0
-        spcstring = ""
-        for k in self.cell.sitedata[0][1]:
-            spcstring += k+"/"
-        spcstring = spcstring.rstrip("/")
+        spcstring = self.cell.atomdata[0][0].spcstring()
         positionstring = ""
-        tofilestring = ""
-        for site in self.cell.sitedata:
-            spcs = ""
-            for k in site[1]:
-                spcs += k+"/"
-            spcs = spcs.rstrip("/")
-            # Accumulate for this species
-            if spcs == spcstring:
-                natoms += len(site[2])
-                for pos in site[2]:
-                    for coord in pos:
-                        positionstring += " %15.11f" % coord
-                    positionstring += bfcmtstring+"\n"
-            else:
-                # Print species
-                if len(spcstring) > 2:
-                    # alloy
-                    filestring += '\'??.in\''.ljust(37)+': spfname = '+spcstring+'\n'
+        for a in self.cell.atomdata:
+            for b in a:
+                spcs = b.spcstring()
+                # Accumulate for this species
+                if spcs == spcstring:
+                    ## natoms += len(a)
+                    natoms += 1
+                    positionstring += str(b.position)+bfcmtstring+"\n"
                 else:
-                    filestring += '\''+spcstring+'.in\''.ljust(37)+': spfname\n'
-                filestring += "  "+str(natoms)+"\n"
-                filestring += positionstring
-                # Initialize next species
-                spcstring = spcs
-                natoms = len(site[2])
-                positionstring = ""
-                for pos in site[2]:
-                    for coord in pos:
-                        positionstring += " %15.11f" % coord
-                    positionstring += bfcmtstring+"\n"
+                    # Print species
+                    if len(spcstring) > 2:
+                        # alloy
+                        filestring += "'??.in'".ljust(37)+": spfname = "+spcstring+"\n"
+                    else:
+                        filestring += ("'"+spcstring+".in'").ljust(37)+": spfname \n"
+                    filestring += "  "+str(natoms)+"\n"
+                    filestring += positionstring
+                    # Initialize next species
+                    spcstring = spcs
+                    natoms = 1
+                    positionstring = str(b.position)+bfcmtstring+"\n"
         # Print last species
         if len(spcstring) > 2:
             # alloy
-            filestring += '\'??.in\''.ljust(37)+': spfname = '+spcstring+'\n'
+            filestring += "'??.in'".ljust(37)+": spfname = "+spcstring+"\n"
         else:
-            filestring += '\''+spcstring+'.in\''.ljust(37)+': spfname\n'
+            filestring += ("'"+spcstring+".in'").ljust(37)+": spfname\n"
         filestring += "  "+str(natoms)+"\n"
         filestring += positionstring
         return filestring
@@ -731,7 +680,7 @@ class ElkFile(GeometryOutputFile):
 class ExcitingFile(GeometryOutputFile):
     """
     Class for storing the geometrical data needed in an input.xml file and the method
-    FileString that outputs the contents of an input.xml file as a string.
+    __str__ that outputs the contents of an input.xml file as a string.
     """
     def __init__(self,crystalstructure,string):
         GeometryOutputFile.__init__(self,crystalstructure,string)
@@ -739,7 +688,7 @@ class ExcitingFile(GeometryOutputFile):
         self.cell.newunit("bohr")
         self.title = ""
         self.docstring = self.docstring.rstrip("\n")+"\n"
-    def FileString(self):
+    def __str__(self):
         filestring = "<input>\n"
         filestring += "  <title>\n"
         filestring += self.docstring
@@ -763,45 +712,32 @@ class ExcitingFile(GeometryOutputFile):
         # local B-field string
         bfcmtstring = "   0.00000000  0.00000000  0.00000000"
         # initialize some stuff
-        spcstring = ""
-        for k in self.cell.sitedata[0][1]:
-            spcstring += k+"/"
-        spcstring = spcstring.rstrip("/")
+        spcstring = self.cell.atomdata[0][0].spcstring()
         positionstring = ""
-        tofilestring = ""
-        for site in self.cell.sitedata:
-            spcs = ""
-            for k in site[1]:
-                spcs += k+"/"
-            spcs = spcs.rstrip("/")
-            # Accumulate for this species
-            if spcs == spcstring:
-                for pos in site[2]:
+        for a in self.cell.atomdata:
+            for b in a:
+                spcs = b.spcstring()
+                # Accumulate for this species
+                if spcs == spcstring:
                     positionstring += "      <atom coord=\""
-                    for coord in pos:
-                        positionstring += " %15.11f" % coord
-                    positionstring += "\" bfcmt=\""+bfcmtstring+"\"></atom>\n"
-            else:
-                # Print species
-                if len(spcstring) > 2:
-                    # alloy
-                    filestring += '\'??.in\''.ljust(37)+': spfname = '+spcstring+'\n'
+                    positionstring += str(b.position)+"\"/>\n"
                 else:
-                    filestring += "    <species speciesfile=\""+spcstring+".xml\">\n"
-                filestring += positionstring
-                filestring += "    </species>\n"
-                # Initialize next species
-                spcstring = spcs
-                positionstring = ""
-                for pos in site[2]:
-                    positionstring += "      <atom coord=\""
-                    for coord in pos:
-                        positionstring += " %15.11f" % coord
-                    positionstring += "\" bfcmt=\""+bfcmtstring+"\"></atom>\n"
+                    # Print species
+                    if len(spcstring) > 2:
+                        # alloy
+                        filestring += "    <species speciesfile=\"??.xml\">"
+                        filestring += "       <!-- "+spcstring+" -->\n"
+                    else:
+                        filestring += "    <species speciesfile=\""+spcstring+".xml\">\n"
+                    filestring += positionstring+"    </species>\n"
+                    # Initialize next species
+                    spcstring = spcs
+                    positionstring = "      <atom coord=\""+str(b.position)+"\"/>\n"
         # Print last species
         if len(spcstring) > 2:
             # alloy
-            filestring += '\'??.in\''.ljust(37)+': spfname = '+spcstring+'\n'
+            filestring += "    <species speciesfile=\"??.xml\">"
+            filestring += "       <!-- "+spcstring+" -->\n"
         else:
             filestring += "    <species speciesfile=\""+spcstring+".xml\">\n"
         filestring += positionstring
@@ -815,7 +751,7 @@ class FleurFile(GeometryOutputFile):
     """
     Class for storing the geometrical data needed in a Fleur input generator input file (how about
     that, we generate input for the generator of the input...) and the method
-    FileString that outputs the contents of an elk/exciting.in file as a string.
+    __str__ that outputs the contents as a string.
     """
     def __init__(self,crystalstructure,string):
         GeometryOutputFile.__init__(self,crystalstructure,string)
@@ -825,7 +761,7 @@ class FleurFile(GeometryOutputFile):
         self.docstring = self.docstring.replace("\n"," ")
         if len(self.docstring) > 80:
             self.docstring = self.docstring[0:78]+"...\n"
-    def FileString(self):
+    def __str__(self):
         ed = ElementData()
         filestring = self.docstring+"\n"
         filestring += "&input cartesian=f oldfleur=f\n\n"
@@ -833,8 +769,7 @@ class FleurFile(GeometryOutputFile):
         tmpstring = ""
         n = 1
         for pos in self.cell.latticevectors:
-            for coord in pos:
-                tmpstring += "  %13.10f"%coord
+            tmpstring += str(pos)
             tmpstring += "    !  a%1i\n"%n
             n += 1
         filestring += tmpstring
@@ -843,32 +778,26 @@ class FleurFile(GeometryOutputFile):
         filestring += "1.0  1.0  1.0 ! scale(1), scale(2), scale(3)\n"
         # Atoms
         natom = 0
+        for a in self.cell.atomdata:
+            natom += len(a)
+        filestring += str(natom)+"\n"
         nspcs = 0
         spcs = ""
         coordstring = ""
-        for site in self.cell.sitedata:
-            spcstring = ""
-            for k in site[1]:
-                spcstring += k+"/"
-            spcstring = spcstring.rstrip("/")
-            natom += len(site[2])
-            # Check for alloy
-            if len(site[1]) > 1:
-                prestring = "??"
-                poststring = "  ! "
-                for k in site[1]:
-                    poststring += str(ed.elementnr[k])+"/"
-                poststring = poststring.rstrip("/")+" "+spcstring+"\n"
-            else:
-                prestring = str(ed.elementnr[spcstring]).rjust(2)
-                poststring = "  ! "+spcstring+"\n"
-            for pos in site[2]:
-                coordstring += prestring
-                for coord in pos:
-                    coordstring += " %13.10f"%coord
-                coordstring += poststring
+        for a in self.cell.atomdata:
+            for b in a:
+                # Check for alloy
+                if b.alloy():
+                    prestring = "??"
+                    poststring = "  ! "
+                    for k in b.species:
+                        poststring += str(ed.elementnr[k])+"/"
+                    poststring = poststring.rstrip("/")+" "+str(b.spcstring())+"\n"
+                else:
+                    prestring = str(ed.elementnr[b.spcstring()]).ljust(2)
+                    poststring = "  ! "+b.spcstring()+"\n"
+                coordstring += prestring+str(b.position)+poststring
         # To filestring
-        filestring += str(natom)+"\n"
         filestring += coordstring
         return filestring
 
@@ -876,7 +805,7 @@ class FleurFile(GeometryOutputFile):
 class CASTEPFile(GeometryOutputFile):
     """
     Class for storing the geometrical data needed in a CASTEP run and the method
-    FileString that outputs to a .cell file as a string.
+    __str__ that outputs to a .cell file as a string.
     """
     def __init__(self, crystalstructure, string):
         GeometryOutputFile.__init__(self,crystalstructure,string)
@@ -889,7 +818,7 @@ class CASTEPFile(GeometryOutputFile):
             string = string.lstrip("#")
             string = "#"+string+"\n"
             self.docstring += string
-    def FileString(self):
+    def __str__(self):
         # Assign some local variables
         a = self.cell.lengthscale
         lattice = self.cell.latticevectors
@@ -908,44 +837,25 @@ class CASTEPFile(GeometryOutputFile):
         filestring += "%ENDBLOCK LATTICE_CART\n\n"
         # The atom position info
         filestring += "%BLOCK POSITIONS_FRAC\n"
-        for site in self.cell.sitedata:
-            spcstring = ""
-            l = ""
-            for k in site[1]:
-                spcstring += k+"/"
-                if l == "":
-                    l = ed.elementblock[k]
-                else:
-                    if ed.angularmomentum[ed.elementblock[k]] > ed.angularmomentum[l]:
-                        l = ed.elementblock[k]
-            spcstring = spcstring.rstrip("/")
-            for pos in site[2]:
-                filestring += spcstring.rjust(max(2,len(spcstring)))+" "
-                for coord in pos:
-                    filestring += " %19.15f"%coord
-                filestring += "\n"
+        for a in self.cell.atomdata:
+            for b in a:
+                filestring += b.spcstring().ljust(2)+" "+str(b.position)+"\n"
         filestring += "%ENDBLOCK POSITIONS_FRAC\n"
         # pseudo-potential block
         filestring += "\n"
         filestring += "%BLOCK SPECIES_POT\n"
         filestring += "%ENDBLOCK SPECIES_POT\n"
-        # Put the symmetry operations
+        # Put in the symmetry operations
         filestring += "\n%BLOCK SYMMETRY_OPS\n"
         latvect = self.cell.conventional_latticevectors()
-        # CASTEP assumes that you put identity first
-        symops = copy.deepcopy(self.cell.symops)
+        # make list and make sure that identity comes first
+        symoplist = sorted(list(cell.symops))
+        symoplist.sort(key = lambda op: det3(op.rotation), reverse=True)
         identity = SymmetryOperation(['x','y','z'])
-        symops.remove(identity)
-        symops.insert(0,identity)
-        latticevectors = self.cell.conventional_latticevectors()
+        symoplist.remove(identity)
+        symoplist.insert(identity,0)
         k = 1
-        for op in symops:
-            # Rotations relate to conventional cell
-            # axes, we need them w.r.t. cartesian axes
-            op.rotation_matrix = latticevectors.transform(op.rotation_matrix)
-            op.rotation_matrix = op.rotation_matrix.transform(minv3(latticevectors))
-            # transform translations
-            op.translation = op.translation.transform(minv3(self.cell.lattrans))
+        for op in symoplist:
             filestring += "# Symm. op. %i\n"%k
             filestring += str(op)
             k += 1
@@ -956,13 +866,13 @@ class CASTEPFile(GeometryOutputFile):
 class CPMDFile(GeometryOutputFile):
     """
     Class for storing the geometrical data needed in a CPMD run and the method
-    FileString that outputs to a .inp file as a string.
+    __str__ that outputs to a .inp file as a string.
     """
     def __init__(self, crystalstructure, string):
         GeometryOutputFile.__init__(self,crystalstructure,string)
         self.cell.newunit("bohr")
         self.cutoff = 100.0
-    def FileString(self):
+    def __str__(self):
         # Assign some local variables
         a = self.cell.lengthscale
         lattice = self.cell.latticevectors
@@ -975,7 +885,7 @@ class CPMDFile(GeometryOutputFile):
                 transmtx[i].append(lattice[i][j] * a)
         # docstring
         filestring = self.docstring+"\n"
-        filestring += "%SYSTEM\n"
+        filestring += "&SYSTEM\n"
         # lattice
         filestring += " CELL VECTORS\n"
         for vec in transmtx:
@@ -988,26 +898,29 @@ class CPMDFile(GeometryOutputFile):
         filestring += "&END\n\n"
         # The atom position info
         filestring += "&ATOMS\n"
-        for site in self.cell.sitedata:
-            spcstring = ""
-            l = ""
-            for k in site[1]:
-                spcstring += k+"/"
-                if l == "":
-                    l = ed.elementblock[k]
-                else:
-                    if ed.angularmomentum[ed.elementblock[k]] > ed.angularmomentum[l]:
-                        l = ed.elementblock[k]
-            spcstring = spcstring.rstrip("/")
-            # pseudo-potential for each type
-            filestring += "*[pseudopotential file for "+spcstring+" here]\n"
-            filestring += "  LMAX="+l.upper()+"\n"
-            filestring += "  "+str(len(site[2]))+"\n"
-            for pos in site[2]:
-                v = mvmult3(transmtx,pos)
-                for coord in v:
-                    filestring += " %19.15f"%coord
-                filestring += "\n"
+        # get all species
+        species = set([])
+        for a in self.cell.atomdata:
+            for b in a:
+                species.add(b.spcstring())
+        for spc in species:
+            filestring += "*[pseudopotential file for "+spc+" here]\n"
+            # Find maximal angular momentum
+            spcs = spc.split("/")
+            l = "s"
+            for s in spcs:
+                 if ed.angularmomentum[ed.elementblock[s]] > ed.angularmomentum[l]:
+                     l = ed.elementblock[s]
+            natoms = 0
+            posstring = ""
+            for a in self.cell.atomdata:
+                for b in a:
+                    if b.spcstring() == spc:
+                        natoms +=1
+                        posstring += str(Vector(mvmult3(transmtx,b.position)))+"\n"
+            # Print
+            filestring += str(natoms)+"\n"
+            filestring += posstring
         filestring += "&END\n"
         return filestring
 
@@ -1015,7 +928,7 @@ class CPMDFile(GeometryOutputFile):
 class SiestaFile(GeometryOutputFile):
     """
     Class for storing the geometrical data needed in a Siesta run and the method
-    FileString that outputs to a .fdf file as a string.
+    __str__ that outputs to a .fdf file as a string.
     """
     def __init__(self, crystalstructure, string):
         GeometryOutputFile.__init__(self,crystalstructure,string)
@@ -1028,64 +941,56 @@ class SiestaFile(GeometryOutputFile):
             string = string.lstrip("#")
             string = "#"+string+"\n"
             self.docstring += string
-    def FileString(self):
+    def __str__(self):
         # Assign some local variables
-        a = self.cell.lengthscale
         lattice = self.cell.latticevectors
         ed = ElementData()
         # docstring
         filestring = self.docstring
-        # The atom position info
         filestring += "AtomicCoordinatesFormat".ljust(28)+"Fractional\n"
-        Alloy = False
+        species = set([])
         natom = 0
-        nspcs = 0
-        spcs = ""
-        coordstring = ""
-        specieslabels = ""
-        for site in self.cell.sitedata:
-            spcstring = ""
-            for k in site[1]:
-                spcstring += k+"/"
-            spcstring = spcstring.rstrip("/")
-            natom += len(site[2])
-            if spcs != spcstring:
-                nspcs += 1
-                specieslabels += str(nspcs).ljust(4)+"   "
-                # Check for alloy
-                if len(site[1]) > 1:
-                    species = "    ??    # "+spcstring
-                    specieslabels += "??".rjust(4)+"??".rjust(7)+"     # "
-                    for k in site[1]:
-                        specieslabels += str(ed.elementnr[k])+"/"
-                    specieslabels = specieslabels.rstrip("/")
-                    specieslabels += "   "+spcstring+"\n"
-                else:
-                    for k in site[1]:
-                        species = "  "+k.rjust(4)
-                    specieslabels += str(ed.elementnr[species.lstrip()]).rjust(4)+" "+species+"\n"
-            for pos in site[2]:
-                for coord in pos:
-                    coordstring += "%19.15f "%coord
-                coordstring += species.rjust(2)+"\n"
-            spcs = spcstring
-        filestring += "LatticeConstant".ljust(28)+str(a)+" Ang\n"
+        for a in self.cell.atomdata:
+            natom += len(a)
+            for b in a:
+                species.add(b.spcstring())
+        species = list(species)
+        nspcs = len(species)
+        filestring += "LatticeConstant".ljust(28)+str(self.cell.lengthscale)+" Ang\n"
         filestring += "NumberOfAtoms".ljust(28)+str(natom)+"\n"
         filestring += "NumberOfSpecies".ljust(28)+str(nspcs)+"\n"
         # lattice
         filestring += "%block LatticeVectors\n"
         for vec in lattice:
-            for coord in vec:
-                filestring += "%19.15f "%coord
-            filestring += "\n"
+            filestring += str(vec)+"\n"
         filestring += "%endblock LatticeVectors\n"
         # Atomic coordinates
         filestring += "%block AtomicCoordinatesAndAtomicSpecies\n"
-        filestring += coordstring
+        for sp in species:
+            for a in self.cell.atomdata:
+                for b in a:
+                    if b.spcstring() == sp:
+                        filestring += str(b.position)
+                        if b.alloy():
+                            filestring += "   ??   # "+b.spcstring()+"\n"
+                        else:
+                            filestring += "   "+b.spcstring()+"\n"
         filestring += "%endblock AtomicCoordinatesAndAtomicSpecies\n"
         # Chemical species
         filestring += "%block ChemicalSpeciesLabel\n"
-        filestring += specieslabels
+        i = 1
+        for sp in species:
+            filestring += str(i).ljust(8)
+            if len(sp) > 2:
+                filestring += "??      ??    # "
+                tsp = sp.split("/")
+                for t in tsp:
+                    filestring += str(ed.elementnr[t])+"/"
+                filestring = filestring.rstrip("/")
+                filestring += "      "+sp+"\n"
+            else:
+                filestring += str(ed.elementnr[sp]).ljust(8)+sp.ljust(8)+"\n"
+            i += 1
         filestring += "%endblock ChemicalSpeciesLabel\n"
         return filestring
 
@@ -1093,7 +998,7 @@ class SiestaFile(GeometryOutputFile):
 class ABINITFile(GeometryOutputFile):
     """
     Class for storing the geometrical data needed in an abinit run and the method
-    FileString that outputs the contents of a abinit input file as a string.
+    __str__ that outputs the contents of a abinit input file as a string.
     """
     def __init__(self, crystalstructure, string):
         GeometryOutputFile.__init__(self,crystalstructure,string)
@@ -1106,7 +1011,7 @@ class ABINITFile(GeometryOutputFile):
             string = string.lstrip("#")
             string = "#"+string+"\n"
             self.docstring += string
-    def FileString(self):
+    def __str__(self):
         # Assign some local variables
         a = self.cell.lengthscale
         lattice = self.cell.latticevectors
@@ -1118,49 +1023,37 @@ class ABINITFile(GeometryOutputFile):
         filestring += "acell   3*"+str(a)+"\n\n"
         filestring += "rprim   "
         for vec in lattice:
-            for coord in vec:
-                filestring += "%19.15f "%coord
-            filestring += "\n        "
+            filestring += str(vec)+"\n        "
         filestring += "\n"
         # The atom position info
         alloy = False
         spcs = ""
-        typatstring = "typat   "
+        typatstring = "typat    "
         natom = 0
         ntypat = 0
-        znuclstring = "znucl   "
+        znuclstring = "znucl    "
         alloystring = ""
         xredstring = "xred   "
-        for site in self.cell.sitedata:
-            spcstring = ""
-            for k in site[1]:
-                spcstring += k+"/"
-            spcstring = spcstring.rstrip("/")
-            if spcs == spcstring:
-                natom += len(site[2])
-            else:
-                natom += len(site[2])
-                ntypat += 1
-                # Check for alloy
-                if len(site[1]) > 1:
-                    alloy = True
-                    znuclstring += "?? "
-                    alloystring += spcstring+" "
-                else:
-                    for k in site[1]:
-                        znuclstring += str(ed.elementnr[k])+" "
-            for pos in site[2]:
+        for a in self.cell.atomdata:
+            for b in a:
+                natom += 1
+                if spcs != b.spcstring():
+                    ntypat += 1
+                    if b.alloy():
+                        znuclstring += "?? "
+                        alloystring += b.spcstring()+" "
+                        alloy = True
+                    else:
+                        znuclstring += str(ed.elementnr[b.spcstring()])+" "
                 typatstring += str(ntypat)+" "
-                for coord in pos:
-                    xredstring += "%19.15f "%coord
-                xredstring += "\n       "
-            spcs = spcstring
-        filestring += "natom   "+str(natom)+"\n"
-        filestring += "ntypat  "+str(ntypat)+"\n"
+                xredstring += str(b.position)+"\n       "
+                spcs = b.spcstring()
+        filestring += "natom    "+str(natom)+"\n"
+        filestring += "ntypat   "+str(ntypat)+"\n"
         filestring += typatstring+"\n"
         filestring += znuclstring
         if alloy:
-            filestring += " # "+alloystring
+            filestring += "    # "+alloystring
         filestring += "\n"
         filestring += xredstring+"\n"
         return filestring
@@ -1169,7 +1062,7 @@ class ABINITFile(GeometryOutputFile):
 class POSCARFile(GeometryOutputFile):
     """
     Class for storing the geometrical data needed in a POSCAR file and the method
-    FileString that outputs the contents of a POSCAR file as a string.
+    __str__ that outputs the contents of a POSCAR file as a string.
     If you want POSCAR to be printed with the atomic positions in Cartesian form,
     then set
     POSCARFile.printcartpos = True
@@ -1182,27 +1075,24 @@ class POSCARFile(GeometryOutputFile):
         self.cell.newunit("angstrom")
         self.printcartvecs = False
         self.printcartpos = False
+        self.vasp5format = False
+        # set up species list
+        tmp = set([])
+        for a in self.cell.atomdata:
+            for b in a:
+                tmp.add(b.spcstring())
+        self.species = list(tmp)
         # make sure the docstring goes on one line
         self.docstring = self.docstring.replace("\n"," ")
     def SpeciesOrder(self):
         """
-        Return a string with the species in the cell in the order they come in the
-        input CrystalStructure.sitedata.
+        Return a string with the species in the order they appear in POSCAR.
         """
         returnstring = ""
-        spcs = ""
-        for site in self.cell.sitedata:
-            spcstring = ""
-            for k in site[1]:
-                spcstring += k+"/"
-            spcstring = spcstring.rstrip("/")
-            if spcs == spcstring:
-                pass
-            else:
-                returnstring += " "+spcstring
-                spcs = spcstring
+        for sp in self.species:
+            returnstring += sp+" "
         return returnstring
-    def FileString(self):
+    def __str__(self):
         # Assign some local variables
         a = self.cell.lengthscale
         lattice = self.cell.latticevectors
@@ -1220,33 +1110,12 @@ class POSCARFile(GeometryOutputFile):
                         [0, 1, 0],
                         [0, 0, 1]]
         # The first line with info from input docstring
-        firstline = self.docstring+" Species order: "
-        # loop over sites incrementing the position string, number of sites for each species and
-        # collect information about the species at the end of the firstline string
-        spcs = ""
-        nsitestring = ""
-        for site in self.cell.sitedata:
-            spcstring = ""
-            for k in site[1]:
-                spcstring += k+"/"
-            spcstring = spcstring.rstrip("/")
-            if spcs == spcstring:
-                nsites += len(site[2])
-            else:
-                if spcs != "":
-                    nsitestring += " "+str(nsites)
-                nsites = len(site[2])
-                firstline += " "+spcstring
-                spcs = spcstring
-            for pos in site[2]:
-                v = mvmult3(transmtx,pos)
-                for coord in v:
-                    positionunits += "%19.15f "%coord
-                positionunits += "\n"
-        nsitestring += " "+str(nsites)+"\n"
-        firstline += "\n"
-        # Write first string
-        filestring = firstline
+        filestring = self.docstring
+        if not self.vasp5format:
+            filestring += " Species order: "
+            for sp in self.species:
+                filestring += sp+" "
+        filestring += "\n"
         # Lattice parameter and vectors
         if self.printcartvecs:
             latticestring = " 1.0\n"
@@ -1257,17 +1126,192 @@ class POSCARFile(GeometryOutputFile):
             for i in range(3):
                 latticestring += "%19.15f %19.15f %19.15f\n" % (lattice[i][0], lattice[i][1], lattice[i][2])
         filestring += latticestring
-        # Species info
-        filestring += nsitestring
-        # All the sites
+        # print species here if vasp 5 format
+        if self.vasp5format:
+            for sp in self.species:
+                filestring += (" "+sp).rjust(4)
+            filestring += "\n"
+        # positions and number of species
+        nspstring = ""
+        positionstring = ""
+        for sp in self.species:
+            nsp = 0
+            for a in self.cell.atomdata:
+                for b in a:
+                    if b.spcstring() == sp:
+                        nsp += 1
+                        p = Vector(mvmult3(transmtx,b.position))
+                        positionstring += str(p)+"\n"
+            nspstring += (" "+str(nsp)).rjust(4)
+        filestring += nspstring+"\n"
         filestring += positionunits
+        filestring += positionstring
         return filestring
+
+class POTCARFile():
+    """
+    Class for representing and outputting a POTCAR file for VASP.
+    """
+    def __init__(self, crystalstructure, directory=""):
+        self.cell = crystalstructure
+        if directory != "":
+            self.dir = directory
+        else:
+            try:
+                self.dir = os.environ['VASP_PSEUDOLIB']
+            except:
+                try:
+                    self.dir = os.environ['VASP_PAWLIB']
+                except:
+                    self.dir = ""
+        # check directory
+        if self.dir == "":
+            raise SetupError("No path to the VASP pseudopotential library specified.\n")
+        if not os.path.exists(self.dir):
+            raise SetupError("The specified path to the VASP pseudopotential library does not exist.\n"+self.dir)
+        # set up species list
+        tmp = set([])
+        for a in self.cell.atomdata:
+            for b in a:
+                tmp.add(b.spcstring())
+        self.species = list(tmp)
+    def __str__(self):
+        # Make good selection of potcars
+        prioritylist = ["_d", "_pv", "_sv", "", "_h", "_s"]
+        # get all files
+        potcarlist = []
+        for a in self.species:
+            for version in prioritylist:
+                potcarfile = self.dir+"/"+a+version+"/POTCAR"
+                if os.path.exists(potcarfile):
+                    potcarlist.append(potcarfile)
+                    break
+        # read potcar files and put in outstring
+        outstring = ""
+        for f in potcarlist:
+            potcar = open(f,"r")
+            outstring += potcar.read()
+            potcar.close()
+        return outstring
+
+class KPOINTSFile():
+    """
+    Class for representing and outputting a KPOINTS file for VASP.
+    """
+    def __init__(self, crystalstructure, docstring="",kresolution=0.2):
+        self.docstring = docstring
+        self.kresolution = kresolution
+        # set reciprocal lattice vectors in reciprocal angstroms
+        reclatvect = crystalstructure.reciprocal_latticevectors()
+        for j in range(3):
+            for i in range(3):
+                reclatvect[j][i] = reclatvect[j][i] / crystalstructure.a
+        # Lengths of reciprocal lattice vectors
+        reclatvectlen = [sqrt(fsum(map(lambda x: x**2, elem))) for elem in reclatvect]
+        self.kgrid = [max(1,int(round(elem/self.kresolution))) for elem in reclatvectlen]
+    def __str__(self):
+        tmp = self.docstring
+        tmp += " k-space resolution ~"+str(self.kresolution)+"/A\n"
+        tmp += " 0\n"
+        tmp += "Monkhorst-Pack\n"
+        tmp += str(self.kgrid[0])+" "+str(self.kgrid[1])+" "+str(self.kgrid[2])+"\n"
+        tmp += "0 0 0\n"
+        return tmp
+        
+class INCARFile():
+    """
+    Class for representing and outputting a INCAR file for VASP.
+    """
+    def __init__(self, crystalstructure, docstring="",potcardir=""):
+        self.cell = crystalstructure
+        self.docstring = "# "+docstring.lstrip("#").rstrip("\n")+"\n"
+        # we need the potcar directory
+        if potcardir != "":
+            self.potcardir = potcardir
+        else:
+            try:
+                self.potcardir = os.environ['VASP_PSEUDOLIB']
+            except:
+                try:
+                    self.potcardir = os.environ['VASP_PAWLIB']
+                except:
+                    self.potcardir = ""
+        # check directory
+        if self.potcardir == "":
+            raise SetupError("No path to the VASP pseudopotential library specified.\n")
+        if not os.path.exists(self.potcardir):
+            raise SetupError("The specified path to the VASP pseudopotential library does not exist.\n"+self.dir)
+        # set up species list
+        self.species = dict([])
+        for a in self.cell.atomdata:
+            for b in a:
+                spcstr = b.spcstring()
+                if spcstr in self.species:
+                    t = self.species[spcstr] + 1
+                    self.species[spcstr] = t
+                else:
+                    self.species[spcstr] = 1
+        # get potcar list
+        prioritylist = ["_d", "_pv", "_sv", "", "_h", "_s"]
+        potcarlist = []
+        for a in self.species:
+            for version in prioritylist:
+                potcarfile = self.potcardir+"/"+a+version+"/POTCAR"
+                if os.path.exists(potcarfile):
+                    potcarlist.append(potcarfile)
+                    break        
+        # get maximal encut from potcars
+        self.maxencut = 0.0
+        for f in potcarlist:
+            potcar = open(f,"r")
+            for line in potcar:
+                words = line.split()
+                if len(words) > 0:
+                    if words[0] == "ENMAX":
+                        self.maxencut = max(float(words[2].rstrip(";")), self.maxencut)
+                        break
+            potcar.close()
+        # ecut = max(encuts found in potcars)*encutfac
+        self.encutfac = 1.5
+        # do we suspect that this might be magnetic?
+        self.magnetic = False
+        self.magmomlist = []
+        suspiciouslist = set(["Cr", "Mn", "Fe", "Co", "Ni"])
+        initialmoments = {"Cr" : 3, "Mn" : 3, "Fe" : 3, "Co" : 3, "Ni" : 1}
+        for s in self.species:
+            if s in suspiciouslist:
+                self.magnetic = True
+                for i in range(self.species[s]):
+                    self.magmomlist.append(str(initialmoments[s]))
+            else:
+                for i in range(self.species[s]):
+                    self.magmomlist.append("0")
+    def __str__(self):
+        tmp = self.docstring
+        tmp += "ENCUT = "+str(self.maxencut*self.encutfac)+"\n"
+        ## tmp += "IBRION = 1\n"
+        ## tmp += "POTIM = 0.4\n"
+        ## tmp += "ISIF = 2\n"
+        ## tmp += "NSW = 30\n"
+        ## tmp += "NELMIN = 4\n"
+        tmp += "PREC = Accurate\n"
+        tmp += "LREAL = Auto\n"
+        tmp += "ISMEAR = 0\n"
+        tmp += "SIGMA = 0.1\n"
+        if self.magnetic:
+            tmp += "ISPIN = 2\n"
+            tmp += "MAGMOM = "
+            for species in self.magmomlist:
+                tmp += species+" "
+            tmp += "\n"
+        return tmp
+        
 
 ################################################################################################
 class KFCDFile(GeometryOutputFile):
     """
     Class for storing the geometrical data needed in a [filename].dat file for the kfcd program
-    and the method FileString that outputs the contents of the .dat file as a string.
+    and the method __str__ that outputs the contents of the .dat file as a string.
     """
     def __init__(self,crystalstructure,string):
         GeometryOutputFile.__init__(self,crystalstructure,string)
@@ -1276,7 +1320,7 @@ class KFCDFile(GeometryOutputFile):
         self.kstrjobnam = "default"
         # To be put on the first line
         self.programdoc = ""
-    def FileString(self):
+    def __str__(self):
         filestring = ""
         tmpstring = "KFCD      MSGL..=  0"
         tmpstring = tmpstring.ljust(25)+self.programdoc.replace("\n"," ")+"\n"
@@ -1297,7 +1341,7 @@ class KFCDFile(GeometryOutputFile):
 class KGRNFile(GeometryOutputFile):
     """
     Class for storing the geometrical data needed in a [filename].dat file for the kgrn program
-    and the method FileString that outputs the contents of the .dat file as a string.
+    and the method __str__ that outputs the contents of the .dat file as a string.
     """
     def __init__(self,crystalstructure,string):
         GeometryOutputFile.__init__(self,crystalstructure,string)
@@ -1309,7 +1353,7 @@ class KGRNFile(GeometryOutputFile):
         # Set atomic units for length scale
         self.cell.newunit("bohr")
         self.latticenr = "14"
-    def FileString(self):
+    def __str__(self):
         ed = ElementData()
         filestring = ""
         tmpstring = "KGRN"
@@ -1330,8 +1374,8 @@ class KGRNFile(GeometryOutputFile):
         filestring += "DIR010=chd/\n"
         # Use environment variable TMPDIR if possible
         tmpstring = "DIR011="
-        if 'TMPDIR' in os.environ:
-            tmpstring += os.environ['TMPDIR']
+        if "TMPDIR" in os.environ:
+            tmpstring += os.environ["TMPDIR"]
             # Make sure the string will end with a single /
             tmpstring = tmpstring.rstrip("/")
         else:
@@ -1345,12 +1389,13 @@ class KGRNFile(GeometryOutputFile):
         filestring += tmpstring
         filestring += self.docstring.replace("\n"," ")+"\n"
         filestring += "Band: 10 lines\n"
-        tmpstring = "NITER.= 50 NLIN.= 31 NPRN.=  0 NCPA.= 20 NT...=%3i"%len(self.cell.sitedata)+" MNTA.="
+        tmpstring = "NITER.= 50 NLIN.= 31 NPRN.=  0 NCPA.= 20 NT...=%3i"%len(self.cell.atomdata)+" MNTA.="
         # Work out maximal number of species occupying a site
         mnta = 1
-        for site in self.cell.sitedata:
-            mnta = max(mnta,len(site[1]))
-        tmpstring += "%2i"%mnta+"\n"
+        for a in self.cell.atomdata:
+            for b in a:
+                mnta = max(mnta,len(b.species))
+        tmpstring += "%3i"%mnta+"\n"
         filestring += tmpstring
         filestring += "MODE..= 3D FRC..=  N DOS..=  N OPS..=  N AFM..=  P CRT..=  M\n"
         filestring += "Lmaxh.=  8 Lmaxt=  4 NFI..= 31 FIXG.=  2 SHF..=  0 SOFC.=  N\n"
@@ -1420,43 +1465,42 @@ class KGRNFile(GeometryOutputFile):
         filestring += "TOLE...= 1.d-07 TOLEF.= 1.d-07 TOLCPA= 1.d-06 TFERMI=  500.0 (K)\n"
         # Get number of sites
         nosites = 0
-        for site in self.cell.sitedata:
-            for pos in site[2]:
-                nosites += 1
+        for a in self.cell.atomdata:
+            nosites += len(a)
         # average wigner-seitz radius
         volume = abs(det3(self.cell.latticevectors))
         wsr = self.cell.lengthscale * 3*volume/(nosites * 4 * pi)**third
         filestring += "SWS......=%8f   NSWS.=  1 DSWS..=   0.05 ALPCPA= 0.9020\n"%wsr
         filestring += "Setup: 2 + NQ*NS lines\n"
         filestring += "EFGS...=  0.000 HX....=  0.100 NX...= 11 NZ0..=  6 STMP..= Y\n"
+        # atom info
         filestring += "Symb   IQ IT ITA NZ  CONC   Sm(s)  S(ws) WS(wst) QTR SPLT\n"
         iq = 1
         it = 1
-        # type loop
-        for site in self.cell.sitedata:
-            # alloy component loop
+        for a in self.cell.atomdata:
             ita = 1
-            for comp in site[1]:
-                # site loop
-                for pos in site[2]:
-                    tmpstring = comp.ljust(4)+"  "+"%3i%3i%3i"%(iq,it,ita)
-                    tmpstring += "%4i"%ed.elementnr[comp]
-                    tmpstring += "%7.3f%7.3f%7.3f%7.3f"%(site[1][comp],1,1,1)
-                    tmpstring += "%5.2f%5.2f"%(0,0)
-                    tmpstring += "\n"
-                    filestring += tmpstring
-                    iq += 1
+            # THIS MAKES ASSUMPTIONS ABOUT THE ORDERING OF ATOMDATA
+            # But we're OK for all orderings implemented so far
+            for comp in a[0].spcstring().split("/"):
+                for b in a:
+                    if comp in b.species:
+                        tmpstring = comp.ljust(4)+"  "+"%3i%3i%3i"%(iq,it,ita)
+                        tmpstring += "%4i"%ed.elementnr[comp]
+                        tmpstring += "%7.3f%7.3f%7.3f%7.3f"%(a[0].species[comp],1,1,1)
+                        tmpstring += "%5.2f%5.2f\n"%(0,0)
+                        filestring += tmpstring
+                        iq += 1
                 ita += 1
-                iq -= len(site[2])
-            iq += len(site[2])
+                iq -= len(a)
+            iq += len(a)
             it += 1
         filestring += "Atom:  4 lines + NT*NTA*6 lines\n"
         filestring += "IEX...=  4 NP..= 251 NES..= 15 NITER=100 IWAT.=  0 NPRNA=  0\n"
         filestring += "VMIX.....=  0.300000 RWAT....=  3.500000 RMAX....= 20.000000\n"
         filestring += "DX.......=  0.030000 DR1.....=  0.002000 TEST....=  1.00E-12\n"
         filestring += "TESTE....=  1.00E-12 TESTY...=  1.00E-12 TESTV...=  1.00E-12\n"
-        for site in self.cell.sitedata:
-            for comp in site[1]:
+        for a in self.cell.atomdata:
+            for comp in a[0].species:
                 filestring += comp+"\n"
                 try:
                     filestring += ed.emtoelements[comp]
@@ -1467,14 +1511,14 @@ class KGRNFile(GeometryOutputFile):
 class ShapeFile(GeometryOutputFile):
     """
     Class for storing the geometrical data needed in a [filename].dat file for the shape program
-    and the method FileString that outputs the contents of the .dat file as a string.
+    and the method __str__ that outputs the contents of the .dat file as a string.
     """
     def __init__(self,crystalstructure,string):
         GeometryOutputFile.__init__(self,crystalstructure,string)
         self.jobnam = "default"
         # To be put on the first line
         self.programdoc = ""
-    def FileString(self):
+    def __str__(self):
         filestring = ""
         tmpstring = "SHAPE     HP......=N"
         tmpstring = tmpstring.ljust(25)+self.programdoc.replace("\n"," ")+"\n"
@@ -1491,7 +1535,7 @@ class ShapeFile(GeometryOutputFile):
 class BMDLFile(GeometryOutputFile):
     """
     Class for storing the geometrical data needed in a [filename].dat file for the bmdl program
-    and the method FileString that outputs the contents of the .dat file as a string.
+    and the method __str__ that outputs the contents of the .dat file as a string.
     """
     def __init__(self,crystalstructure,string):
         GeometryOutputFile.__init__(self,crystalstructure,string)
@@ -1507,7 +1551,8 @@ class BMDLFile(GeometryOutputFile):
         self.gamma = 90
         # To be put on the first line
         self.programdoc = ""
-    def FileString(self):
+    def __str__(self):
+        lv = self.cell.latticevectors
         ed = ElementData()
         filestring = ""
         tmpstring = "BMDL      HP......=N"
@@ -1522,9 +1567,8 @@ class BMDLFile(GeometryOutputFile):
         filestring += "LAMDA....=    2.5000 AMAX....=    4.5000 BMAX....=    4.5000\n"
         # Get number of sites
         nosites = 0
-        for site in self.cell.sitedata:
-            for pos in site[2]:
-                nosites += 1
+        for a in self.cell.atomdata:
+            nosites += len(a)
         if self.latticenr == 0:
             tmpstring = "NQ3...=%3i LAT...= 0 IPRIM.= 0 NGHBP.=13 NQR2..= 0\n" % (nosites,self.latticenr)
         else:
@@ -1536,26 +1580,21 @@ class BMDLFile(GeometryOutputFile):
         tmpstring = ""
         if self.latticenr == 0:
             for i in range(3):
-                tmpstring += "BSX......=%10f BSY.....=%10f BSZ.....=%10f\n" % (self.cell.latticevectors[i][0],self.cell.latticevectors[i][1],self.cell.latticevectors[i][2])
+                tmpstring += "BSX......=%10f BSY.....=%10f BSZ.....=%10f\n" % (lv[i][0],lv[i][1],lv[i][2])
         else:
             tmpstring +=  "ALPHA....=%10f BETA....=%10f GAMMA...=%10f\n" % (self.alpha, self.beta, self.gamma)
         filestring += tmpstring
-        v = [0.0,0.0,0.0]
-        for site in self.cell.sitedata:
-            for pos in site[2]:
-                v = mvmult3(self.cell.latticevectors,pos)
-                tmpstring = "QX(IQ)...=%10f QY......=%10f QZ......=%10f" % (v[0],v[1],v[2])
-                tmpstring +=  "      "
-                for k in site[1]:
-                    tmpstring += k+"/"
-                tmpstring = tmpstring.rstrip("/")+" "+str(site[3])+"\n"
-                filestring += tmpstring
+        for a in self.cell.atomdata:
+            for b in a:
+                v = mvmult3(lv,b.position)
+                filestring += "QX(IQ)...=%10f QY......=%10f QZ......=%10f" % (v[0],v[1],v[2])
+                filestring += "      "+b.spcstring()+"\n"
         return filestring
 
 class KSTRFile(GeometryOutputFile):
     """
     Class for storing the geometrical data needed in a [filename].dat file for the kstr program
-    and the method FileString that outputs the contents of the .dat file as a string.
+    and the method __str__ that outputs the contents of the .dat file as a string.
     """
     def __init__(self,crystalstructure,string):
         GeometryOutputFile.__init__(self,crystalstructure,string)
@@ -1574,7 +1613,8 @@ class KSTRFile(GeometryOutputFile):
         self.latticenr = 14
         # To be put on the first line
         self.programdoc = ""
-    def FileString(self):
+    def __str__(self):
+        lv = self.cell.latticevectors
         ed = ElementData()
         filestring = ""
         tmpstring = "KSTR      HP......=N"
@@ -1587,23 +1627,23 @@ class KSTRFile(GeometryOutputFile):
         filestring += self.docstring.replace("\n"," ")+"\n"
         # NL = maximal l from element blocks
         maxl = 1
-        for site in self.cell.sitedata:
-            for i in site[1]:
-                if ed.elementblock[i] == 'p':
-                    maxl = max(maxl,2)
-                elif ed.elementblock[i] == 'd':
-                    maxl = max(maxl,3)
-                elif ed.elementblock[i] == 'f':
-                    maxl = max(maxl,4)
+        for a in self.cell.atomdata:
+            for b in a:
+                for i in b.species:
+                    if ed.elementblock[i] == "p":
+                        maxl = max(maxl,2)
+                    elif ed.elementblock[i] == "d":
+                        maxl = max(maxl,3)
+                    elif ed.elementblock[i] == "f":
+                        maxl = max(maxl,4)
         tmpstring = "NL.....= %1i NLH...=11 NLW...= 9 NDER..= 6 ITRANS= 3 NPRN..= 0\n" % maxl
         filestring += tmpstring
         # Get number of sites
         nosites = 0
-        for site in self.cell.sitedata:
-            for pos in site[2]:
-                nosites += 1
+        for a in self.cell.atomdata:
+            nosites += len(a)
         # Setting the real space summation cutoff to 4.5*(wigner-seitz radius)
-        volume = abs(det3(self.cell.latticevectors))
+        volume = abs(det3(lv))
         wsr = (3*volume/(nosites * 4 * pi))**third
         tmpstring = "(K*W)^2..=  0.000000 DMAX....=%10f RWATS...=      0.10\n" % (wsr*4.5)
         filestring += tmpstring
@@ -1615,20 +1655,15 @@ class KSTRFile(GeometryOutputFile):
         tmpstring = ""
         if self.iprim == 0:
             for i in range(3):
-                tmpstring += "BSX......=%10f BSY.....=%10f BSZ.....=%10f\n" % (self.cell.latticevectors[i][0],self.cell.latticevectors[i][1],self.cell.latticevectors[i][2])
+                tmpstring += "BSX......=%10f BSY.....=%10f BSZ.....=%10f\n" % (lv[i][0],lv[i][1],lv[i][2])
         else:
             tmpstring +=  "ALPHA....=%10f BETA....=%10f GAMMA...=%10f\n" % (self.alpha, self.beta, self.gamma)
         filestring += tmpstring
-        v = [0.0,0.0,0.0]
-        for site in self.cell.sitedata:
-            for pos in site[2]:
-                v = mvmult3(self.cell.latticevectors,pos)
-                tmpstring = "QX(IQ)...=%10f QY......=%10f QZ......=%10f" % (v[0],v[1],v[2])
-                tmpstring +=  "      "
-                for k in site[1]:
-                    tmpstring += k+"/"
-                tmpstring = tmpstring.rstrip("/")+" "+str(site[3])+"\n"
-                filestring += tmpstring
+        for a in self.cell.atomdata:
+            for b in a:
+                v = mvmult3(lv,b.position)
+                filestring += "QX(IQ)...=%10f QY......=%10f QZ......=%10f" % (v[0],v[1],v[2])
+                filestring += "      "+b.spcstring()+"\n"
         for i in range(nosites):
             filestring += "a/w(IQ)..="
             for i in range(4):
