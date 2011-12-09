@@ -17,10 +17,13 @@
 from distutils.core import setup
 from glob import glob
 from subprocess import call
+from os import chdir
+
+# Set up documentation
+docfiles = ['docs/cif2cell.pdf']
 
 # Get list of the cif example files
 ciffiles = glob('cifs/*.cif')
-docfiles = ['docs/cif2cell.pdf']
 
 setup(name='cif2cell',
       version='0.4.0',
