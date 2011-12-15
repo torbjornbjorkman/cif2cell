@@ -32,7 +32,6 @@ import copy
 import os
 from elementdata import *
 from uctools import *
-from math import fsum
 
 ################################################################################################
 class GeometryOutputFile:
@@ -1148,7 +1147,7 @@ class POSCARFile(GeometryOutputFile):
         filestring += positionstring
         return filestring
 
-class POTCARFile():
+class POTCARFile:
     """
     Class for representing and outputting a POTCAR file for VASP.
     """
@@ -1194,7 +1193,7 @@ class POTCARFile():
             potcar.close()
         return outstring
 
-class KPOINTSFile():
+class KPOINTSFile:
     """
     Class for representing and outputting a KPOINTS file for VASP.
     """
@@ -1207,7 +1206,7 @@ class KPOINTSFile():
             for i in range(3):
                 reclatvect[j][i] = reclatvect[j][i] / crystalstructure.a
         # Lengths of reciprocal lattice vectors
-        reclatvectlen = [sqrt(fsum(map(lambda x: x**2, elem))) for elem in reclatvect]
+        reclatvectlen = [elem.length() for elem in reclatvect]
         self.kgrid = [max(1,int(round(elem/self.kresolution))) for elem in reclatvectlen]
     def __str__(self):
         tmp = self.docstring
@@ -1218,7 +1217,7 @@ class KPOINTSFile():
         tmp += "0 0 0\n"
         return tmp
         
-class INCARFile():
+class INCARFile:
     """
     Class for representing and outputting a INCAR file for VASP.
     """

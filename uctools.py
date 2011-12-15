@@ -783,7 +783,6 @@ class CellData(GeometryObject):
                                                [half, half, zero],
                                                [zero, zero, one]])
             elif self.spacegroupsetting == 'R':
-                print "Gamma = ", self.gamma
                 if abs(self.gamma - 120) < self.coordepsilon:
                     # rhombohedral from hexagonal setting
                     self.transvecs = [LatticeVector([zero,zero,zero]),

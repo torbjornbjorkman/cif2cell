@@ -37,6 +37,6 @@ setup(name='cif2cell',
       requires=['CifFile'],
       data_files=[('./', ['LICENSE']),
                   ('lib/cif2cell/sample_cifs', ciffiles),
-                  ('lib/docs',docfiles)],
+                  ('lib/cif2cell/docs',docfiles)],
       license='GNU General Public License version 3'
       )
