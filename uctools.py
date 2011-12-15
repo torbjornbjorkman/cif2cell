@@ -383,17 +383,20 @@ class SymmetryOperation(GeometryObject):
                 eq = eq and abs(self.rotation[i][j] - other.rotation[i][j]) < self.compeps
             eq = eq and self.translation == other.translation
         return eq
-    # comparison between operations made by comparing lengths of translation vectors
+    # Comparison between operations made by comparing lengths of translation vectors,
+    # whether the rotation is diagonal and the identity is always less than anything else.
+    # That way we only need to sort a list of operations to get identity first (and a reasonably
+    # intuitive list order).
     def __lt__(self, other):
         if self.translation < other.translation:
             return True
         if other.translation < self.translation:
             return False
         if self.diagonal():
-            # prefer diagonal matrices
+            # diagonal matrices "smaller"
             if not other.diagonal():
                 return True
-            # prefer identity over anything else
+            # identity is "smallest"
             if self.rotation[0][0] == self.rotation[1][1] == self.rotation[2][2] == 1:
                 return True
             return False
@@ -1395,8 +1398,12 @@ class ReferenceData:
     firstpage       :  - self-explanatory
     lastpage        : |
     year            :/
+
+    Methods:
+    getFromCIF      : Get reference data from a CIF block
     journalstring   : journal, volume firstpage-lastpage (year)
     referencestring : authorstring, journalstring
+    bibtexref       : output a string for bibtex
     
     Various attempts at identifying the data are made and if they all fail
     an empty string is returned.
@@ -1410,6 +1417,7 @@ class ReferenceData:
         self.cpd = ""
         self.authors = []
         self.authorstring = ""
+        self.title = ""
         self.journal = ""
         self.volume = ""
         self.firstpage = ""
@@ -1437,6 +1445,46 @@ class ReferenceData:
              'Crystallography Open Database'        : 'COD'
             }
 
+    def bibtexref(self):
+        string = "@article{"
+        # Guess what is the first authors last name
+        tmp = self.authors[0].replace(" ","")
+        tmp = tmp.split(',')
+        deletelist = []
+        for i in range(len(tmp)):
+            tmp[i] = tmp[i].split('.')
+            if max([len(t) for t in tmp[i]]) < 2:
+                deletelist.append(i)
+        deletelist.sort(reverse=True)
+        for i in deletelist:
+            tmp.pop(i)
+        tmp = [item for sublist in tmp for item in sublist]
+        # Add label consisting of first authors last name and the year
+        string += tmp[-1]+str(self.year)+",\n"
+        # Add authors
+        string += "author = {"
+        for author in self.authors:
+            string += author+" and "
+        string = string[0:len(string)-5]        
+        string += "},\n"
+        # Add title
+        if len(self.title) > 0:
+            string += "title = {"+self.title+"},\n"
+        # Add journal
+        if len(self.journal) > 0:
+            string += "journal = {"+self.journal+"},\n"
+        # Add volume
+        if len(self.volume) > 0:
+            string += "volume = {"+self.volume+"},\n"
+        # Add page(s)
+        if len(self.firstpage) > 0:
+            string += "pages = {"+self.firstpage+"-"+self.lastpage
+            string = string.rstrip("-")+"},\n"
+        # Add year
+        if len(self.year) > 0:
+            string += "year = {"+self.year+"},\n"
+        string += "}\n"
+        return string
     def journalstring(self):
         try:
             if not (self.journal == "" and self.volume == "" and self.firstpage=="" and self.year==""):
@@ -1531,6 +1579,14 @@ class ReferenceData:
             self.authorstring = "Failed to get author information"
         # get rid of newline characters
         self.authorstring = self.authorstring.replace("\n","")
+        # Title of the paper
+        try:
+            self.title = cifblock.get('_publ_section_title')
+            self.title = self.title.replace("\n"," ")
+            self.title = self.title.replace("  "," ")
+            self.title = self.title.strip(" ")
+        except:
+            pass
         # Journal details
         failed = False
         try:

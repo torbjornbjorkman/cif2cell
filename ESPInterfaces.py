@@ -848,11 +848,7 @@ class CASTEPFile(GeometryOutputFile):
         filestring += "\n%BLOCK SYMMETRY_OPS\n"
         latvect = self.cell.conventional_latticevectors()
         # make list and make sure that identity comes first
-        symoplist = sorted(list(cell.symops))
-        symoplist.sort(key = lambda op: det3(op.rotation), reverse=True)
-        identity = SymmetryOperation(['x','y','z'])
-        symoplist.remove(identity)
-        symoplist.insert(identity,0)
+        symoplist = sorted(list(self.cell.symops))
         k = 1
         for op in symoplist:
             filestring += "# Symm. op. %i\n"%k
