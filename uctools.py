@@ -361,7 +361,7 @@ class SymmetryOperation(GeometryObject):
         self.eqsite = eqsite
         if self.eqsite != None:
             self.rotation = self.rotmat()
-            self.translation = self.transvec()
+            self.translation = LatticeVector(self.transvec())
         else:
             self.rotation = None
             self.translation = None
@@ -416,7 +416,8 @@ class SymmetryOperation(GeometryObject):
     # Return a translation vector from "x,y,z" representation of a symmetry operation
     def transvec(self):
         vec = []
-        for i in range(3): vec.append(0.0)
+        for i in range(3):
+            vec.append(0.0)
         for j in range(len(self.eqsite)):
             xyz = self.eqsite[j].replace('+',' +').replace('-',' -').split()
             for i in xyz:
@@ -833,10 +834,6 @@ class CellData(GeometryObject):
             self.symops = set([])
             for op in SpaceGroupData().EquivalentPositions[self.spacegroupnr]:
                 self.symops.add(SymmetryOperation(op))
-            ## # set coordinate transformation
-            ## rhomb2hextrans = LatticeMatrix([[third, zero, third],
-            ##                             [-third, third, third],
-            ##                             [zero,  -third, third]])
 
         # If we reduce the cell, remove the symmetry operations that are the
         # same up to an induced lattice translation
@@ -848,7 +845,7 @@ class CellData(GeometryObject):
                         for vec in self.transvecs:
                             if op1.translation+vec == op2.translation:
                                 if op1.rotation == op2.rotation:
-                                    if op1 < op2:
+                                    if op1.translation.length() < op2.translation.length():
                                         redundant.add(op2)
                 self.symops -= redundant
 
@@ -868,9 +865,6 @@ class CellData(GeometryObject):
             # Set up atomdata
             self.atomdata.append([])
             self.atomdata[i].append(AtomSite(position=self.ineqsites[i]))
-            ## # If rhombohedral setting and conventional cell, transform wyckoff sites to hexagonal basis
-            ## if self.crystal_system() == "trigonal" and self.alpha == self.beta == self.gamma and not self.primcell:
-            ##     self.atomdata[i][0].position = LatticeVector(mvmult3(rhomb2hextrans,self.atomdata[i][0].position))
             # Add species and occupations to atomdata
             for k,v in self.occupations[i].iteritems():
                 self.atomdata[i][0].species[k] = v
@@ -1216,9 +1210,10 @@ class CellData(GeometryObject):
             eqsitedata = cifblock.GetLoop('_symmetry_equiv_pos_as_xyz')
             try:
                 eqsitestrs = eqsitedata.get('_symmetry_equiv_pos_as_xyz')
-                # funny exception which will occur for the P1 space group
+                # fixes a funny exception that can occur for the P1 space group
                 if type(eqsitestrs) == StringType:
                     eqsitestrs = [eqsitestrs]
+                # Define the set of space group operations
                 self.symops = set([])
                 for i in range(len(eqsitestrs)):
                     tmp = eqsitestrs[i].split(',')
