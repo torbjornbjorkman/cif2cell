@@ -849,14 +849,36 @@ class CellData(GeometryObject):
                                         redundant.add(op2)
                 self.symops -= redundant
 
-        # To cartesian representation
+        # Space group operations to cartesian representation
         lv = self.conventional_latticevectors()
         for op in self.symops:
             op.rotation = lv.transform(op.rotation)
             op.rotation = op.rotation.transform(minv3(lv))
             # transform translations
             op.translation = op.translation.transform(minv3(self.lattrans))
-                                
+
+        # Test that the lattice vectors are invariant under all space group operations
+        # If not, the data is given in some non-standard representation that presently
+        # can't be handled.
+        if self.crystal_system() == 'hexagonal' or self.crystal_system() == 'trigonal':
+            # Hexagonal and trigonal as a special case... check that the hexagonal planes are in the ab plane
+            for op in self.symops:
+                if not (op.rotation[2] == Vector([0,0,1]) or op.rotation[2] == Vector([0,0,-1])):
+                    raise SymmetryError("Lattice vectors do not fulfil the given symmetries of the lattice!\n"\
+                                        "The cell is given in some non-standard setting presently not handled by the program.")
+        else:
+            for op in self.symops:
+                if not op.translation.length() > self.compeps:
+                    fails = False
+                    for vec1 in lv:
+                        transvec = vec1.transform(op.rotation)
+                        if not (transvec == lv[0] or transvec == lv[1] or transvec == lv[2]
+                                or transvec == -lv[0] or transvec == -lv[1] or transvec == -lv[2]):
+                            fails = True
+                    if fails:
+                        raise SymmetryError("Lattice vectors do not fulfil the given symmetries of the lattice!\n"\
+                                            "The cell is given in some non-standard setting presently not handled by the program.")
+        
         #########################
         #    CELL GENERATION    # 
         #########################
