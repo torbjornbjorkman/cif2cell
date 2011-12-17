@@ -1,5 +1,22 @@
 CIF2CELL RELEASE INFORMATION
 
+VERSION 0.4.1
+
+Major new release.
+* A lot of tidying up under the hood.
+* Now comes with an unfinished manual.
+* A --setup-all flag that attempts to do a more "complete" setup. 
+  Presently only available for VASP.
+* Sorting of atoms in a supercell is possible.
+* Primitive/conventional cell treatment completely consistent
+  for trigonal/rhombohedral systems. By default the minimal
+  rhombohedral cell is chosen, and with --no-reduce you get 
+  the hexagonal cell.
+* Outputting charge state. 
+* Exporting reference data in BibTeX format.
+* A LOT of bugfixes.
+
+-------------------------------------------------------------- 
 VERSION 0.2.6
 
 * Fixed problem in setup script that made some files not install properly.
