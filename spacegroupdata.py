@@ -22,10 +22,9 @@
 #               All data was generated using the sginfo program (http://cci.lbl.gov/sginfo)
 #               and then automatically processed into python code.
 #
-#  Author: Torbjorn Bjorkman, torbjorn(at)cc.hut.fi
-#  Affiliation: COMP, Aaalto University School of
-#               Science and Technology, Department of
-#               Applied Physics, Espoo, Finland
+#  Author:      Torbjorn Bjorkman, torbjorn.bjorkman(at)aalto.fi
+#  Affiliation: COMP, Aaalto University School of Science,
+#               Department of Applied Physics, Espoo, Finland
 #
 # TODO:
 #   - The EquivalentPositions array only has information for the standard settings of
@@ -5820,3 +5819,65 @@ class SpaceGroupData:
             ["x+1/4","z+1/4","y+1/4"],
             ["-z+1/4","y+1/4","-x-1/4"],
             ["z+1/4","y+1/4","x+1/4"]]]
+
+    # Set of all possible H-M symbols
+    allHMSymbols = {"P1","P-1","P2:b","P121","P2:c","P112","P2:a","P211","P21:b","P1211","P21:c",
+                    "P1121","P21:a","P2111","C2:b1","C121","C2:b2","A121","C2:b3","I121","C2:c1",
+                    "A112","C2:c2","B112","B2","C2:c3","I112","C2:a1","B211","C2:a2","C211","C2:a3",
+                    "I211","Pm:b","P1m1","Pm:c","P11m","Pm:a","Pm11","Pc:b1","P1c1","Pc:b2","P1n1",
+                    "Pc:b3","P1a1","Pc:c1","P11a","Pc:c2","P11n","Pc:c3","P11b","Pb","Pc:a1","Pb11",
+                    "Pc:a2","Pn11","Pc:a3","Pc11","Cm:b1","C1m1","Cm:b2","A1m1","Cm:b3","I1m1","Cm:c1",
+                    "A11m","Cm:c2","B11m","Bm","Cm:c3","I11m","Cm:a1","Bm11","Cm:a2","Cm11","Cm:a3","Im11",
+                    "Cc:b1","C1c1","Cc:b2","A1n1","Cc:b3","I1a1","Cc:-b1","A1a1","Cc:-b2","C1n1","Cc:-b3",
+                    "I1c1","Cc:c1","A11a","Cc:c2","B11n","Cc:c3","I11b","Cc:-c1","B11b","Bb","Cc:-c2",
+                    "A11n","Cc:-c3","I11a","Cc:a1","Bb11","Cc:a2","Cn11","Cc:a3","Ic11","Cc:-a1","Cc11",
+                    "Cc:-a2","Bn11","Cc:-a3","Ib11","P2/m:b","P12/m1","P2/m:c","P112/m","P2/m:a","P2/m11",
+                    "P21/m:b","P121/m1","P21/m:c","P1121/m","P21/m:a","P21/m11","C2/m:b1","C12/m1","C2/m:b2",
+                    "A12/m1","C2/m:b3","I12/m1","C2/m:c1","A112/m","C2/m:c2","B112/m","B2/m","C2/m:c3",
+                    "I112/m","C2/m:a1","B2/m11","C2/m:a2","C2/m11","C2/m:a3","I2/m11","P2/c:b1","P12/c1",
+                    "P2/c:b2","P12/n1","P2/c:b3","P12/a1","P2/c:c1","P112/a","P2/c:c2","P112/n","P2/c:c3",
+                    "P112/b","P2/b","P2/c:a1","P2/b11","P2/c:a2","P2/n11","P2/c:a3","P2/c11","P21/c:b1",
+                    "P121/c1","P21/c:b2","P121/n1","P21/c:b3","P121/a1","P21/c:c1","P1121/a","P21/c:c2",
+                    "P1121/n","P21/c:c3","P1121/b","P21/b","P21/c:a1","P21/b11","P21/c:a2","P21/n11",
+                    "P21/c:a3","P21/c11","C2/c:b1","C12/c1","C2/c:b2","A12/n1","C2/c:b3","I12/a1",
+                    "C2/c:-b1","A12/a1","C2/c:-b2","C12/n1","C2/c:-b3","I12/c1","C2/c:c1","A112/a",
+                    "C2/c:c2","B112/n","C2/c:c3","I112/b","C2/c:-c1","B112/b","B2/b","C2/c:-c2","A112/n",
+                    "C2/c:-c3","I112/a","C2/c:a1","B2/b11","C2/c:a2","C2/n11","C2/c:a3","I2/c11","C2/c:-a1",
+                    "C2/c11","C2/c:-a2","B2/n11","C2/c:-a3","I2/b11","P222","P2221","P2122","P2212","P21212",
+                    "P22121","P21221","P212121","C2221","A2122","B2212","C222","A222","B222","F222","I222",
+                    "I212121","Pmm2","P2mm","Pm2m","Pmc21","Pcm21","P21ma","P21am","Pb21m","Pm21b","Pcc2","P2aa",
+                    "Pb2b","Pma2","Pbm2","P2mb","P2cm","Pc2m","Pm2a","Pca21","Pbc21","P21ab","P21ca","Pc21b","Pb21a",
+                    "Pnc2","Pcn2","P2na","P2an","Pb2n","Pn2b","Pmn21","Pnm21","P21mn","P21nm","Pn21m","Pm21n","Pba2",
+                    "P2cb","Pc2a","Pna21","Pbn21","P21nb","P21cn","Pc21n","Pn21a","Pnn2","P2nn","Pn2n","Cmm2","A2mm",
+                    "Bm2m","Cmc21","Ccm21","A21ma","A21am","Bb21m","Bm21b","Ccc2","A2aa","Bb2b","Amm2","Bmm2","B2mm",
+                    "C2mm","Cm2m","Am2m","Abm2","Bma2","B2cm","C2mb","Cm2a","Ac2m","Ama2","Bbm2","B2mb","C2cm","Cc2m",
+                    "Am2a","Aba2","Bba2","B2cb","C2cb","Cc2a","Ac2a","Fmm2","F2mm","Fm2m","Fdd2","F2dd","Fd2d","Imm2",
+                    "I2mm","Im2m","Iba2","I2cb","Ic2a","Ima2","Ibm2","I2mb","I2cm","Ic2m","Im2a","Pmmm","Pnnn:1",
+                    "Pnnn:2","Pccm","Pmaa","Pbmb","Pban:1","Pban:2","Pncb:1","Pncb:2","Pcna:1","Pcna:2","Pmma",
+                    "Pmmb","Pbmm","Pcmm","Pmcm","Pmam","Pnna","Pnnb","Pbnn","Pcnn","Pncn","Pnan","Pmna","Pnmb",
+                    "Pbmn","Pcnm","Pncm","Pman","Pcca","Pccb","Pbaa","Pcaa","Pbcb","Pbab","Pbam","Pmcb","Pcma",
+                    "Pccn","Pnaa","Pbnb","Pbcm","Pcam","Pmca","Pmab","Pbma","Pcmb","Pnnm","Pmnn","Pnmn","Pmmn:1",
+                    "Pmmn:2","Pnmm:1","Pnmm:2","Pmnm:1","Pmnm:2","Pbcn","Pcan","Pnca","Pnab","Pbna","Pcnb","Pbca",
+                    "Pcab","Pnma","Pmnb","Pbnm","Pcmn","Pmcn","Pnam","Cmcm","Ccmm","Amma","Amam","Bbmm","Bmmb",
+                    "Cmca","Ccmb","Abma","Acam","Bbcm","Bmab","Cmmm","Ammm","Bmmm","Cccm","Amaa","Bbmb","Cmma",
+                    "Cmmb","Abmm","Acmm","Bmcm","Bmam","Ccca:1","Ccca:2","Cccb:1","Cccb:2","Abaa:1","Abaa:2",
+                    "Acaa:1","Acaa:2","Bbcb:1","Bbcb:2","Bbab:1","Bbab:2","Fmmm","Fddd:1","Fddd:2","Immm",
+                    "Ibam","Imcb","Icma","Ibca","Icab","Imma","Immb","Ibmm","Icmm","Imcm","Imam","P4","P41",
+                    "P42","P43","I4","I41","P-4","I-4","P4/m","P42/m","P4/n:1","P4/n:2","P42/n:1","P42/n:2",
+                    "I4/m","I41/a:1","I41/a:2","P422","P4212","P4122","P41212","P4222","P42212","P4322",
+                    "P43212","I422","I4122","P4mm","P4bm","P42cm","P42nm","P4cc","P4nc","P42mc","P42bc",
+                    "I4mm","I4cm","I41md","I41cd","P-42m","P-42c","P-421m","P-421c","P-4m2","P-4c2","P-4b2",
+                    "P-4n2","I-4m2","I-4c2","I-42m","I-42d","P4/mmm","P4/mcc","P4/nbm:1","P4/nbm:2","P4/nnc:1",
+                    "P4/nnc:2","P4/mbm","P4/mnc","P4/nmm:1","P4/nmm:2","P4/ncc:1","P4/ncc:2","P42/mmc",
+                    "P42/mcm","P42/nbc:1","P42/nbc:2","P42/nnm:1","P42/nnm:2","P42/mbc","P42/mnm","P42/nmc:1",
+                    "P42/nmc:2","P42/ncm:1","P42/ncm:2","I4/mmm","I4/mcm","I41/amd:1","I41/amd:2","I41/acd:1",
+                    "I41/acd:2","P3","P31","P32","R3:H","R3:R","P-3","R-3:H","R-3:R","P312","P321","P3112",
+                    "P3121","P3212","P3221","R32:H","R32:R","P3m1","P31m","P3c1","P31c","R3m:H","R3m:R","R3c:H",
+                    "R3c:R","P-31m","P-31c","P-3m1","P-3c1","R-3m:H","R-3m:R","R-3c:H","R-3c:R","P6","P61",
+                    "P65","P62","P64","P63","P-6","P6/m","P63/m","P622","P6122","P6522","P6222","P6422","P6322",
+                    "P6mm","P6cc","P63cm","P63mc","P-6m2","P-6c2","P-62m","P-62c","P6/mmm","P6/mcc","P63/mcm",
+                    "P63/mmc","P23","F23","I23","P213","I213","Pm-3","Pn-3:1","Pn-3:2","Fm-3","Fd-3:1","Fd-3:2",
+                    "Im-3","Pa-3","Ia-3","P432","P4232","F432","F4132","I432","P4332","P4132","I4132","P-43m",
+                    "F-43m","I-43m","P-43n","F-43c","I-43d","Pm-3m","Pn-3n:1","Pn-3n:2","Pm-3n","Pn-3m:1",
+                    "Pn-3m:2","Fm-3m","Fm-3c","Fd-3m:1","Fd-3m:2","Fd-3c:1","Fd-3c:2","Im-3m","Ia-3d"}
+

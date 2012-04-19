@@ -18,10 +18,9 @@
 #************************************************************************************
 #  Description: A command-line tool to generate the geometrical setup
 #               for various electronic structure codes from a CIF format file.
-#  Author: Torbjorn Bjorkman
-#  Affiliation: COMP, Aaalto University School of
-#               Science and Technology, Department of
-#               Applied Physics, Espoo, Finland
+#  Author:      Torbjorn Bjorkman, torbjorn.bjorkman(at)aalto.fi
+#  Affiliation: COMP, Aaalto University School of Science,
+#               Department of Applied Physics, Espoo, Finland
 #************************************************************************************
 from __future__ import division
 import os
@@ -106,7 +105,7 @@ parser.add_option_group(progspec)
 
 # own name
 programname = "cif2cell"
-version = "0.4.1"
+version = "0.4.2"
 if options.version:
     print programname+" version "+version
     sys.exit(0)
@@ -264,7 +263,7 @@ except PositionError, e:
 except CellError, e:
     sys.stderr.write("***Error: cell setup: "+e.value+"\n")
     sys.exit(2)
-    
+
 ##############################################
 # Generate cell
 if reducetoprim:
@@ -281,6 +280,8 @@ else:
     except SymmetryError, e:
         sys.stderr.write("***Error: cell setup: "+e.value+"\n")
         sys.exit(2)
+
+
 # Print cell
 if verbose or not options.program and not options.quiet:
     print string.upper(programname)+" "+version

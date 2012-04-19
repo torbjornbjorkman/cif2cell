@@ -23,10 +23,9 @@
 #               Currently supports standard (conventional)
 #               cell settings and from that reduction to the
 #               primitive cell.
-#  Author: Torbjorn Bjorkman, torbjorn(at)cc.hut.fi
-#  Affiliation: COMP, Aaalto University School of
-#               Science and Technology, Department of
-#               Applied Physics, Espoo, Finland
+#  Author:      Torbjorn Bjorkman, torbjorn.bjorkman(at)aalto.fi
+#  Affiliation: COMP, Aaalto University School of Science,
+#               Department of Applied Physics, Espoo, Finland
 #******************************************************************************************
 from __future__ import division
 import os
@@ -493,7 +492,7 @@ class CellData(GeometryObject):
         self.ineqsites = []
         self.occupations = []
         self.atomdata = []
-        self.atomset = set([])
+        ## self.atomset = set([])
         # initial lattice parameters
         self.ainit = 0
         self.binit = 0
@@ -561,18 +560,14 @@ class CellData(GeometryObject):
             latticevectors = LatticeMatrix([[sin(gammar), cos(gammar), zero],
                                             [zero, one, zero],
                                             [zero, zero, self.coa]])
-        elif self.crystal_system() == 'tetragonal':
-            latticevectors = LatticeMatrix([[one, zero, zero],
-                                            [zero, one, zero],
-                                            [zero, zero, self.coa]])
-        elif self.crystal_system() == 'orthorhombic':
+        elif self.crystal_system() == 'tetragonal' or self.crystal_system() == 'orthorhombic':
             latticevectors = LatticeMatrix([[one, zero, zero], 
                                             [zero, self.boa, zero], 
                                             [zero, zero, self.coa]])
-        elif self.crystal_system() == 'monoclinic':
-            latticevectors = LatticeMatrix([[one, zero, zero], 
-                                            [zero, self.boa, zero], 
-                                            [self.coa*cos(betar), zero, self.coa*sin(betar)]])
+        ## elif self.crystal_system() == 'monoclinic':
+        ##     latticevectors = LatticeMatrix([[one, zero, zero], 
+        ##                                     [zero, self.boa, zero], 
+        ##                                     [self.coa*cos(betar), zero, self.coa*sin(betar)]])
         elif self.crystal_system() == 'trigonal':
             # Hexagonal cell taken as conventional
             if not abs(self.gamma-120) < self.coordepsilon:
@@ -580,7 +575,7 @@ class CellData(GeometryObject):
             latticevectors = LatticeMatrix([[sin(gammar), cos(gammar), zero],
                                             [zero, one, zero],
                                             [zero, zero, self.coa]])
-        elif self.crystal_system() == 'triclinic' or self.crystal_system() == 'unknown':
+        elif self.crystal_system() == 'triclinic' or self.crystal_system() == 'monoclinic' or self.crystal_system() == 'unknown':
             angfac1 = (cos(alphar) - cos(betar)*cos(gammar))/sin(gammar)
             angfac2 = sqrt(sin(gammar)**2 - cos(betar)**2 - cos(alphar)**2 
                        + 2*cos(alphar)*cos(betar)*cos(gammar))/sin(gammar)
@@ -642,8 +637,8 @@ class CellData(GeometryObject):
     
     def primitive(self):
         """ Return a CrystalStructure object for the primitive cell."""
-        w = self.getCrystalStructure(reduce=True)
-        return w
+        self.getCrystalStructure(reduce=True)
+        return self
     
     def conventional(self):
         """ Return a CrystalStructure object for the conventional cell."""
@@ -945,7 +940,7 @@ class CellData(GeometryObject):
                     posexpr[k] = posexpr[k].replace('z',str(a[0].position[2]))
                 position = LatticeVector([eval(pos) for pos in posexpr])
                 b = AtomSite(position=position,species=a[0].species,charges=a[0].charges)
-                self.atomset.add(b)
+                ## self.atomset.add(b)
                 append = True
                 for site in a:
                     for vec in self.transvecs:
@@ -960,8 +955,8 @@ class CellData(GeometryObject):
         for a in self.atomdata:
             for b in a:
                 b.position = LatticeVector(mvmult3(invlattrans,b.position))
-        for a in self.atomset:
-            a.position = LatticeVector(mvmult3(invlattrans,a.position))
+        ## for a in self.atomset:
+        ##     a.position = LatticeVector(mvmult3(invlattrans,a.position))
         ######################
         #    MISCELLANEOUS   #
         ######################
@@ -1044,7 +1039,7 @@ class CellData(GeometryObject):
         for a in newsites:
             for b in a:
                 self.atomdata[i].append(b)
-                self.atomset.add(b)
+                ## self.atomset.add(b)
             i += 1
 
         # Move all atoms by transvec 

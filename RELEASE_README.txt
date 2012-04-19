@@ -1,5 +1,11 @@
 CIF2CELL RELEASE INFORMATION
 
+VERSION 0.4.2
+
+Fixed serious bug in the cell generation. All users should immediately 
+upgrade from version 0.4.1.
+
+-------------------------------------------------------------- 
 VERSION 0.4.1
 
 Major new release.

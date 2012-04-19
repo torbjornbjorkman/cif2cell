@@ -15,18 +15,13 @@
 # along with cif2cell.  If not, see <http://www.gnu.org/licenses/>.
 #
 #******************************************************************************************
-#  Description: A set of tools to generate the geometrical
-#               setup for various electronic structure codes.
-#               Contains some container classes for structural
-#               data and methods to extract these from a CIF
-#               file.
-#               Currently supports standard (conventional)
-#               cell settings and from that reduction to the
-#               primitive cell.
-#  Author: Torbjorn Bjorkman, torbjorn(at)cc.hut.fi
-#  Affiliation: COMP, Aaalto University School of
-#               Science and Technology, Department of
-#               Applied Physics, Espoo, Finland
+#  Description: Interfaces for a number of electronic structure programs. Currently only
+#               reads CIF and outputs to the ESP's. Supported programs are: ABINIT, CASTEP,
+#               CPMD, Crystal09, Elk, EMTO, Exciting, Fleur, NCOL, RSPt, Siesta, VASP
+#               
+#  Author:      Torbjorn Bjorkman, torbjorn.bjorkman(at)aalto.fi
+#  Affiliation: COMP, Aaalto University School of Science,
+#               Department of Applied Physics, Espoo, Finland
 #******************************************************************************************
 import copy
 import os

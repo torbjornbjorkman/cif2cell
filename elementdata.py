@@ -17,10 +17,9 @@
 #******************************************************************************************
 #  Description: Chemical element data useful for generating setups for electronic
 #               structure programs.
-#  Author: Torbjorn Bjorkman, torbjorn(at)cc.hut.fi
-#  Affiliation: COMP, Aaalto University School of
-#               Science and Technology, Department of
-#               Applied Physics, Espoo, Finland
+#  Author:      Torbjorn Bjorkman, torbjorn.bjorkman(at)aalto.fi
+#  Affiliation: COMP, Aaalto University School of Science,
+#               Department of Applied Physics, Espoo, Finland
 #******************************************************************************************
 class ElementData:
     """
