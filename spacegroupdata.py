@@ -5821,7 +5821,7 @@ class SpaceGroupData:
             ["z+1/4","y+1/4","x+1/4"]]]
 
     # Set of all possible H-M symbols
-    allHMSymbols = {"P1","P-1","P2:b","P121","P2:c","P112","P2:a","P211","P21:b","P1211","P21:c",
+    allHMSymbols = set(["P1","P-1","P2:b","P121","P2:c","P112","P2:a","P211","P21:b","P1211","P21:c",
                     "P1121","P21:a","P2111","C2:b1","C121","C2:b2","A121","C2:b3","I121","C2:c1",
                     "A112","C2:c2","B112","B2","C2:c3","I112","C2:a1","B211","C2:a2","C211","C2:a3",
                     "I211","Pm:b","P1m1","Pm:c","P11m","Pm:a","Pm11","Pc:b1","P1c1","Pc:b2","P1n1",
@@ -5879,5 +5879,5 @@ class SpaceGroupData:
                     "P63/mmc","P23","F23","I23","P213","I213","Pm-3","Pn-3:1","Pn-3:2","Fm-3","Fd-3:1","Fd-3:2",
                     "Im-3","Pa-3","Ia-3","P432","P4232","F432","F4132","I432","P4332","P4132","I4132","P-43m",
                     "F-43m","I-43m","P-43n","F-43c","I-43d","Pm-3m","Pn-3n:1","Pn-3n:2","Pm-3n","Pn-3m:1",
-                    "Pn-3m:2","Fm-3m","Fm-3c","Fd-3m:1","Fd-3m:2","Fd-3c:1","Fd-3c:2","Im-3m","Ia-3d"}
+                    "Pn-3m:2","Fm-3m","Fm-3c","Fd-3m:1","Fd-3m:2","Fd-3c:1","Fd-3c:2","Im-3m","Ia-3d"])
 
