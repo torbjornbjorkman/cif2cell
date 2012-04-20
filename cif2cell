@@ -30,11 +30,12 @@ from math import *
 from datetime import datetime
 from optparse import OptionParser, OptionGroup
 import warnings
+import CifFile
+import subprocess
+from utils import *
 from uctools import *
 from ESPInterfaces import *
 from elementdata import *
-import CifFile
-import subprocess
 
 # Turn of warnings about deprecated stuff
 warnings.simplefilter("ignore",DeprecationWarning)
