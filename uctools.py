@@ -267,8 +267,8 @@ class CellData(GeometryObject):
                 self.spacegroupsymbol = SGnrtoHM[str(self.spacegroupnr)]
                 self.spacegroupsymboltype = "(H-M)"
             else:
-                raise SymmetryError("No H-M symbol available, and space group %3i does "+\
-                                    "not have a unique setting."%self.spacegroupnr)
+                raise SymmetryError("No H-M symbol available and space group %3i does "%(self.spacegroupnr)+\
+                                    "not have a unique setting.")
         else:
             self.spacegroupsetting = self.spacegroupsymbol[0]
         # Check if we know enough:
@@ -834,12 +834,6 @@ class CellData(GeometryObject):
                     self.spacegroupnr = int(HMtoSGnr[self.spacegroupsymbol])
                 except:
                     pass
-        # Save spacegroup setting separately
-        if self.spacegroupsymbol == "" and self.spacegroupnr != -1:
-            self.spacegroupsymbol = SGnrtoHM[str(self.spacegroupnr)]
-            self.spacegroupsymboltype = "(H-M)"
-        else:
-            pass
         # Get symmetry equivalent positions (space group operations)
         try:
             eqsitedata = cifblock.GetLoop('_symmetry_equiv_pos_as_xyz')
