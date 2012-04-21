@@ -27,7 +27,7 @@
 #  Affiliation: COMP, Aaalto University School of Science,
 #               Department of Applied Physics, Espoo, Finland
 #
-# TODO: Support for Hall symbols is probably broken.
+#  TODO:        Support for Hall symbols is probably broken.
 #******************************************************************************************
 from __future__ import division
 import os
@@ -437,11 +437,8 @@ class CellData(GeometryObject):
                 for op in EquivalentPositionsHM[self.spacegroupsymbol]:
                     self.symops.add(SymmetryOperation(op))
             else:
-                # Get equivalent sites from tables if not present
-                # THIS MIGHT GET WRONG!!! MAYBE WE SHOULD NOT DO ALLOW THIS FALLBACK!!!
-                for op in EquivalentPositionsSGnr[self.spacegroupnr]:
-                    self.symops.add(SymmetryOperation(op))
-
+                raise SymmetryError("Non-standard space group setting "+self.spacegroupsymbol+" not supported.")
+            
         # If rhombohedral setting and conventional cell, get tabulated symmetry operations (which are in hexagonal setting)
         if self.rhomb2hex:
             self.symops = set([])
@@ -828,10 +825,16 @@ class CellData(GeometryObject):
                         self.spacegroupsymbol = ""
                         self.spacegroupsymboltype = ""
         # Found symbol but not number?
-        if self.spacegroupnr == -1 and self.spacegroupsymbol != "":
+        if self.spacegroupnr == -1:
             if self.spacegroupsymboltype == "(H-M)":
                 try:
-                    self.spacegroupnr = int(HMtoSGnr[self.spacegroupsymbol])
+                    tmpstr = HMtoSGnr[self.spacegroupsymbol]
+                    nrstr = ""
+                    i = 0
+                    while tmpstr[i] in set(string.digits):
+                        nrstr += tmpstr[i]
+                        i += 1
+                    self.spacegroupnr = int(nrstr)
                 except:
                     pass
         # Get symmetry equivalent positions (space group operations)
