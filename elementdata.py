@@ -503,6 +503,7 @@ class ElementData:
         # Covalent radii
         self.CovalentRadius = {
             'H'  : 0.32 ,
+            'D'  : 0.32 ,
             'Ne' : 0.71 ,
             'F'  : 0.72 ,
             'O'  : 0.73 ,
@@ -595,6 +596,7 @@ class ElementData:
         # Covalent radii, stolen from Jmol
         self.CovalentRadius2 = {
             'H'  : .230,  
+            'D'  : .230,  
             'He' : .930,  
             'Li' : .680,  
             'Be' : .350,  

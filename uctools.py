@@ -84,9 +84,9 @@ class CellData(GeometryObject):
         self.initialized = False
         self.quiet = False
         self.coordepsilon = 0.0002
+        self.HallSymbol = ""
         self.spacegroupnr = 0
-        self.spacegroupsymbol = ""
-        self.spacegroupsymboltype = ""
+        self.HMSymbol = ""
         self.spacegroupsetting = ""
         self.lattrans = LatticeMatrix([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
         self.transvecs = [LatticeVector([zero, zero, zero])]
@@ -94,7 +94,7 @@ class CellData(GeometryObject):
         self.ineqsites = []
         self.occupations = []
         self.atomdata = []
-        ## self.atomset = set([])
+        self.atomset = set([])
         # initial lattice parameters
         self.ainit = 0
         self.binit = 0
@@ -258,19 +258,32 @@ class CellData(GeometryObject):
         ###################################
         #   INITIALIZE SPACE GROUP DATA   #
         ###################################
-        # Is this space group setting supported?
-        if self.spacegroupsymbol != "" and not self.spacegroupsymbol in allHMSymbols:
-            raise SymmetryError("Cannot parse non-standard setting "+self.spacegroupsymbol+".")
-        # Get space group symbol, if possible to do in unique way.
-        if self.spacegroupsymbol == "":
-            if self.spacegroupnr in groupsWithUniqueSetting:
-                self.spacegroupsymbol = SGnrtoHM[str(self.spacegroupnr)]
-                self.spacegroupsymboltype = "(H-M)"
-            else:
-                raise SymmetryError("No H-M symbol available and space group %3i does "%(self.spacegroupnr)+\
-                                    "not have a unique setting.")
+        # Only Hall symbols are used internally.
+        if self.HallSymbol == "":
+            if self.HMSymbol == "":
+                if 0 < self.spacegroupnr <= 230:
+                    try:
+                        self.HallSymbol = Number2Hall[self.spacegroupnr]
+                    except:
+                        raise SymmetryError("Found neither Hall nor H-M symbol and space group %3i has no unique setting."%self.spacegroupnr)
+                else:
+                    raise SymmetryError("CIF file contains neither space group symbols nor space group number.")
+            try:
+                self.HallSymbol = HM2Hall[self.HMSymbol]
+            except:
+                raise SymmetryError("Cannot convert "+self.HMSymbol+" to Hall symbol.")
+
+        # Set space group number and H-M symbol, if not in file.
+        if not 0 < self.spacegroupnr <= 230:
+            self.spacegroupnr = Hall2Number[self.HallSymbol]
+        if self.HMSymbol == "":
+            self.HMSymbol == Hall2HM[self.HallSymbol]
+
+        if self.HallSymbol == "":
+            raise SymmetryError("Hall symbol not set, cell generation not possible.")
         else:
-            self.spacegroupsetting = self.spacegroupsymbol[0]
+            self.spacegroupsetting = self.HallSymbol.lstrip("-")[0]
+
         # Check if we know enough:
         # To produce the conventional cell (self.primcell=False) we don't need the space group
         # symbol or number as long as we have the symmetry operations (equivalent sites).
@@ -280,7 +293,7 @@ class CellData(GeometryObject):
             except:
                 pass
         if self.a!=0 and self.b!=0 and self.c!=0 and self.alpha!=0 and self.beta!=0 and self.gamma!=0:
-            if self.spacegroupnr == -1:
+            if not 0 < self.spacegroupnr < 231:
                 if len(self.symops) >= 1:
                     if self.primcell == True:
                         if self.spacegroupsetting == 'P':
@@ -294,12 +307,20 @@ class CellData(GeometryObject):
         else:
             raise CellError("No crystallographic parameter may be zero.")
 
+        # If no symmetry operations are not set, get internally stored.
+        if not self.symops:
+            eqsites = SymOpsHall[self.HallSymbol]
+            # Define the set of space group operations.
+            self.symops = set([])
+            for site in eqsites:
+                self.symops.add(SymmetryOperation(site))
+
         ############################
         #    INITIALIZE LATTICE    #
         ############################
         # Special case: trigonal systems in rhombohedral setting
         # are first transformed to hexagonal setting
-        if self.spacegroupsetting == "R" and abs(self.gamma - 120) > self.coordepsilon:
+        if self.HallSymbol in Rhomb2HexHall and abs(self.gamma - 120) > self.coordepsilon:
             self.rhomb2hex = True
             self.c = self.a * sqrt(3 + 6*cos(self.alpha*pi/180))
             self.a = 2 * self.a * sin(self.alpha*pi/360)
@@ -312,6 +333,11 @@ class CellData(GeometryObject):
                                                    [-third, -2*third, third]])
             for i in range(len(self.ineqsites)):
                 self.ineqsites[i] = LatticeVector(mvmult3(rhomb2hextrans,self.ineqsites[i]))
+            # We also need the correct symmetry operations.
+            eqsites = SymOpsHall[Rhomb2HexHall[self.HallSymbol]]
+            self.symops = set([])
+            for site in eqsites:
+                self.symops.add(SymmetryOperation(site))
         # set primitive lattice vectors
         self.latticevectors = self.conventional_latticevectors()
         self.lengthscale = self.a
@@ -390,7 +416,7 @@ class CellData(GeometryObject):
                 self.lattrans = LatticeMatrix([[half, -half, zero],
                                                [half, half, zero],
                                                [zero, zero, one]])
-            elif self.spacegroupsetting == 'R':
+            elif self.HallSymbol in Rhomb2HexHall:
                 if abs(self.gamma - 120) < self.coordepsilon:
                     # rhombohedral from hexagonal setting
                     self.transvecs = [LatticeVector([zero,zero,zero]),
@@ -431,20 +457,7 @@ class CellData(GeometryObject):
         #################################
         #       SYMMETRY OPERATIONS     #
         #################################
-        if len(self.symops) == 0:
-            if self.spacegroupsymbol in allHMSymbols:
-                # Get equivalent sites from dictionary
-                for op in EquivalentPositionsHM[self.spacegroupsymbol]:
-                    self.symops.add(SymmetryOperation(op))
-            else:
-                raise SymmetryError("Non-standard space group setting "+self.spacegroupsymbol+" not supported.")
-            
-        # If rhombohedral setting and conventional cell, get tabulated symmetry operations (which are in hexagonal setting)
-        if self.rhomb2hex:
-            self.symops = set([])
-            for op in EquivalentPositionsSGnr[self.spacegroupnr]:
-                self.symops.add(SymmetryOperation(op))
-
+        
         # If we reduce the cell, remove the symmetry operations that are the
         # same up to an induced lattice translation
         if self.primcell:
@@ -474,7 +487,7 @@ class CellData(GeometryObject):
             # Hexagonal and trigonal as a special case... check that the hexagonal planes are in the ab plane
             for op in self.symops:
                 if not (op.rotation[2] == Vector([0,0,1]) or op.rotation[2] == Vector([0,0,-1])):
-                    raise SymmetryError("Lattice vectors do not fulfil the given symmetries of the lattice!\n"\
+                    raise SymmetryError("Lattice vectors do not fulfil the given symmetries of the lattice!\n"+
                                         "The cell is given in some non-standard setting presently not handled by the program.")
         else:
             for op in self.symops:
@@ -552,7 +565,7 @@ class CellData(GeometryObject):
                     posexpr[k] = posexpr[k].replace('z',str(a[0].position[2]))
                 position = LatticeVector([eval(pos) for pos in posexpr])
                 b = AtomSite(position=position,species=a[0].species,charges=a[0].charges)
-                ## self.atomset.add(b)
+                self.atomset.add(b)
                 append = True
                 for site in a:
                     for vec in self.transvecs:
@@ -564,11 +577,11 @@ class CellData(GeometryObject):
                         break
                 if append:
                     a.append(b)
+        # Transform positions. Note that atomdata and atomset alias the same data,
+        # so we only transform once.
         for a in self.atomdata:
             for b in a:
                 b.position = LatticeVector(mvmult3(invlattrans,b.position))
-        ## for a in self.atomset:
-        ##     a.position = LatticeVector(mvmult3(invlattrans,a.position))
         ######################
         #    MISCELLANEOUS   #
         ######################
@@ -642,7 +655,6 @@ class CellData(GeometryObject):
             for b in a:
                 for translation in newtranslations[1:]:
                     position = b.position + translation
-                    ## newsites[i].append(AtomSite(position=position,species=b.species))
                     t = copy.deepcopy(b)
                     t.position = position
                     newsites[i].append(t)
@@ -651,19 +663,16 @@ class CellData(GeometryObject):
         for a in newsites:
             for b in a:
                 self.atomdata[i].append(b)
-                ## self.atomset.add(b)
+                self.atomset.add(b)
             i += 1
 
         # Move all atoms by transvec 
         if reduce(lambda x,y: x+y, transvec) != 0:
-            ## for a in self.atomdata:
-            ##     for b in a:
             for i in range(len(self.atomdata)):
                 for j in range(len(self.atomdata[i])):
                     for k in range(3):
                         fac = oldlatlen[k]/self.latticevectors[k].length()
                         self.atomdata[i][j].position[k] = self.atomdata[i][j].position[k] + transvec[k]*fac
-                        ## b.position[k] = b.position[k] + fac*transvec[k]
                         
         # previous length of lattice vectors
         oldlatlen = [vec.length() for vec in self.latticevectors]
@@ -797,65 +806,85 @@ class CellData(GeometryObject):
 
     # Get lattice information from CIF block
     def getFromCIF(self, cifblock=None):
-        # Get space group number
+        ################################
+        # Get space group information  #
+        ################################
+        # _space_group is the primary choice, so if both _symmetry and _space_group
+        # are present, _symmetry will be overwritten
+        try:
+            self.spacegroupnr = int(cifblock['_symmetry_Int_Tables_number'])
+        except:
+            pass
         try:
             self.spacegroupnr = int(cifblock['_space_group_IT_number'])
-        except KeyError:
-            try:
-                self.spacegroupnr = int(cifblock['_symmetry_Int_Tables_number'])
-            except KeyError:
-                self.spacegroupnr = -1
-        # Get space group symbol
-        try:
-            self.spacegroupsymbol=cifblock['_space_group_name_H-M_alt'].translate(string.maketrans("",""),string.whitespace)
-            self.spacegroupsymboltype='(H-M)'
         except:
-            try:
-                self.spacegroupsymbol=cifblock['_space_group_name_Hall'].translate(string.maketrans("",""),string.whitespace)
-                self.spacegroupsymboltype='(Hall)'
-            except:
-                try:
-                    self.spacegroupsymbol=cifblock['_symmetry_space_group_name_H-M'].translate(string.maketrans("", ""),string.whitespace)
-                    self.spacegroupsymboltype='(H-M)'
-                except:
+            pass
+        try:
+            self.HallSymbol=cifblock['_symmetry_space_group_name_Hall']
+        except:
+            pass
+        try:
+            self.HallSymbol=cifblock['_space_group_name_Hall']
+        except:
+            pass
+        try:
+            self.HMSymbol=cifblock['_symmetry_space_group_name_H-M'].translate(string.maketrans("", ""),string.whitespace)
+        except:
+            pass
+        try:
+            self.HMSymbol=cifblock['_space_group_name_H-M_alt'].translate(string.maketrans("",""),string.whitespace)
+        except:
+            pass
+
+        # Only Hall symbols are used internally.
+        if self.HallSymbol == "":
+            if self.HMSymbol == "":
+                if 0 < self.spacegroupnr <= 230:
                     try:
-                        self.spacegroupsymbol=cifblock['_symmetry_space_group_name_Hall'].translate(string.maketrans("",""),string.whitespace)
-                        self.spacegroupsymboltype='(Hall)'
+                        self.HallSymbol = Number2Hall[self.spacegroupnr]
                     except:
-                        self.spacegroupsymbol = ""
-                        self.spacegroupsymboltype = ""
-        # Found symbol but not number?
-        if self.spacegroupnr == -1:
-            if self.spacegroupsymboltype == "(H-M)":
-                try:
-                    tmpstr = HMtoSGnr[self.spacegroupsymbol]
-                    nrstr = ""
-                    i = 0
-                    while tmpstr[i] in set(string.digits):
-                        nrstr += tmpstr[i]
-                        i += 1
-                    self.spacegroupnr = int(nrstr)
-                except:
-                    pass
-        # Get symmetry equivalent positions (space group operations)
+                        raise SymmetryError("Found neither Hall nor H-M symbol and space group %3i has no unique setting."%self.spacegroupnr)
+                else:
+                    raise SymmetryError("CIF file contains neither space group symbols nor space group number.")
+            try:
+                self.HallSymbol = HM2Hall[self.HMSymbol]
+            except:
+                raise SymmetryError("Cannot convert "+self.HMSymbol+" to Hall symbol.")
+
+        # Set space group number and H-M symbol, if not in file.
+        if self.spacegroupnr < 1 or self.spacegroupnr > 230:
+            self.spacegroupnr = Hall2Number[self.HallSymbol]
+        if self.HMSymbol == "":
+            self.HMSymbol == Hall2HM[self.HallSymbol]
+
+        # Get symmetry equivalent positions (space group operations).
+        eqsites = None
         try:
             eqsitedata = cifblock.GetLoop('_symmetry_equiv_pos_as_xyz')
             try:
                 eqsitestrs = eqsitedata.get('_symmetry_equiv_pos_as_xyz')
-                # fixes a funny exception that can occur for the P1 space group
+                # This if fixes a funny exception that can occur for the P1 space group.
                 if type(eqsitestrs) == StringType:
                     eqsitestrs = [eqsitestrs]
-                # Define the set of space group operations
-                self.symops = set([])
-                for i in range(len(eqsitestrs)):
-                    tmp = eqsitestrs[i].split(',')
-                    for j in range(len(tmp)):
-                        tmp[j] = tmp[j].strip().lower()
-                    self.symops.add(SymmetryOperation(tmp))
+                    eqsites = []
+                    for i in range(len(eqsitestrs)):
+                        tmp = eqsitestrs[i].split(',')
+                        eqsites.append([])
+                        for j in range(len(tmp)):
+                            eqsites[i].append(tmp[j].strip().lower())
             except KeyError:
-                self.symops = set([])
+                self.symops = None
         except KeyError:
-            self.symops = set([])
+            self.symops = None
+        # If no symmetry operations in file, get internally stored.
+        if type(eqsites) == type(None):
+            eqsites = SymOpsHall[self.HallSymbol]
+
+        # Define the set of space group operations.
+        self.symops = set([])
+        for site in eqsites:
+            self.symops.add(SymmetryOperation(site))
+        
         # Get cell
         try:
             # Set initial crystal parameters

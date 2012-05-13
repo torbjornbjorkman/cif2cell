@@ -1,5 +1,25 @@
 CIF2CELL RELEASE INFORMATION
 
+
+VERSION 0.4.3
+
+Due to problems with covering all possibilites for writing
+Hermann-Mauguin symbols, version 0.4.3 was unable to support
+large portions of popular CIF databases, and was removed
+from the downloading section here. This will be fixed shortly
+in an upcoming release, meanwhile use 0.4.2.
+
+* Reworked the space group information stored internally to
+  more flexible and pythonic formats.
+* The code should now handle all reasonably normal settings 
+  (anything selectable in the Bilbao Crystallographic server) 
+  and choke in a controlled way on anything else (things like
+  face centered monoclinic settings, which are by convention
+  represented in an equivalent base-centered monoclinic setting).
+
+With thanks to Henning Glawe for reporting some irregular behaviour.
+
+-------------------------------------------------------------- 
 VERSION 0.4.2
 
 Fixed serious bug in the cell generation. All users should immediately 

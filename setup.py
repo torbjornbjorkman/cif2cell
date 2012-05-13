@@ -26,13 +26,13 @@ docfiles = ['docs/cif2cell.pdf']
 ciffiles = glob('cifs/*.cif')
 
 setup(name='cif2cell',
-      version='0.4.3',
+      version='0.4.4',
       description='Construct a unit cell from CIF data',
       long_description='A command-line tool to generate the geometrical setup for various electronic structure codes from a CIF format file.',
       author='Torbjorn Bjorkman',
       author_email='torbjornb@gmail.com',
       url='http://cif2cell.sourceforge.net/',
-      py_modules=['uctools','spacegroupdata','elementdata','ESPInterfaces'],
+      py_modules=['utils','uctools','spacegroupdata','elementdata','ESPInterfaces'],
       scripts=['cif2cell'],
       requires=['CifFile'],
       data_files=[('./', ['LICENSE']),

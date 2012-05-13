@@ -18,6 +18,7 @@
 #************************************************************************************
 #  Description: A command-line tool to generate the geometrical setup
 #               for various electronic structure codes from a CIF format file.
+#               This code was published in Comp. Phys, Comm. 182, 1183-1186 (2011).
 #  Author:      Torbjorn Bjorkman, torbjorn.bjorkman(at)aalto.fi
 #  Affiliation: COMP, Aaalto University School of Science,
 #               Department of Applied Physics, Espoo, Finland
@@ -42,7 +43,7 @@ warnings.simplefilter("ignore",DeprecationWarning)
 #
 # INPUT OPTIONS
 # General stuff
-description = "A program for generating input lattice structures to various electronic structure programs from a CIF (Crystallographic Information Framework) file."
+description = "A program for generating input lattice structures to various electronic structure programs from a CIF (Crystallographic Information Framework) file. This code was published in "
 usage = "usage: %prog -f FILE [-p PROGRAM] [other options]"
 parser = OptionParser(usage=usage, description=description)
 parser.add_option("-v","--verbose",dest="verbose",help="Print a lot of extra information to screen",action="store_true")
@@ -69,7 +70,7 @@ parser.add_option("--print-charge-state","--print-oxidation-numbers",dest="print
 parser.add_option("--print-reference-bibtex",dest="bibtexref",help="Print citation in BibTeX format and exit.",action="store_true")
 # CELL GENERATION OPTIONS
 #cellgenopts = OptionGroup(parser, "Cell generation options")
-parser.add_option("--rhombohedral-diagonal",dest="rhombdiag",help="Set up rhombohedral cell with threefold axis along [111].",action="store_true")
+#parser.add_option("--rhombohedral-diagonal",dest="rhombdiag",help="Set up rhombohedral cell with threefold axis along [111].",action="store_true")
 parser.add_option("--no-reduce",dest="noreduce",help="Do not reduce to the primitive cell.",action="store_true")
 # Supercell options
 parser.add_option("--supercell",dest="supercellmap",help="Three integers separated with commas and enclosed in square brackets that specify the dimensions of a supercell to be constructed from the primitive cell. If combined with the --no-reduce option the supercell will instead be generated based on the conventional cell.",metavar="[k,l,m]")
@@ -106,7 +107,7 @@ parser.add_option_group(progspec)
 
 # own name
 programname = "cif2cell"
-version = "0.4.3"
+version = "0.4.4"
 if options.version:
     print programname+" version "+version
     sys.exit(0)
@@ -268,8 +269,8 @@ except CellError, e:
 ##############################################
 # Generate cell
 if reducetoprim:
-    if options.rhombdiag:
-        cd.rhombohedral_diagonal = True
+    ## if options.rhombdiag:
+    ##     cd.rhombohedral_diagonal = True
     try:
         cell = cd.primitive()
     except SymmetryError, e:
@@ -314,16 +315,11 @@ if verbose or not options.program and not options.quiet:
     if tmpstring != "":
         print tmpstring
     print "\n SYMMETRY INFORMATION"
-    if cd.spacegroupnr >= 0:
-        if 0 < cd.spacegroupnr <=230:
-            print "Space group number "+": ".rjust(len(cd.spacegroupsymboltype)+2)+str(cd.spacegroupnr)
-        else:
-            print "Space group number "+": ".rjust(len(cd.spacegroupsymboltype)+2)+"?"
-        if cd.spacegroupsymbol != "":
-            print "Space group symbol "+cd.spacegroupsymboltype+": "+cd.spacegroupsymbol
-        else:
-            print "Space group symbol "+cd.spacegroupsymboltype+": ?"
+    if cd.HallSymbol != "":
         print cd.crystal_system()[0].upper()+cd.crystal_system()[1:]+" crystal system."
+        print "Space group number     : ".rjust(2)+str(cd.spacegroupnr)
+        print "Hall symbol            : "+cd.HallSymbol
+        print "Hermann-Mauguin symbol : "+cd.HMSymbol
     else:
         print "No space group information found."
     # only print these if verbose
@@ -761,12 +757,12 @@ if outputprogram == 'cif':
         a = cd.latticevectors[0].scalmult(cd.lengthscale)
         b = cd.latticevectors[1].scalmult(cd.lengthscale)
         c = cd.latticevectors[2].scalmult(cd.lengthscale)
-	cb['_cell_length_a'] = a.length() #sqrt(a[0]*a[0]+a[1]*a[1]+a[2]*a[2])
-	cb['_cell_length_b'] = b.length() #sqrt(b[0]*b[0]+b[1]*b[1]+b[2]*b[2])
-	cb['_cell_length_c'] = c.length() #sqrt(c[0]*c[0]+c[1]*c[1]+c[2]*c[2])
-	cb['_cell_angle_alpha'] = acos((b[0]*c[0]+b[1]*c[1]+b[2]*c[2])/(b.length()*c.length()))*180/pi
-	cb['_cell_angle_beta'] = acos((a[0]*c[0]+a[1]*c[1]+a[2]*c[2])/(a.length()*c.length()))*180/pi
-	cb['_cell_angle_gamma'] = acos((b[0]*a[0]+b[1]*a[1]+b[2]*a[2])/(a.length()*b.length()))*180/pi
+	cb['_cell_length_a'] = a.length()
+	cb['_cell_length_b'] = b.length()
+	cb['_cell_length_c'] = c.length()
+	cb['_cell_angle_alpha'] = acos(b.dot(c))/(b.length()*c.length())*180/pi
+	cb['_cell_angle_beta'] = acos(a.dot(c))/(a.length()*c.length())*180/pi
+	cb['_cell_angle_gamma'] = acos(b.dot(a))/(a.length()*b.length())*180/pi
     # Supercell may have broken symmetry, so just put P1
         cb['_space_group_IT_number'] = 1
         cb['_space_group_name_H-M_alt'] = "P1"
@@ -779,10 +775,8 @@ if outputprogram == 'cif':
         cb['_cell_angle_beta']  = cd.beta
         cb['_cell_angle_gamma'] = cd.gamma
         cb['_space_group_IT_number'] = cd.spacegroupnr
-        if cd.spacegroupsymboltype == "(H-M)":
-            cb['_space_group_name_H-M_alt'] = cd.spacegroupsymbol
-        elif cd.spacegrousymboltype == "(Hall)":
-            cb['_space_group_name_Hall'] = cd.spacegroupsymbol        
+        cb['_space_group_name_H-M_alt'] = cd.HMSymbol
+        cb['_space_group_name_Hall'] = cd.HallSymbol
     # Positions
     labels = []
     symbols = []
@@ -980,7 +974,7 @@ if outputprogram == 'spacegroup':
     # Get output file object
     spacegroupfile = SpacegroupFile(cell, docstring)
     angtobohr = 1e-10 * 4 * pi * 10973731.568527/7.2973525376e-3
-    spacegroupfile.HermannMauguin = cd.spacegroupsymbol.replace("/","")
+    spacegroupfile.HermannMauguin = cd.HMSymbol.replace("/","")
     spacegroupfile.a = cd.a*angtobohr
     spacegroupfile.b = cd.b*angtobohr
     spacegroupfile.c = cd.c*angtobohr

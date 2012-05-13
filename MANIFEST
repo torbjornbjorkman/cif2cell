@@ -3,6 +3,7 @@ README
 cif2cell
 setup.py
 spacegroupdata.py
+utils.py
 uctools.py
 elementdata.py
 ESPInterfaces.py
