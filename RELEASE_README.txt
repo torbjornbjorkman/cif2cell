@@ -2,15 +2,17 @@ CIF2CELL RELEASE INFORMATION
 
 VERSION 0.4.4
 
-Mostly, this release greatly extends the support for non-standard settings.
-The program now handles almost all of the ICSD database, and should
-detect any setting that is not handled and exit with an error message. 
+Back on track again after the little mishap in version 0.4.3. 
+Mostly, this release greatly extends the support for non-standard 
+space group settings. The program now handles almost all of the 
+ICSD database, and should detect any setting that is not handled 
+and exit with an error message. 
 
 Under the hood, the handling of the space group data has been
 extensively modified to make it easy to handle non-standard settings. 
 The program now uses Hall symbols internally, because all the time
-having to parse the poorly standardized and/or  non-unique
-Hermann-Mauguin symbols almost drove me insane. 
+having to parse the poorly standardized and/or non-unique
+Hermann-Mauguin symbols almost drove me insane.
 
 -------------------------------------------------------------- 
 VERSION 0.4.3
