@@ -836,6 +836,12 @@ class CellData(GeometryObject):
         except:
             pass
 
+        # Force correct case for space group symbols
+        if self.HMSymbol != "":
+            self.HMSymbol = self.HMSymbol[0].upper()+self.HMSymbol[1:].lower()
+        if self.HallSymbol != "":
+            self.HallSymbol = self.HallSymbol[0].upper()+self.HallSymbol[1:].lower()
+
         # Only Hall symbols are used internally.
         if self.HallSymbol == "":
             if self.HMSymbol == "":

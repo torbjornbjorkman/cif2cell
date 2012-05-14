@@ -1,5 +1,12 @@
 CIF2CELL RELEASE INFORMATION
 
+VERSION 0.4.4_1
+
+A small patch fixing that  a lot of Hermann-Mauguin symbols with the 
+standard choice of origin and unique axes where not supported in their 
+abbreviated form (such as C2/m for C12/m1). 
+
+-------------------------------------------------------------- 
 VERSION 0.4.4
 
 Back on track again after the little mishap in version 0.4.3. 
