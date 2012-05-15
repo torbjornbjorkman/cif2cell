@@ -858,7 +858,10 @@ class CellData(GeometryObject):
                 tmp[-1] = 'H'
                 self.HMSymbol = "".join(tmp)
         if self.HallSymbol != "":
-            self.HallSymbol = self.HallSymbol[0].upper()+self.HallSymbol[1:].lower()
+            if self.HallSymbol[0] == "-":
+                self.HallSymbol = "-"+self.HallSymbol[1].upper()+self.HallSymbol[2:].lower()
+            else:
+                self.HallSymbol = self.HallSymbol[0].upper()+self.HallSymbol[1:].lower()
 
         # Get symmetry equivalent positions (space group operations).
         eqsites = None
@@ -879,9 +882,6 @@ class CellData(GeometryObject):
                 self.symops = None
         except KeyError:
             self.symops = None
-        # If no symmetry operations in file, get internally stored.
-        if type(eqsites) == type(None):
-            eqsites = SymOpsHall[self.HallSymbol]
 
         # Only Hall symbols are used internally.
         if self.HallSymbol == "":
@@ -905,6 +905,10 @@ class CellData(GeometryObject):
             self.spacegroupnr = Hall2Number[self.HallSymbol]
         if self.HMSymbol == "":
             self.HMSymbol == Hall2HM[self.HallSymbol]
+
+        # If no symmetry operations in file, get internally stored.
+        if type(eqsites) == type(None):
+            eqsites = SymOpsHall[self.HallSymbol]
 
         # Define the set of space group operations.
         self.symops = set([])

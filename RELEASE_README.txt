@@ -1,6 +1,6 @@
 CIF2CELL RELEASE INFORMATION
 
-VERSION 0.4.4_2
+VERSION 0.4.4.2
 
 Another small patch fixing some problems provided/omitted by the
 previous patch related to the H-M symbols.
