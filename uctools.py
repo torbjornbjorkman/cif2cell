@@ -258,7 +258,7 @@ class CellData(GeometryObject):
         ###################################
         #   INITIALIZE SPACE GROUP DATA   #
         ###################################
-        # Only Hall symbols are used internally.
+        # Try to set Hall symbol, if not set
         if self.HallSymbol == "":
             if self.HMSymbol == "":
                 if 0 < self.spacegroupnr <= 230:
@@ -271,27 +271,37 @@ class CellData(GeometryObject):
             try:
                 self.HallSymbol = HM2Hall[self.HMSymbol]
             except:
-                raise SymmetryError("Cannot convert "+self.HMSymbol+" to Hall symbol.")
+                print "***Warning: Cannot convert "+self.HMSymbol+" to Hall symbol."
 
-        # Set space group number and H-M symbol, if not in file.
+        # Set space group number and H-M symbol if not set
         if not 0 < self.spacegroupnr <= 230:
-            self.spacegroupnr = Hall2Number[self.HallSymbol]
+            try:
+                self.spacegroupnr = Hall2Number[self.HallSymbol]
+            except:
+                pass
         if self.HMSymbol == "":
-            self.HMSymbol == Hall2HM[self.HallSymbol]
-
-        if self.HallSymbol == "":
-            raise SymmetryError("Hall symbol not set, cell generation not possible.")
-        else:
-            self.spacegroupsetting = self.HallSymbol.lstrip("-")[0]
+            try:
+                self.HMSymbol == Hall2HM[self.HallSymbol]
+            except:
+                pass
 
         # Check if we know enough:
         # To produce the conventional cell (self.primcell=False) we don't need the space group
         # symbol or number as long as we have the symmetry operations (equivalent sites).
         if self.spacegroupsetting == "":
             try:
+                self.spacegroupsetting = self.HallSymbol.lstrip("-")[0]
+            except:
+                try:
+                    self.spacegroupsetting = self.HMSymbol[0]
+                except:
+                    pass
+        if self.spacegroupsetting == "":
+            try:
                 self.spacegroupsetting = SGnrtoHM[str(self.spacegroupnr)][0]
             except:
                 pass
+        # Sanity test of lattice parameters
         if self.a!=0 and self.b!=0 and self.c!=0 and self.alpha!=0 and self.beta!=0 and self.gamma!=0:
             if not 0 < self.spacegroupnr < 231:
                 if len(self.symops) >= 1:
@@ -839,29 +849,16 @@ class CellData(GeometryObject):
         # Force correct case for space group symbols
         if self.HMSymbol != "":
             self.HMSymbol = self.HMSymbol[0].upper()+self.HMSymbol[1:].lower()
+            if self.HMSymbol[-1] == 'r':
+                tmp = list(self.HMSymbol)
+                tmp[-1] = 'R'
+                self.HMSymbol = "".join(tmp)
+            if self.HMSymbol[-1] == 'h':
+                tmp = list(self.HMSymbol)
+                tmp[-1] = 'H'
+                self.HMSymbol = "".join(tmp)
         if self.HallSymbol != "":
             self.HallSymbol = self.HallSymbol[0].upper()+self.HallSymbol[1:].lower()
-
-        # Only Hall symbols are used internally.
-        if self.HallSymbol == "":
-            if self.HMSymbol == "":
-                if 0 < self.spacegroupnr <= 230:
-                    try:
-                        self.HallSymbol = Number2Hall[self.spacegroupnr]
-                    except:
-                        raise SymmetryError("Found neither Hall nor H-M symbol and space group %3i has no unique setting."%self.spacegroupnr)
-                else:
-                    raise SymmetryError("CIF file contains neither space group symbols nor space group number.")
-            try:
-                self.HallSymbol = HM2Hall[self.HMSymbol]
-            except:
-                raise SymmetryError("Cannot convert "+self.HMSymbol+" to Hall symbol.")
-
-        # Set space group number and H-M symbol, if not in file.
-        if self.spacegroupnr < 1 or self.spacegroupnr > 230:
-            self.spacegroupnr = Hall2Number[self.HallSymbol]
-        if self.HMSymbol == "":
-            self.HMSymbol == Hall2HM[self.HallSymbol]
 
         # Get symmetry equivalent positions (space group operations).
         eqsites = None
@@ -872,12 +869,12 @@ class CellData(GeometryObject):
                 # This if fixes a funny exception that can occur for the P1 space group.
                 if type(eqsitestrs) == StringType:
                     eqsitestrs = [eqsitestrs]
-                    eqsites = []
-                    for i in range(len(eqsitestrs)):
-                        tmp = eqsitestrs[i].split(',')
-                        eqsites.append([])
-                        for j in range(len(tmp)):
-                            eqsites[i].append(tmp[j].strip().lower())
+                eqsites = []
+                for i in range(len(eqsitestrs)):
+                    tmp = eqsitestrs[i].split(',')
+                    eqsites.append([])
+                    for j in range(len(tmp)):
+                        eqsites[i].append(tmp[j].strip().lower())
             except KeyError:
                 self.symops = None
         except KeyError:
@@ -885,6 +882,29 @@ class CellData(GeometryObject):
         # If no symmetry operations in file, get internally stored.
         if type(eqsites) == type(None):
             eqsites = SymOpsHall[self.HallSymbol]
+
+        # Only Hall symbols are used internally.
+        if self.HallSymbol == "":
+            if self.HMSymbol == "":
+                if 0 < self.spacegroupnr <= 230:
+                    try:
+                        self.HallSymbol = Number2Hall[self.spacegroupnr]
+                    except:
+                        raise SymmetryError("Found neither Hall nor H-M symbol and space group %3i does not have a unique setting."%self.spacegroupnr)
+                else:
+                    raise SymmetryError("CIF file contains neither space group symbols nor space group number.")
+            try:
+                self.HallSymbol = HM2Hall[self.HMSymbol]
+            except:
+                pass
+            ## except:
+            ##     raise SymmetryError("Cannot convert "+self.HMSymbol+" to Hall symbol.")
+                
+        # Set space group number and H-M symbol, if not in file.
+        if self.spacegroupnr < 1 or self.spacegroupnr > 230:
+            self.spacegroupnr = Hall2Number[self.HallSymbol]
+        if self.HMSymbol == "":
+            self.HMSymbol == Hall2HM[self.HallSymbol]
 
         # Define the set of space group operations.
         self.symops = set([])
