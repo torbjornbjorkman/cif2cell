@@ -38,10 +38,16 @@ from uctools import *
 from ESPInterfaces import *
 from elementdata import *
 
+# Name and version
+programname = "cif2cell"
+version = "0.4.4.4"
+
 # Turn of warnings about deprecated stuff
 warnings.simplefilter("ignore",DeprecationWarning)
-#
-# INPUT OPTIONS
+
+############################
+#      INPUT OPTIONS       #
+############################
 # General stuff
 description = "A program for generating input lattice structures to various electronic structure programs from a CIF (Crystallographic Information Framework) file. This code was published in "
 usage = "usage: %prog FILE [-p PROGRAM] [other options]"
@@ -105,9 +111,7 @@ progspec.add_option("--vasp-pseudo-libdr",dest="vasppseudolib",help="Path to the
 parser.add_option_group(progspec)
 (options,args) = parser.parse_args()
 
-# own name
-programname = "cif2cell"
-version = "0.4.4.2"
+# Print version number and exit
 if options.version:
     print programname+" version "+version
     sys.exit(0)
@@ -202,9 +206,8 @@ if cif_file:
     ## val_results = CifFile.validate(cif_file,dic=cdic)
     ## print validate_report(val_results)
     ## val_report = CifFile.ValidationResult(val_results)
-    cf = CifFile.CifFile(cif_file,grammar=cif_grammar)
     try:
-        cf = CifFile.CifFile(cif_file,grammar=cif_grammar)
+        cf = CifFile.ReadCif(cif_file,grammar=cif_grammar)
     except:
         sys.stderr.write("***Error: could not read "+cif_file+".\n")
         sys.exit(2)
@@ -628,10 +631,6 @@ else:
         outputfile = "POSCAR"
     elif outputprogram == "rspt":
         outputfile = "symt.inp"
-        if options.newsymt:
-            newsymtformat = True
-        else:
-            newsymtformat = False
     elif outputprogram == "cellgen":
         outputfile = "cellgen.inp"
     elif outputprogram == "elk":
@@ -642,8 +641,10 @@ else:
         outputfile = "spacegroup.in"
     elif outputprogram == "abinit":
         outputfile = ref.cpd.replace(" ", "").replace("(","").replace(")","")
-        # If the filename seems too long, replace by the name of the cif file
-        if len(outputfile) > 10:
+        # If the filename seems too long or strange, replace by the name of the cif file
+        if len(outputfile.strip(string.punctuation)) == 0:
+            outputfile = cif_file_name.replace(".cif","")
+        if len(outputfile) > 24:
             if len(cif_file_name) < len(outputfile):
                 outputfile = cif_file_name.replace(".cif","")
             else:
@@ -651,8 +652,10 @@ else:
         outputfile = outputfile+".in"
     elif outputprogram == "siesta":
         outputfile = ref.cpd.replace(" ", "").replace("(","").replace(")","")
-        # If the filename seems too long, replace by the name of the cif file
-        if len(outputfile) > 10:
+        # If the filename seems too long or strange, replace by the name of the cif file
+        if len(outputfile.strip(string.punctuation)) == 0:
+            outputfile = cif_file_name.replace(".cif","")
+        if len(outputfile) > 24:
             if len(cif_file_name) < len(outputfile):
                 outputfile = cif_file_name.replace(".cif","")
             else:
@@ -660,8 +663,10 @@ else:
         outputfile = outputfile+".fdf"
     elif outputprogram == "cpmd":
         outputfile = ref.cpd.replace(" ", "").replace("(","").replace(")","")
-        # If the filename seems too long, replace by the name of the cif file
-        if len(outputfile) > 10:
+        # If the filename seems too long or strange, replace by the name of the cif file
+        if len(outputfile.strip(string.punctuation)) == 0:
+            outputfile = cif_file_name.replace(".cif","")
+        if len(outputfile) > 24:
             if len(cif_file_name) < len(outputfile):
                 outputfile = cif_file_name.replace(".cif","")
             else:
@@ -669,8 +674,10 @@ else:
         outputfile = outputfile+".inp"
     elif outputprogram == "castep":
         outputfile = ref.cpd.replace(" ", "").replace("(","").replace(")","")
-        # If the filename seems too long, replace by the name of the cif file
-        if len(outputfile) > 10:
+        # If the filename seems too long or strange, replace by the name of the cif file
+        if len(outputfile.strip(string.punctuation)) == 0:
+            outputfile = cif_file_name.replace(".cif","")
+        if len(outputfile) > 24:
             if len(cif_file_name) < len(outputfile):
                 outputfile = cif_file_name.replace(".cif","")
             else:
@@ -678,8 +685,10 @@ else:
         outputfile = outputfile+".cell"
     elif outputprogram == "fleur":
         outputfile = ref.cpd.replace(" ", "").replace("(","").replace(")","")
-        # If the filename seems too long, replace by the name of the cif file
-        if len(outputfile) > 10:
+        # If the filename seems too long or strange, replace by the name of the cif file
+        if len(outputfile.strip(string.punctuation)) == 0:
+            outputfile = cif_file_name.replace(".cif","")
+        if len(outputfile) > 24:
             if len(cif_file_name) < len(outputfile):
                 outputfile = cif_file_name.replace(".cif","")
             else:
@@ -687,8 +696,10 @@ else:
         outputfile = "inp_"+outputfile
     elif outputprogram == "crystal09":
         outputfile = ref.cpd.replace(" ", "").replace("(","").replace(")","")
-        # If the filename seems too long, replace by the name of the cif file
-        if len(outputfile) > 10:
+        # If the filename seems too long or strange, replace by the name of the cif file
+        if len(outputfile.strip(string.punctuation)) == 0:
+            outputfile = cif_file_name.replace(".cif","")
+        if len(outputfile) > 24:
             if len(cif_file_name) < len(outputfile):
                 outputfile = cif_file_name.replace(".cif","")
             else:
@@ -999,7 +1010,7 @@ if outputprogram == 'rspt':
     # Construct documentation string
     docstring = StandardDocstring()
     # Get file string and print to symt.inp
-    if newsymtformat:
+    if options.newsymt:
         symtfile = SymtFile2(cell, docstring)
         # spin polarization and relativity
         if options.rsptspinpol:

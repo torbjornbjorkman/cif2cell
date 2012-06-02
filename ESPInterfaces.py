@@ -957,15 +957,14 @@ class SiestaFile(GeometryOutputFile):
         filestring += "%endblock LatticeVectors\n"
         # Atomic coordinates
         filestring += "%block AtomicCoordinatesAndAtomicSpecies\n"
+        i = 1
         for sp in species:
             for a in self.cell.atomdata:
                 for b in a:
                     if b.spcstring() == sp:
                         filestring += str(b.position)
-                        if b.alloy():
-                            filestring += "   ??   # "+b.spcstring()+"\n"
-                        else:
-                            filestring += "   "+b.spcstring()+"\n"
+                        filestring += "   %i\n"%i
+            i += 1
         filestring += "%endblock AtomicCoordinatesAndAtomicSpecies\n"
         # Chemical species
         filestring += "%block ChemicalSpeciesLabel\n"

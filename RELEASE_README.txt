@@ -1,5 +1,13 @@
 CIF2CELL RELEASE INFORMATION
 
+VERSION 0.4.4.4
+
+* Fixed bug in the Siesta interface.
+* Fixed bug with naming of output files for RSPt. 
+* Added non-standard settings.
+* Improved handling of species designated with '?' or '.'.
+
+-------------------------------------------------------------- 
 VERSION 0.4.4.2
 
 Another small patch fixing some problems provided/omitted by the

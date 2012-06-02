@@ -82,6 +82,8 @@ class CellData(GeometryObject):
     def __init__(self):
         GeometryObject.__init__(self)
         self.initialized = False
+        self.filename = ""
+        self.blockname = ""
         self.quiet = False
         self.coordepsilon = 0.0002
         self.HallSymbol = ""
@@ -265,7 +267,7 @@ class CellData(GeometryObject):
                     try:
                         self.HallSymbol = Number2Hall[self.spacegroupnr]
                     except:
-                        raise SymmetryError("Found neither Hall nor H-M symbol and space group %3i has no unique setting."%self.spacegroupnr)
+                        raise SymmetryError("Found neither Hall nor H-M symbol and space group %i does not have a unique setting."%self.spacegroupnr)
                 else:
                     raise SymmetryError("CIF file contains neither space group symbols nor space group number.")
             try:
@@ -857,6 +859,14 @@ class CellData(GeometryObject):
                 tmp = list(self.HMSymbol)
                 tmp[-1] = 'H'
                 self.HMSymbol = "".join(tmp)
+            if self.HMSymbol[-1] == 's':
+                tmp = list(self.HMSymbol)
+                tmp[-1] = 'S'
+                self.HMSymbol = "".join(tmp)
+            if self.HMSymbol[-1] == 'z':
+                tmp = list(self.HMSymbol)
+                tmp[-1] = 'Z'
+                self.HMSymbol = "".join(tmp)
         if self.HallSymbol != "":
             if self.HallSymbol[0] == "-":
                 self.HallSymbol = "-"+self.HallSymbol[1].upper()+self.HallSymbol[2:].lower()
@@ -890,15 +900,13 @@ class CellData(GeometryObject):
                     try:
                         self.HallSymbol = Number2Hall[self.spacegroupnr]
                     except:
-                        raise SymmetryError("Found neither Hall nor H-M symbol and space group %3i does not have a unique setting."%self.spacegroupnr)
+                        raise SymmetryError("Found neither Hall nor H-M symbol and space group %i does not have a unique setting."%self.spacegroupnr)
                 else:
                     raise SymmetryError("CIF file contains neither space group symbols nor space group number.")
             try:
                 self.HallSymbol = HM2Hall[self.HMSymbol]
             except:
                 pass
-            ## except:
-            ##     raise SymmetryError("Cannot convert "+self.HMSymbol+" to Hall symbol.")
                 
         # Set space group number and H-M symbol, if not in file.
         if self.spacegroupnr < 1 or self.spacegroupnr > 230:
@@ -915,7 +923,9 @@ class CellData(GeometryObject):
         for site in eqsites:
             self.symops.add(SymmetryOperation(site))
         
-        # Get cell
+        #######################
+        #    Get cell data    #
+        #######################
         try:
             # Set initial crystal parameters
             self.ainit     = float(removeerror(cifblock['_cell_length_a']))
@@ -943,28 +953,33 @@ class CellData(GeometryObject):
         self.gamma = self.gammainit
         self.coa = self.c / self.a
         self.boa = self.b / self.a
+        
         # Get info on atom positions
         try:
             tmpdata = cifblock.GetLoop('_atom_site_fract_x')
         except:
-            raise PositionError("Unable to find irreducible positions.")
+            raise PositionError("Unable to find positions.")
         # Positions
         try:
             sitexer = tmpdata.get('_atom_site_fract_x')
             siteyer = tmpdata.get('_atom_site_fract_y')
             sitezer = tmpdata.get('_atom_site_fract_z')
-            if type(sitexer) == NoneType or type(siteyer) == NoneType or type(sitezer) == NoneType:
-                raise PositionError("Irreducible positions not found.")
+            if type(sitexer) == NoneType or type(siteyer) == NoneType or type(sitezer) == NoneType or \
+            '?' in sitexer or '?' in siteyer or '?' in sitezer or \
+            '.' in sitexer or '.' in siteyer or '.' in sitezer:
+                raise PositionError("Positions not found for one or more species.")
         except KeyError:
-            raise PositionError("Irreducible positions not found.")
+            raise PositionError("Positions not found for one or more species.")
+        
         # Element names
         elementsymbs = tmpdata.get('_atom_site_type_symbol')
-        if type(elementsymbs) == NoneType:
+        if type(elementsymbs) == NoneType or '?' in elementsymbs or '.' in elementsymbs:
             elementsymbs = tmpdata.get('_atom_site_label')
             if type(elementsymbs) == NoneType:
                 # Fill up with question marks if not found
                 print "***Warning: Could not find element names."
                 elementsymbs = ["??" for site in sitexer]
+
         # Find charge state
         self.chargedict = dict([])
         self.charges = []
@@ -997,6 +1012,7 @@ class CellData(GeometryObject):
                 self.charges = [Charge(0) for element in elementsymbs]
                 for element in elementsymbs:
                     self.chargedict[element] = Charge(0)
+        
         # Remove stuff (usually charge state specification) from element symbol strings
         elements = []
         i = 0
@@ -1016,7 +1032,7 @@ class CellData(GeometryObject):
             siteoccer = tmpdata.get('_atom_site_occupancy')
         except KeyError:
             raise PositionError("Error reading site occupancies.")
-        if siteoccer == None:
+        if siteoccer == None or '?' in siteoccer or '.' in siteoccer:
             if not self.quiet:
                 print "***Warning : Site occupancies not found, assuming all occupancies = 1."
             siteoccer = []
@@ -1151,6 +1167,7 @@ class ReferenceData:
             string += "year = {"+self.year+"},\n"
         string += "}\n"
         return string
+    
     def journalstring(self):
         try:
             if not (self.journal == "" and self.volume == "" and self.firstpage=="" and self.year==""):
@@ -1233,6 +1250,7 @@ class ReferenceData:
             self.authors = authorsloop.get('_publ_author_name')
             if type(self.authors) == StringType:
                 self.authorstring = self.authors
+                self.authors = [self.authors]
             else:                
                 if len(self.authors) == 1:
                     self.authorstring = self.authors[0]

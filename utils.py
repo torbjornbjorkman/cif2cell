@@ -320,7 +320,7 @@ class AtomSite(GeometryObject):
         if covalent:
             for sp in self.species.keys():
                 try:
-                    t.append(ElementData().CovalentRadius[sp])
+                    t.append(ElementData().CovalentRadius2[sp])
                 except:
                     pass
         else:
@@ -329,13 +329,16 @@ class AtomSite(GeometryObject):
                     t.append(ElementData().IonicRadius[sp+str(ch)])
                 except:
                     try:
-                        t.append(ElementData().CovalentRadius[sp])
+                        t.append(ElementData().CovalentRadius2[sp])
                     except:
                         pass
-        if size == "min":
-            return min(t)
-        else:
-            return max(t)
+        try:
+            if size == "min":
+                return min(t)
+            else:
+                return max(t)
+        except:
+            return None
 
 class SymmetryOperation(GeometryObject):
     """
@@ -425,7 +428,7 @@ class SymmetryOperation(GeometryObject):
             return False
         
 ################################################################################################
-# Local functions
+# Functions
 def removeerror(string):
     # Remove error estimates at the end of a number (as in 3.28(5))
     splitstr=string.split('(')
@@ -532,3 +535,4 @@ def copysign(x, y):
         return x
     else:
         return -x
+
