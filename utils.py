@@ -536,3 +536,18 @@ def copysign(x, y):
     else:
         return -x
 
+# Get rid of newline characters from a string, portably.
+# replace allows to specify a string to replace the newline
+# character with.
+def deletenewline(string, replace=""):
+    tmp = string
+    # Windows...
+    if "\r\n" in string:
+        tmp = tmp.replace("\r\n",replace)
+    # ...Mac...
+    if "\r" in string:
+        tmp = tmp.replace("\r",replace)
+    # ...and Unix.
+    if "\n" in string:
+        tmp = tmp.replace("\n",replace)
+    return tmp

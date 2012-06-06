@@ -1160,7 +1160,7 @@ class ReferenceData:
             string += "volume = {"+self.volume+"},\n"
         # Add page(s)
         if len(self.firstpage) > 0:
-            string += "pages = {"+self.firstpage+"-"+self.lastpage
+            string += "pages = {"+self.firstpage+"--"+self.lastpage
             string = string.rstrip("-")+"},\n"
         # Add year
         if len(self.year) > 0:
@@ -1250,7 +1250,7 @@ class ReferenceData:
             self.authors = authorsloop.get('_publ_author_name')
             if type(self.authors) == StringType:
                 self.authorstring = self.authors
-                self.authors = [self.authors]
+                self.authors = self.authors.split(";")
             else:                
                 if len(self.authors) == 1:
                     self.authorstring = self.authors[0]
@@ -1261,12 +1261,12 @@ class ReferenceData:
         except KeyError:
             self.authors = []
             self.authorstring = "Failed to get author information"
-        # get rid of newline characters
-        self.authorstring = self.authorstring.replace("\n","")
+        # Get rid of newline characters
+        self.authorstring = deletenewline(self.authorstring)
         # Title of the paper
         try:
             self.title = cifblock.get('_publ_section_title')
-            self.title = self.title.replace("\n"," ")
+            self.title = deletenewline(self.title,replace=" ")
             self.title = self.title.replace("  "," ")
             self.title = self.title.strip(" ")
         except:
@@ -1274,7 +1274,7 @@ class ReferenceData:
         # Journal details
         failed = False
         try:
-            # Look for citation block
+            # Look for citation block.
             references = cifblock.GetLoop('_citation_id')
             # Pick primary reference (or the first in the list, if not found)
             i = 0
@@ -1354,23 +1354,23 @@ class ReferenceData:
         if not failed:
             # get rid of newline characters
             try:
-                self.journal = self.journal.replace("\n","")
+                self.journal = deletenewline(self.journal)
             except:
                 self.journal = "??????"
             try:
-                self.volume = self.volume.replace("\n","")
+                self.volume = deletenewline(self.volume)
             except:
                 self.volume = "??"
             try:
-                self.firstpage = self.firstpage.replace("\n","")
+                self.firstpage = deletenewline(self.firstpage)
             except:
                 self.firstpage = "??"
             try:
-                self.lastpage = self.lastpage.replace("\n","")
+                self.lastpage = deletenewline(self.lastpage)
             except:
                 self.lastpage = "??"
             try:
-                self.year = self.year.replace("\n","")
+                self.year = deletenewline(self.year)
             except:
                 self.year = "????"
 
