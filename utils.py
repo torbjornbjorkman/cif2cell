@@ -426,6 +426,16 @@ class SymmetryOperation(GeometryObject):
             return True
         else:
             return False
+
+################################################################################################
+# Dictionaries
+settingname = { 'P' : 'primitive',
+                'A' : 'base-centered',
+                'B' : 'base-centered',
+                'C' : 'base-centered',
+                'I' : 'body-centered',
+                'F' : 'face-centered',
+                'R' : 'rhombohedral' }
         
 ################################################################################################
 # Functions

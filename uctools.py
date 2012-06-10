@@ -144,6 +144,9 @@ class CellData(GeometryObject):
         elif self.unit == "nm" and newunit == "bohr":
             fact = 18.897261
         self.lengthscale *= fact
+        self.a *= fact
+        self.b *= fact
+        self.c *= fact
         self.unit = newunit
 
     def crystal_system(self):
@@ -1249,15 +1252,15 @@ class ReferenceData:
             authorsloop = cifblock.GetLoop('_publ_author_name')
             self.authors = authorsloop.get('_publ_author_name')
             if type(self.authors) == StringType:
+                self.authors = deletenewline(self.authors)
                 self.authorstring = self.authors
                 self.authors = self.authors.split(";")
-            else:                
-                if len(self.authors) == 1:
-                    self.authorstring = self.authors[0]
-                elif len(self.authors) == 2:
-                    self.authorstring = self.authors[0]+" and "+self.authors[1]
-                elif len(self.authors) > 2:
-                    self.authorstring = self.authors[0]+" et al."
+            if len(self.authors) == 1:
+                self.authorstring = self.authors[0]
+            elif len(self.authors) == 2:
+                self.authorstring = self.authors[0]+" and "+self.authors[1]
+            elif len(self.authors) > 2:
+                self.authorstring = self.authors[0]+" et al."
         except KeyError:
             self.authors = []
             self.authorstring = "Failed to get author information"
