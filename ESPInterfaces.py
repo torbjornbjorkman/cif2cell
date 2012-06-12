@@ -1762,7 +1762,10 @@ class XBandSysFile(GeometryOutputFile):
                 filestring += "%18.12f"%p
             filestring += "\n"
         filestring += "number of sites NQ\n"
-        filestring += "%3i\n"%len(self.cell.atomset)
+        nq = 0
+        for a in self.cell.atomdata:
+            nq += len(a)
+        filestring += "%3i\n"%nq
         filestring += " IQ ICL     basis vectors     (cart. coord.) [A]                      RWS [a.u.]  NLQ  NOQ ITOQ\n"
         # Average Wigner-Seitz radius
         rws = pow(3*self.cell.volume()/(4*pi*len(self.cell.atomset)),1.0/3.0)*self.cell.a

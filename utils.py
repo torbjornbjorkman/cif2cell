@@ -286,7 +286,7 @@ class AtomSite(GeometryObject):
         ## self.charge = Charge(charge)
         self.index = index
     def __hash__(self):
-        return hash(self.position)+hash(''.join(sorted(self.species.keys())))+hash(sum(self.species.values()))
+        return hash(hash(self.position)+hash(''.join(sorted(self.species.keys())))+hash(sum(self.species.values())))
     def __eq__(self,other):
         return self.position == other.position and self.species == other.species
     # Species string
