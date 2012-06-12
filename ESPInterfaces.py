@@ -1737,9 +1737,9 @@ class XBandSysFile(GeometryOutputFile):
         elif self.cell.crystal_system() == "cubic":
             if self.cell.spacegroupsetting == "P":
                 filestring += "12 cubic       primitive      m3m    O_h \n"
-            if self.cell.spacegroupsetting == "F":
+            elif self.cell.spacegroupsetting == "F":
                 filestring += "13 cubic       face-centered  m3m    O_h \n"
-            if self.cell.spacegroupsetting == "I":
+            elif self.cell.spacegroupsetting == "I":
                 filestring += "14 cubic       body-centered  m3m    O_h \n"
             else:
                 print "xband does not know %1s centering of a cubic cell."%self.cell.spacegroupsetting

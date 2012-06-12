@@ -775,9 +775,6 @@ def StandardDocstring():
 ################################################################################################
 # Output cell to new CIF file
 if outputprogram == 'cif':
-    ## if makesupercell:
-    ##     print "Output of supercell to CIF not yet implemented."
-    ##     sys.exit(0)
     f = open(outputfile,'w')
     cf = CifFile.CifFile()
     cb = CifFile.CifBlock()
@@ -788,9 +785,9 @@ if outputprogram == 'cif':
 	cb['_cell_length_a'] = a.length()
 	cb['_cell_length_b'] = b.length()
 	cb['_cell_length_c'] = c.length()
-	cb['_cell_angle_alpha'] = acos(b.dot(c))/(b.length()*c.length())*180/pi
-	cb['_cell_angle_beta'] = acos(a.dot(c))/(a.length()*c.length())*180/pi
-	cb['_cell_angle_gamma'] = acos(b.dot(a))/(a.length()*b.length())*180/pi
+	cb['_cell_angle_alpha'] = acos(b.dot(c)/(b.length()*c.length()))*180/pi
+	cb['_cell_angle_beta'] = acos(a.dot(c)/(a.length()*c.length()))*180/pi
+	cb['_cell_angle_gamma'] = acos(b.dot(a)/(a.length()*b.length()))*180/pi
     # Supercell may have broken symmetry, so just put P1
         cb['_space_group_IT_number'] = 1
         cb['_space_group_name_H-M_alt'] = "P1"
