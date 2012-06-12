@@ -257,7 +257,15 @@ class CellData(GeometryObject):
     # Fill out sites that are not occupied to 100% with
     # empty spheres (optionally giving a label).
     def fill_out_empty(self,label="Em"):
-        pass
+        for a in self.atomdata:
+            # Check concentration
+            t = 0.0
+            for sp,conc in a[0].species.iteritems():
+                t += conc
+            # Add vacuum spheres if partially empty
+            if abs(1.0-t) > a[0].compeps:
+                for b in a:
+                    b.species[label] = 1.0-t            
     
     def getCrystalStructure(self, reduce=False):
         """

@@ -1761,10 +1761,12 @@ class XBandSysFile(GeometryOutputFile):
             for p in vec:
                 filestring += "%18.12f"%p
             filestring += "\n"
+        # Get number of sites and fill out with empty spheres if the sites are not fully filled
         filestring += "number of sites NQ\n"
         nq = 0
         for a in self.cell.atomdata:
             nq += len(a)
+        self.cell.fill_out_empty(label="Vc")
         filestring += "%3i\n"%nq
         filestring += " IQ ICL     basis vectors     (cart. coord.) [A]                      RWS [a.u.]  NLQ  NOQ ITOQ\n"
         # Average Wigner-Seitz radius
