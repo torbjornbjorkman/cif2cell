@@ -62,6 +62,8 @@ class CellData(GeometryObject):
         volume              : Return the unit cell volume
         primitive           : Returns a CrystalStructure object for the primitive cell
         conventional        : Returns a CrystalStructure object for the conventional cell.
+        fill_out_empty      : Fill out any site whose concentrations do not add up to 1.0
+                              with an empty sphere.
         getCrystalStructure : The 'primitive' and 'conventional' methods are just
                               wrappers around this method. It requires the following
                               to be set beforehand:
@@ -251,6 +253,11 @@ class CellData(GeometryObject):
         """ Return a CrystalStructure object for the conventional cell."""
         w = self.getCrystalStructure(reduce=False)
         return w
+
+    # Fill out sites that are not occupied to 100% with
+    # empty spheres (optionally giving a label).
+    def fill_out_empty(self,label="Em"):
+        pass
     
     def getCrystalStructure(self, reduce=False):
         """

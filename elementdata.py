@@ -35,6 +35,9 @@ class ElementData:
     def __init__(self):
         # Element numbers
         self.elementnr = {
+            'Em' : 0  , # empty site 
+            'Vc' : 0  , # empty site
+            'Va' : 0  , # empty site
             'H'  : 1  ,
             'D'  : 1  ,
             'He' : 2  ,
@@ -382,7 +385,10 @@ class ElementData:
             'Uub': 12 }
         
         # Element classification in s, p, d and f blocks
-        self.elementblock = { 
+        self.elementblock = {
+            'Em' : 's'  , # empty site
+            'Vc' : 's'  , # empty site
+            'Va' : 's'  , # empty site 
             'H'  : 's'  ,
             'D'  : 's'  ,
             'He' : 's'  ,

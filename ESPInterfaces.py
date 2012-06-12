@@ -1664,9 +1664,9 @@ class KSTRFile(GeometryOutputFile):
 
 ################################################################################################
 # SPRKKR
-class SPRKKRSysFile(GeometryOutputFile):
+class XBandSysFile(GeometryOutputFile):
     """
-    Class for storing the geometrical data needed in a [filename].sys file for the sprkkr program
+    Class for storing the geometrical data needed in a [filename].sys file for the xband program
     and the method __str__ that outputs the contents of the .sys file as a string.
     """
     def __init__(self,crystalstructure,string):
@@ -1680,37 +1680,86 @@ class SPRKKRSysFile(GeometryOutputFile):
         self.alpha = 90
         self.beta = 90
         self.gamma = 90
+        self.minangmom = None
+        self.filename = ""
         # To be put on the first line
         self.programdoc = ""
     def __str__(self):
         ed = ElementData()
+        # First identify any site which is not filled (concentrations add to 1.0)
+        # and fill up with vacuum sphere (Vc)
+        self.cell.fill_out_empty(label='Vc')
         # docstring on a single line
         filestring = deletenewline(self.docstring,replace=" ")
-        filestring += "\n\n"
+        filestring += "\n"+self.filename+"\n"
         filestring += "xband-version\n"
         filestring += "5.0\n"
         # It would be really cool to support lower dimensions...one day.
         filestring += "dimension\n"
         filestring += "3D\n"
         filestring += "Bravais lattice\n"
-        filestring += "?? "+self.cell.crystal_system()+"  "+settingname[self.cell.spacegroupsetting]
-        filestring += " "+self.cell.HMSymbol[1:]+" "+"???\n"
-        filestring += "space group number (ITXC)\n"
-        filestring += "%5i"%self.cell.spacegroupnr+"\n"
+        if self.cell.crystal_system() == 'triclinic':
+            filestring += "1  triclinic   primitive      -1     C_i \n"
+        elif self.cell.crystal_system() == 'monoclinic':
+            if self.cell.spacegroupsetting == 'P':
+                filestring += "2  monoclinic  primitive      2/m    C_2h\n"
+            elif self.cell.spacegroupsetting == 'A' or self.cell.spacegroupsetting == 'B' or \
+                     self.cell.spacegroupsetting == 'C':
+                filestring += "3  monoclinic  primitive      2/m    C_2h\n"
+            else:
+                print "xband only knows primitive and base-centered monoclinic settings!"
+                sys.exit(43)
+        elif self.cell.crystal_system() == 'orthorhombic':
+            if self.cell.spacegroupsetting == 'P':
+                filestring += "4  orthorombic primitive      mmm    D_2h\n"
+            elif self.cell.spacegroupsetting == 'A' or self.cell.spacegroupsetting == 'B' or \
+                     self.cell.spacegroupsetting == 'C':
+                filestring += "5  orthorombic body-centered  mmm    D_2h\n"
+            elif self.cell.spacegroupsetting == "I":
+                filestring += "6  orthorombic body-centered  mmm    D_2h\n"
+            elif self.cell.spacegroupsetting == "F":
+                filestring += "7  orthorombic face-centered  mmm    D_2h\n"
+            else:
+                print "xband does not know %1s centering of an orthorhombic cell."%self.cell.spacegroupsetting
+                sys.exit(43)
+        elif self.cell.crystal_system() == "tetragonal":
+            if self.cell.spacegroupsetting == "P":
+                filestring += "8  tetragonal  primitive      4/mmm  D_4h\n"
+            elif self.cell.spacegroupsetting == "I":
+                filestring += "9  tetragonal  body-centered  4/mmm  D_4h\n"
+            else:
+                print "xband only knows primitive and body-centered tetragonal settings!"
+                sys.exit(43)
+        elif self.cell.crystal_system() == "trigonal":
+            filestring += "10 trigonal    primitive      -3m    D_3d\n"
+        elif self.cell.crystal_system() == "hexagonal":
+            filestring += "11 hexagonal   primitive      6/mmm  D_6h\n"
+        elif self.cell.crystal_system() == "cubic":
+            if self.cell.spacegroupsetting == "P":
+                filestring += "12 cubic       primitive      m3m    O_h \n"
+            if self.cell.spacegroupsetting == "F":
+                filestring += "13 cubic       face-centered  m3m    O_h \n"
+            if self.cell.spacegroupsetting == "I":
+                filestring += "14 cubic       body-centered  m3m    O_h \n"
+            else:
+                print "xband does not know %1s centering of a cubic cell."%self.cell.spacegroupsetting
+                sys.exit(43)
+        filestring += "space group number (ITXC and AP)\n"
+        filestring += "%5i%5i"%(self.cell.spacegroupnr,Number2AP[self.cell.spacegroupnr])+"\n"
         filestring += "structure type\n"
         filestring += "UNKNOWN\n"
         filestring += "lattice parameter A  [a.u.]\n"
-        filestring += "  %16.12f\n"%self.cell.a
+        filestring += "%18.12f\n"%self.cell.a
         filestring += "ratio of lattice parameters  b/a  c/a\n"
-        filestring += "  %16.12f  %16.12f\n"%(self.cell.boa,self.cell.coa)
+        filestring += "%18.12f%18.12f\n"%(self.cell.boa,self.cell.coa)
         filestring += "lattice parameters  a b c  [a.u.]\n"
-        filestring += "  %16.12f  %16.12f  %16.12f\n"%(self.cell.a,self.cell.b,self.cell.c)
+        filestring += "%18.12f%18.12f%18.12f\n"%(self.cell.a,self.cell.b,self.cell.c)
         filestring += "lattice angles  alpha beta gamma  [deg]\n"
-        filestring += "  %16.12f  %16.12f  %16.12f\n"%(self.cell.alpha,self.cell.beta,self.cell.gamma)
+        filestring += "%18.12f%18.12f%18.12f\n"%(self.cell.alpha,self.cell.beta,self.cell.gamma)
         filestring += "primitive vectors     (cart. coord.) [A]\n"
         for vec in self.cell.latticevectors:
             for p in vec:
-                filestring += "  %16.12f"%p
+                filestring += "%18.12f"%p
             filestring += "\n"
         filestring += "number of sites NQ\n"
         filestring += "%3i\n"%len(self.cell.atomset)
@@ -1722,11 +1771,21 @@ class SPRKKRSysFile(GeometryOutputFile):
         itoq = 0
         for a in self.cell.atomdata:
             icl += 1
-            itoq += 1
+            itoqs = []
+            for sp in a[0].species:
+                itoq += 1
+                itoqs.append(itoq)
             for b in a:
                 iq += 1
+                if self.minangmom:
+                    angmom = max(max([ed.angularmomentum[ed.elementblock[spcs]] for spcs in b.species])+1,self.minangmom)
+                else:
+                    angmom = max([ed.angularmomentum[ed.elementblock[spcs]] for spcs in b.species])+1
                 v = mvmult3(self.cell.latticevectors,b.position)
-                filestring += " %2i  %2i  %16.12f  %16.12f  %16.12f    %16.12f  %2i   %2i  %2i\n"%(iq,icl,v[0],v[1],v[2],rws,max([ed.angularmomentum[ed.elementblock[spcs]] for spcs in b.species])+1,1,itoq)
+                filestring += "%3i%4i%18.12f%18.12f%18.12f  %18.12f%4i%5i "%(iq,icl,v[0],v[1],v[2],rws,angmom,len(a[0].species))
+                for i in itoqs:
+                    filestring += "%3i"%i
+                filestring += "\n"
         filestring += "number of sites classes NCL\n"
         filestring += "%3i\n"%len(self.cell.atomdata)
         filestring += "ICL WYCK NQCL IQECL (equivalent sites)\n"
@@ -1734,10 +1793,10 @@ class SPRKKRSysFile(GeometryOutputFile):
         icl = 0
         for a in self.cell.atomdata:
             icl += 1
-            filestring += "%3i   -   %2i "%(icl,len(a))
+            filestring += "%3i   %1s%5i"%(icl,'-',len(a))
             for b in a:
                 iq += 1
-                filestring += "%2i "%iq
+                filestring += "%3i"%iq
             filestring += "\n"
         filestring += "number of atom types NT\n"
         nt = 0
@@ -1751,11 +1810,11 @@ class SPRKKRSysFile(GeometryOutputFile):
             corr = 0
             for sp,conc in a[0].species.iteritems():
                 it += 1
-                filestring += "%3i %3i %5s  %3i %5.3f "%(it,ed.elementnr[sp],sp,len(a),conc)
+                filestring += " %2i%4i  %8s%5i%6.3f"%(it,ed.elementnr[sp],sp,len(a),conc)
                 iq -= corr*len(a)
                 for b in a:
                     iq += 1
-                    filestring += "%2i "%iq
+                    filestring += "%3i"%iq
                 corr = 1
                 filestring += "\n"
         return filestring
