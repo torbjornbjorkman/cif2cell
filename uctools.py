@@ -62,6 +62,8 @@ class CellData(GeometryObject):
         volume              : Return the unit cell volume
         primitive           : Returns a CrystalStructure object for the primitive cell
         conventional        : Returns a CrystalStructure object for the conventional cell.
+        fill_out_empty      : Fill out any site whose concentrations do not add up to 1.0
+                              with an empty sphere.
         getCrystalStructure : The 'primitive' and 'conventional' methods are just
                               wrappers around this method. It requires the following
                               to be set beforehand:
@@ -144,6 +146,9 @@ class CellData(GeometryObject):
         elif self.unit == "nm" and newunit == "bohr":
             fact = 18.897261
         self.lengthscale *= fact
+        self.a *= fact
+        self.b *= fact
+        self.c *= fact
         self.unit = newunit
 
     def crystal_system(self):
@@ -248,6 +253,19 @@ class CellData(GeometryObject):
         """ Return a CrystalStructure object for the conventional cell."""
         w = self.getCrystalStructure(reduce=False)
         return w
+
+    # Fill out sites that are not occupied to 100% with
+    # empty spheres (optionally giving a label).
+    def fill_out_empty(self,label="Em"):
+        for a in self.atomdata:
+            # Check concentration
+            t = 0.0
+            for sp,conc in a[0].species.iteritems():
+                t += conc
+            # Add vacuum spheres if partially empty
+            if abs(1.0-t) > a[0].compeps:
+                for b in a:
+                    b.species[label] = 1.0-t            
     
     def getCrystalStructure(self, reduce=False):
         """
@@ -428,7 +446,7 @@ class CellData(GeometryObject):
                 self.lattrans = LatticeMatrix([[half, -half, zero],
                                                [half, half, zero],
                                                [zero, zero, one]])
-            elif self.HallSymbol in Rhomb2HexHall:
+            elif self.HallSymbol in Hex2RhombHall or self.HallSymbol in Rhomb2HexHall:
                 if abs(self.gamma - 120) < self.coordepsilon:
                     # rhombohedral from hexagonal setting
                     self.transvecs = [LatticeVector([zero,zero,zero]),
@@ -1249,15 +1267,15 @@ class ReferenceData:
             authorsloop = cifblock.GetLoop('_publ_author_name')
             self.authors = authorsloop.get('_publ_author_name')
             if type(self.authors) == StringType:
+                self.authors = deletenewline(self.authors)
                 self.authorstring = self.authors
                 self.authors = self.authors.split(";")
-            else:                
-                if len(self.authors) == 1:
-                    self.authorstring = self.authors[0]
-                elif len(self.authors) == 2:
-                    self.authorstring = self.authors[0]+" and "+self.authors[1]
-                elif len(self.authors) > 2:
-                    self.authorstring = self.authors[0]+" et al."
+            if len(self.authors) == 1:
+                self.authorstring = self.authors[0]
+            elif len(self.authors) == 2:
+                self.authorstring = self.authors[0]+" and "+self.authors[1]
+            elif len(self.authors) > 2:
+                self.authorstring = self.authors[0]+" et al."
         except KeyError:
             self.authors = []
             self.authorstring = "Failed to get author information"

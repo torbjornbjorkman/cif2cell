@@ -62,7 +62,7 @@ class OldNCOLFile(GeometryOutputFile):
         l = { "s" : 2, "p" : 2, "d" : 3, "f" : 4 }
         filestring = ""
         tmpstring = "BULK      IDSYST=  7 SCRATCH=R"
-        tmpstring = tmpstring.ljust(25)+"    "+self.programdoc.replace("\n"," ")+"\n"
+        tmpstring = tmpstring.ljust(25)+"    "+deletenewline(self.programdoc,replace=" ")+"\n"
         filestring += tmpstring
         tmpstring = "JOBNAM...="+self.jobnam.ljust(10)+" MSGL.=  1 BSAVE..=N COLD...=Y DOS...=N SPO...=N ISM...=G RCLCR...=Y\n"
         filestring += tmpstring
@@ -72,7 +72,7 @@ class OldNCOLFile(GeometryOutputFile):
         filestring += "FOR004=\n"
         filestring += "FOR006=\n"
         filestring += "FOR010=\n"
-        filestring += "Band: 4 lines, "+self.docstring.replace("\n"," ")+"\n"
+        filestring += "Band: 4 lines, "+deletenewline(self.docstring,replace=" ")+"\n"
         filestring += "NITER.=200 NOB..=  2 NPRN.=  0 NFIX.=  0 MIXKEY=  2 NCOL.=Y  PMODE=K\n"
         filestring += "REP.....=B FIXD...=Y CRT....=S NB...= 16 CLSIZE= 32 NPROW= 0 NPCOL= 0\n"
         filestring += "NKX...=  1 NKY..=  1 NKZ..=  1 TFERMI..= 2000.0(K)\n"
@@ -156,14 +156,14 @@ class BSTRFile(GeometryOutputFile):
         ed = ElementData()
         filestring = ""
         tmpstring = "BSTR      IDSYST=  7"
-        tmpstring = tmpstring.ljust(40)+self.programdoc.replace("\n"," ")+"\n"
+        tmpstring = tmpstring.ljust(40)+deletenewline(self.programdoc,replace=" ")+"\n"
         filestring += tmpstring
         tmpstring = "JOBNAM...="+self.jobnam.ljust(9)+" MSGL.=   1 \n"
         filestring += tmpstring
         filestring += "MODE....=B STORE..=Y SCREEN.=B CMBC...=Y\n"
         filestring += "FOR001=\n"
         filestring += "FOR006=\n"
-        filestring += self.docstring.replace("\n"," ")+"\n"
+        filestring += deletenewline(self.docstring,replace=" ")+"\n"
         # Get number of sites
         nosites = 0
         for a in self.cell.atomdata:
@@ -1298,6 +1298,7 @@ class INCARFile:
         
 
 ################################################################################################
+# EMTO 
 class KFCDFile(GeometryOutputFile):
     """
     Class for storing the geometrical data needed in a [filename].dat file for the kfcd program
@@ -1342,7 +1343,7 @@ class KGRNFile(GeometryOutputFile):
         self.programdoc = ""
         # Set atomic units for length scale
         self.cell.newunit("bohr")
-        self.latticenr = "14"
+        self.latticenr = 14
     def __str__(self):
         ed = ElementData()
         filestring = ""
@@ -1600,7 +1601,6 @@ class KSTRFile(GeometryOutputFile):
         self.gamma = 90
         self.hardsphere = 0.67
         self.iprim = 0
-        self.latticenr = 14
         # To be put on the first line
         self.programdoc = ""
     def __str__(self):
@@ -1660,4 +1660,166 @@ class KSTRFile(GeometryOutputFile):
                 filestring += "%5.2f"%self.hardsphere
             filestring += "\n"
         filestring += "LAMDA....=    2.5000 AMAX....=    4.5000 BMAX....=    4.5000\n"
+        return filestring
+
+################################################################################################
+# SPRKKR
+class XBandSysFile(GeometryOutputFile):
+    """
+    Class for storing the geometrical data needed in a [filename].sys file for the xband program
+    and the method __str__ that outputs the contents of the .sys file as a string.
+    """
+    def __init__(self,crystalstructure,string):
+        GeometryOutputFile.__init__(self,crystalstructure,string)
+        # Set atomic units for length scale
+        self.cell.newunit("bohr")
+        self.jobnam = "default"
+        self.a = 1
+        self.b = 1
+        self.c = 1
+        self.alpha = 90
+        self.beta = 90
+        self.gamma = 90
+        self.minangmom = None
+        self.filename = ""
+        # To be put on the first line
+        self.programdoc = ""
+    def __str__(self):
+        ed = ElementData()
+        # First identify any site which is not filled (concentrations add to 1.0)
+        # and fill up with vacuum sphere (Vc)
+        self.cell.fill_out_empty(label='Vc')
+        # docstring on a single line
+        filestring = deletenewline(self.docstring,replace=" ")
+        filestring += "\n"+self.filename+"\n"
+        filestring += "xband-version\n"
+        filestring += "5.0\n"
+        # It would be really cool to support lower dimensions...one day.
+        filestring += "dimension\n"
+        filestring += "3D\n"
+        filestring += "Bravais lattice\n"
+        if self.cell.crystal_system() == 'triclinic':
+            filestring += "1  triclinic   primitive      -1     C_i \n"
+        elif self.cell.crystal_system() == 'monoclinic':
+            if self.cell.spacegroupsetting == 'P':
+                filestring += "2  monoclinic  primitive      2/m    C_2h\n"
+            elif self.cell.spacegroupsetting == 'A' or self.cell.spacegroupsetting == 'B' or \
+                     self.cell.spacegroupsetting == 'C':
+                filestring += "3  monoclinic  primitive      2/m    C_2h\n"
+            else:
+                print "xband only knows primitive and base-centered monoclinic settings!"
+                sys.exit(43)
+        elif self.cell.crystal_system() == 'orthorhombic':
+            if self.cell.spacegroupsetting == 'P':
+                filestring += "4  orthorombic primitive      mmm    D_2h\n"
+            elif self.cell.spacegroupsetting == 'A' or self.cell.spacegroupsetting == 'B' or \
+                     self.cell.spacegroupsetting == 'C':
+                filestring += "5  orthorombic body-centered  mmm    D_2h\n"
+            elif self.cell.spacegroupsetting == "I":
+                filestring += "6  orthorombic body-centered  mmm    D_2h\n"
+            elif self.cell.spacegroupsetting == "F":
+                filestring += "7  orthorombic face-centered  mmm    D_2h\n"
+            else:
+                print "xband does not know %1s centering of an orthorhombic cell."%self.cell.spacegroupsetting
+                sys.exit(43)
+        elif self.cell.crystal_system() == "tetragonal":
+            if self.cell.spacegroupsetting == "P":
+                filestring += "8  tetragonal  primitive      4/mmm  D_4h\n"
+            elif self.cell.spacegroupsetting == "I":
+                filestring += "9  tetragonal  body-centered  4/mmm  D_4h\n"
+            else:
+                print "xband only knows primitive and body-centered tetragonal settings!"
+                sys.exit(43)
+        elif self.cell.crystal_system() == "trigonal":
+            filestring += "10 trigonal    primitive      -3m    D_3d\n"
+        elif self.cell.crystal_system() == "hexagonal":
+            filestring += "11 hexagonal   primitive      6/mmm  D_6h\n"
+        elif self.cell.crystal_system() == "cubic":
+            if self.cell.spacegroupsetting == "P":
+                filestring += "12 cubic       primitive      m3m    O_h \n"
+            if self.cell.spacegroupsetting == "F":
+                filestring += "13 cubic       face-centered  m3m    O_h \n"
+            if self.cell.spacegroupsetting == "I":
+                filestring += "14 cubic       body-centered  m3m    O_h \n"
+            else:
+                print "xband does not know %1s centering of a cubic cell."%self.cell.spacegroupsetting
+                sys.exit(43)
+        filestring += "space group number (ITXC and AP)\n"
+        filestring += "%5i%5i"%(self.cell.spacegroupnr,Number2AP[self.cell.spacegroupnr])+"\n"
+        filestring += "structure type\n"
+        filestring += "UNKNOWN\n"
+        filestring += "lattice parameter A  [a.u.]\n"
+        filestring += "%18.12f\n"%self.cell.a
+        filestring += "ratio of lattice parameters  b/a  c/a\n"
+        filestring += "%18.12f%18.12f\n"%(self.cell.boa,self.cell.coa)
+        filestring += "lattice parameters  a b c  [a.u.]\n"
+        filestring += "%18.12f%18.12f%18.12f\n"%(self.cell.a,self.cell.b,self.cell.c)
+        filestring += "lattice angles  alpha beta gamma  [deg]\n"
+        filestring += "%18.12f%18.12f%18.12f\n"%(self.cell.alpha,self.cell.beta,self.cell.gamma)
+        filestring += "primitive vectors     (cart. coord.) [A]\n"
+        for vec in self.cell.latticevectors:
+            for p in vec:
+                filestring += "%18.12f"%p
+            filestring += "\n"
+        # Get number of sites and fill out with empty spheres if the sites are not fully filled
+        filestring += "number of sites NQ\n"
+        nq = 0
+        for a in self.cell.atomdata:
+            nq += len(a)
+        self.cell.fill_out_empty(label="Vc")
+        filestring += "%3i\n"%nq
+        filestring += " IQ ICL     basis vectors     (cart. coord.) [A]                      RWS [a.u.]  NLQ  NOQ ITOQ\n"
+        # Average Wigner-Seitz radius
+        rws = pow(3*self.cell.volume()/(4*pi*len(self.cell.atomset)),1.0/3.0)*self.cell.a
+        iq = 0
+        icl = 0
+        itoq = 0
+        for a in self.cell.atomdata:
+            icl += 1
+            itoqs = []
+            for sp in a[0].species:
+                itoq += 1
+                itoqs.append(itoq)
+            for b in a:
+                iq += 1
+                if self.minangmom:
+                    angmom = max(max([ed.angularmomentum[ed.elementblock[spcs]] for spcs in b.species])+1,self.minangmom)
+                else:
+                    angmom = max([ed.angularmomentum[ed.elementblock[spcs]] for spcs in b.species])+1
+                v = mvmult3(self.cell.latticevectors,b.position)
+                filestring += "%3i%4i%18.12f%18.12f%18.12f  %18.12f%4i%5i "%(iq,icl,v[0],v[1],v[2],rws,angmom,len(a[0].species))
+                for i in itoqs:
+                    filestring += "%3i"%i
+                filestring += "\n"
+        filestring += "number of sites classes NCL\n"
+        filestring += "%3i\n"%len(self.cell.atomdata)
+        filestring += "ICL WYCK NQCL IQECL (equivalent sites)\n"
+        iq = 0
+        icl = 0
+        for a in self.cell.atomdata:
+            icl += 1
+            filestring += "%3i   %1s%5i"%(icl,'-',len(a))
+            for b in a:
+                iq += 1
+                filestring += "%3i"%iq
+            filestring += "\n"
+        filestring += "number of atom types NT\n"
+        nt = 0
+        for a in self.cell.atomdata:
+            nt += len(a[0].species)
+        filestring += "%3i\n"%nt
+        filestring += " IT  ZT  TXTT  NAT  CONC  IQAT (sites occupied)\n"
+        iq = 0
+        it = 0
+        for a in self.cell.atomdata:
+            corr = 0
+            for sp,conc in a[0].species.iteritems():
+                it += 1
+                filestring += " %2i%4i  %8s%5i%6.3f"%(it,ed.elementnr[sp],sp,len(a),conc)
+                iq -= corr*len(a)
+                for b in a:
+                    iq += 1
+                    filestring += "%3i"%iq
+                corr = 1
+                filestring += "\n"
         return filestring

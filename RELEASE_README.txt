@@ -1,5 +1,11 @@
 CIF2CELL RELEASE INFORMATION
 
+VERSION 0.4.5
+
+* New interface to xband/SPRKKR.
+* Fixed yet another bug with rhombohedral settings.
+
+-------------------------------------------------------------- 
 VERSION 0.4.4.4
 
 * Fixed bug in the Siesta interface.
