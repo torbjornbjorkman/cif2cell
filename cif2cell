@@ -40,7 +40,7 @@ from elementdata import *
 
 # Name and version
 programname = "cif2cell"
-version = "0.4.4.4"
+version = "0.4_sprkkr"
 
 # Turn of warnings about deprecated stuff
 warnings.simplefilter("ignore",DeprecationWarning)
