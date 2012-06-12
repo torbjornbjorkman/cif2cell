@@ -438,7 +438,7 @@ class CellData(GeometryObject):
                 self.lattrans = LatticeMatrix([[half, -half, zero],
                                                [half, half, zero],
                                                [zero, zero, one]])
-            elif self.HallSymbol in Rhomb2HexHall:
+            elif self.HallSymbol in Hex2RhombHall or self.HallSymbol in Rhomb2HexHall:
                 if abs(self.gamma - 120) < self.coordepsilon:
                     # rhombohedral from hexagonal setting
                     self.transvecs = [LatticeVector([zero,zero,zero]),
