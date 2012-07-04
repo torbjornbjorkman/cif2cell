@@ -242,7 +242,8 @@ class CellData(GeometryObject):
         return removeindices
 
     def volume(self):
-        return det3(self.latticevectors)
+        """ Return the volume of the cell. """
+        return abs(det3(self.latticevectors))
     
     def primitive(self):
         """ Return a CrystalStructure object for the primitive cell."""
