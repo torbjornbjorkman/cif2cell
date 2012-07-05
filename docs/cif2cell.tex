@@ -17,9 +17,13 @@
 
 \begin{document}
 \maketitle
-\section{Of CIF's and Cells}
-An electronic structure program needs atomic positions and, at least in the case of band structure programs, unit cell vectors to calculate the electronic structure of a crystal. Experimental data on the other hand tends to be given as a space group and a set of irreducible, or wyckoff positions, and are often distributed in the form of CIF files. There is a wide range of sources of CIF files -- it is actually used for communication of crystallographic data by virtually everyone outside of the electronic structure community! Yet far from all electronic structure programs can read the CIF format, and from this circumstance a small set of convenience scripts one day turned into the program \ciftocell. I hope you find it useful.
+\section*{Introduction -- Of CIF's and Cells}
+An electronic structure program needs atomic positions and, at least in the case of band structure programs, unit cell vectors to calculate the electronic structure of a crystal. Experimental data on the other hand tends to be given as a space group and a set of irreducible, or wyckoff positions, and are often distributed in the form of CIF files. There is a wide range of sources of CIF files -- it is actually used for communication of crystallographic data by virtually everyone outside of the electronic structure community! Yet far from all electronic structure programs can read the CIF format, and from this circumstance a small set of my convenience scripts one day turned into the program \ciftocell.
 
+
+The code was published in Computer Physics Communications {\bf 182}, 1183--1186 (2011) and is distributed with the . I hope you find it useful.
+
+\newpage
 \section{Installation}
 \subsection{Requirements}
 \ciftocell{} requires Python 2.4 or higher and the PyCIFRW python package\footnote{Available from \texttt{http://pycifrw.berlios.de}.}. Note however that the output may be slightly different (but equivalent) with Python 2.4 than with later versions due to differences in the internal sorting routines of different Python distributions.

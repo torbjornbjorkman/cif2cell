@@ -35,7 +35,7 @@ setup(name='cif2cell',
       py_modules=['utils','uctools','spacegroupdata','elementdata','ESPInterfaces'],
       scripts=['cif2cell'],
       requires=['CifFile'],
-      data_files=[('./', ['LICENSE']),
+      data_files=[('./', ['LICENSE','HOWTOCITE']),
                   ('lib/cif2cell/sample_cifs', ciffiles),
                   ('lib/cif2cell/docs',docfiles)],
       license='GNU General Public License version 3'

@@ -49,7 +49,7 @@ warnings.simplefilter("ignore",DeprecationWarning)
 #      INPUT OPTIONS       #
 ############################
 # General stuff
-description = "A program for generating input lattice structures to various electronic structure programs from a CIF (Crystallographic Information Framework) file. This code was published in "
+description = "A program for generating input lattice structures to various electronic structure programs from a CIF (Crystallographic Information Framework) file. This code was published in Comput. Phys. Commun. 182, 1183 (2011). Please cite generously."
 usage = "usage: %prog FILE [-p PROGRAM] [other options]"
 parser = OptionParser(usage=usage, description=description)
 parser.add_option("-v","--verbose",dest="verbose",help="Print a lot of extra information to screen",action="store_true")
