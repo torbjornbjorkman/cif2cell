@@ -40,7 +40,7 @@ from elementdata import *
 
 # Name and version
 programname = "cif2cell"
-version = "0.4.5"
+version = "0.4.6"
 
 # Turn of warnings about deprecated stuff
 warnings.simplefilter("ignore",DeprecationWarning)
@@ -62,6 +62,7 @@ parser.add_option("-a","--append",dest="append",help="Append the output to given
 parser.add_option("--grammar",dest="grammar",help="Set the CIF grammar to be used when parsing the input file (default is 1.1).")
 parser.add_option("--which-filename",dest="filenamequery",help="If given together with the --program-name option, the name of the output file will be printed to screen.",action="store_true")
 parser.add_option("-b","--block",dest="block",help="Block of data in input file (if there are more than one block in the CIF file).")
+parser.add_option("--force",dest="force",help="Attempt to force generation of output file despite problems and/or ambiguities in the input file. There are no guarantees that what you get makes sense, but the program makes an honest attempt. Implies --force-alloy.",action="store_true")
 parser.add_option("--force-alloy",dest="forcealloy",help="Force generation of output file for an alloy compound for an electronic structure code that does not implement any alloy theory (such as CPA).",action="store_true")
 parser.add_option("--coordinate-tolerance",dest="coordtol",help="Parameter for determining when two coordinates are the same (default=0.0002).")
 parser.add_option("--setup-all",dest="setupall",help="Make a complete setup, not just the geometrical part. This is currently only available for VASP.",action="store_true")
@@ -144,6 +145,17 @@ else:
     bibtexref = False
 # Programs that can deal with alloys
 alloyprograms = set(["emto","kstr","bmdl","shape","kgrn","kfcd","cif","sprkkr","xband"])
+# force output for alloys
+if options.forcealloy or options.force:
+    forcealloy = True
+else:
+    forcealloy = False
+# Force generation despite problems?
+if options.force:
+    force = True
+else:
+    force = False
+
 # Initialize element data
 ed = ElementData()
 # Number of positions for printing decimal numbers to screen
@@ -258,8 +270,10 @@ if bibtexref:
     sys.exit(0)
 # Get cell data
 cd = CellData()
-# suppress warnings if requested
+# Suppress warnings if requested.
 cd.quiet = options.quiet
+# Force generation despite problems?
+cd.force = force
 if options.coordtol:
     cd.coordepsilon = float(options.coordtol)
 try:
@@ -277,20 +291,19 @@ except SymmetryError, e:
 
 ##############################################
 # Generate cell
-if reducetoprim:
+try:
+    if reducetoprim:
     ## if options.rhombdiag:
     ##     cd.rhombohedral_diagonal = True
-    try:
         cell = cd.primitive()
-    except SymmetryError, e:
-        sys.stderr.write("***Error: cell setup: "+e.value+"\n")
-        sys.exit(2)
-else:
-    try:
+    else:
         cell = cd.conventional()
-    except SymmetryError, e:
-        sys.stderr.write("***Error: cell setup: "+e.value+"\n")
-        sys.exit(2)
+except SymmetryError, e:
+    sys.stderr.write("***Error: cell setup: "+e.value+"\n")
+    sys.exit(2)
+except CellError, e:
+    sys.stderr.write("***Error: cell setup: "+e.value+"\n")
+    sys.exit(2)
 
 
 # Print cell
@@ -308,7 +321,7 @@ if verbose or not options.program and not options.quiet:
     print compoundstring
     # Print database
     print ref.databasestring
-    if cell.alloy and options.forcealloy and options.program:
+    if cell.alloy and forcealloy and options.program:
         print "\nEnforcing generation of file(s) for "+outputprogram+" for an alloy."
     print "\n BIBLIOGRAPHIC INFORMATION"
     refstrings = ref.referencestring().split()
@@ -731,7 +744,7 @@ if outputprogram !="":
 
 ################################################################################################
 # stuff that should be printed irrespective of the verbose flag
-if cell.alloy and options.forcealloy and options.program and not verbose:
+if cell.alloy and forcealloy and options.program and not verbose:
     tmpstring = "Enforcing file generation for alloy. "
     if outputprogram == 'bstr' or outputprogram == 'vasp' or outputprogram == 'cpmd':
         print tmpstring
@@ -745,8 +758,8 @@ if not options.program:
     sys.exit(0)
 
 # Don't generate output for alloys (for most programs)
-if cell.alloy and not options.forcealloy and not outputprogram in alloyprograms:
-    print "Error: This system is an alloy, but the electronic structure code "+outputprogram+" has no way of dealing with alloys.\nRun again with --force-alloy if you want to generate an (incomplete) output file anyway."
+if cell.alloy and not forcealloy and not outputprogram in alloyprograms:
+    print "Error: This system is an alloy, but the electronic structure code "+outputprogram+" has no way of dealing with alloys.\nRun again with --force-alloy (or --force) if you want to generate an (incomplete) output file anyway."
     sys.exit(17)
 
 # Function for printing a standard docstring

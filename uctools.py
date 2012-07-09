@@ -84,6 +84,8 @@ class CellData(GeometryObject):
     def __init__(self):
         GeometryObject.__init__(self)
         self.initialized = False
+        self.force = False    # Force generation despite problems?
+        self.cartesianInput = False
         self.filename = ""
         self.blockname = ""
         self.quiet = False
@@ -92,6 +94,8 @@ class CellData(GeometryObject):
         self.spacegroupnr = 0
         self.HMSymbol = ""
         self.spacegroupsetting = ""
+        self.cart_trans_matrix = None
+        self.cart_trans_vector = None
         self.lattrans = LatticeMatrix([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
         self.transvecs = [LatticeVector([zero, zero, zero])]
         self.symops = set([])
@@ -117,7 +121,7 @@ class CellData(GeometryObject):
         self.gamma = 0
         self.coa = 1
         self.boa = 1
-        self.latticevectors = LatticeMatrix([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+        self.latticevectors = None
         self.lengthscale = 1
         self.unit = "angstrom"
         self.alloy = False
@@ -288,7 +292,12 @@ class CellData(GeometryObject):
                     except:
                         raise SymmetryError("Found neither Hall nor H-M symbol and space group %i does not have a unique setting."%self.spacegroupnr)
                 else:
-                    raise SymmetryError("CIF file contains neither space group symbols nor space group number.")
+                    if self.force:
+                        print "***Warning: CIF file contains neither space group symbols nor space group number."
+                        print "            Defaulting to P 1. Check results carefully!"
+                        self.HallSymbol = "P 1"
+                    else:
+                        raise SymmetryError("CIF file contains neither space group symbols nor space group number.")
             try:
                 self.HallSymbol = HM2Hall[self.HMSymbol]
             except:
@@ -363,7 +372,7 @@ class CellData(GeometryObject):
                                                    [-third, third, third],
                                                    [-third, -2*third, third]])
             for i in range(len(self.ineqsites)):
-                self.ineqsites[i] = LatticeVector(mvmult3(rhomb2hextrans,self.ineqsites[i]))
+                self.ineqsites[i] = Vector(mvmult3(rhomb2hextrans,self.ineqsites[i]))
             # We also need the correct symmetry operations.
             eqsites = SymOpsHall[Rhomb2HexHall[self.HallSymbol]]
             self.symops = set([])
@@ -374,6 +383,30 @@ class CellData(GeometryObject):
         self.lengthscale = self.a
         self.alloy = False
         
+        # Transform ineqsites to lattice coordinates if they were given as
+        # cartesian in the input file.
+        if self.cartesianInput:
+            try:
+                trans_matrix = minv3(self.cart_trans_matrix) 
+            except:
+                if self.force:
+                    # Fallback on the transformation matrix from default lattice vector choices.
+                    t = []
+                    for i in range(3):
+                        t.append([])
+                        for j in range(3):
+                            t[i].append(self.latticevectors[i][j] * self.lengthscale)
+                    trans_matrix = LatticeMatrix(minv3(t))
+                else:
+                    raise CellError("Failed to perform transformation from cartesian to lattice coordinates.")
+            try:
+                # Primarily use the transformation matrix/translation vector given as input.
+                for i in range(len(self.ineqsites)):
+                    t = self.ineqsites[i] - self.cart_trans_vector
+                    self.ineqsites[i] = Vector(mvmult3(trans_matrix,t))
+            except:
+                raise CellError("Failed to perform transformation from cartesian to lattice coordinates.")
+
         ###############################
         #     LATTICE TRANSLATIONS    #
         ###############################
@@ -921,7 +954,12 @@ class CellData(GeometryObject):
                     except:
                         raise SymmetryError("Found neither Hall nor H-M symbol and space group %i does not have a unique setting."%self.spacegroupnr)
                 else:
-                    raise SymmetryError("CIF file contains neither space group symbols nor space group number.")
+                    if self.force:
+                        print "***Warning: CIF file contains neither space group symbols nor space group number."
+                        print "            Defaulting to P 1. Check results carefully!"
+                        self.HallSymbol = "P 1"
+                    else:
+                        raise SymmetryError("CIF file contains neither space group symbols nor space group number.")
             try:
                 self.HallSymbol = HM2Hall[self.HMSymbol]
             except:
@@ -975,17 +1013,61 @@ class CellData(GeometryObject):
         
         # Get info on atom positions
         try:
+            # Lattice coordinates
             tmpdata = cifblock.GetLoop('_atom_site_fract_x')
         except:
-            raise PositionError("Unable to find positions.")
+            try:
+                # Cartesian coordinates
+                tmpdata = cifblock.GetLoop('_atom_site_Cartn_x')
+            except:
+                raise PositionError("Unable to find positions.")
+            self.cartesianInput = True
+            # Try to get transformation matrix to interpret cartesian positions
+            try:
+                t11 = cifblock.get('_atom_sites_Cartn_tran_matrix_11')
+                t12 = cifblock.get('_atom_sites_Cartn_tran_matrix_12')
+                t13 = cifblock.get('_atom_sites_Cartn_tran_matrix_13')
+                t21 = cifblock.get('_atom_sites_Cartn_tran_matrix_21')
+                t22 = cifblock.get('_atom_sites_Cartn_tran_matrix_22')
+                t23 = cifblock.get('_atom_sites_Cartn_tran_matrix_23')
+                t31 = cifblock.get('_atom_sites_Cartn_tran_matrix_13')
+                t32 = cifblock.get('_atom_sites_Cartn_tran_matrix_23')
+                t33 = cifblock.get('_atom_sites_Cartn_tran_matrix_33')
+                self.cart_trans_matrix = [[float(t11),float(t12),float(t13)],
+                                          [float(t21),float(t22),float(t23)],
+                                          [float(t31),float(t32),float(t33)]]
+            except:
+                if self.force:
+                    print "***Warning: Cartesian coordinates in CIF, but no transformation matrix given."
+                    print "            Using choice implied by the default lattice vectors. Check results carefully!"
+                else:
+                    raise PositionError("Cartesian coordinates in CIF, but no transformation matrix given.")
+            # Try to get transformation matrix to interpret cartesian positions
+            try:
+                t1 = cifblock.get('_atom_sites_Cartn_tran_vector_1')
+                t2 = cifblock.get('_atom_sites_Cartn_tran_vector_2')
+                t3 = cifblock.get('_atom_sites_Cartn_tran_vector_3')
+                self.cart_trans_vector = Vector([float(t1),float(t2),float(t3)])
+            except:
+                if self.force:
+                    print "***Warning: Cartesian coordinates in CIF, but no translation vector given."
+                    print "            Using [0,0,0]. Check results carefully!"
+                    self.cart_trans_vector = Vector([0., 0., 0.])
+                else:
+                    raise PositionError("Cartesian coordinates in CIF, but no translation vector given.")
         # Positions
         try:
-            sitexer = tmpdata.get('_atom_site_fract_x')
-            siteyer = tmpdata.get('_atom_site_fract_y')
-            sitezer = tmpdata.get('_atom_site_fract_z')
+            if self.cartesianInput:
+                sitexer = tmpdata.get('_atom_site_Cartn_x')
+                siteyer = tmpdata.get('_atom_site_Cartn_y')
+                sitezer = tmpdata.get('_atom_site_Cartn_z')
+            else:
+                sitexer = tmpdata.get('_atom_site_fract_x')
+                siteyer = tmpdata.get('_atom_site_fract_y')
+                sitezer = tmpdata.get('_atom_site_fract_z')
             if type(sitexer) == NoneType or type(siteyer) == NoneType or type(sitezer) == NoneType or \
-            '?' in sitexer or '?' in siteyer or '?' in sitezer or \
-            '.' in sitexer or '.' in siteyer or '.' in sitezer:
+                   '?' in sitexer or '?' in siteyer or '?' in sitezer or \
+                   '.' in sitexer or '.' in siteyer or '.' in sitezer:
                 raise PositionError("Positions not found for one or more species.")
         except KeyError:
             raise PositionError("Positions not found for one or more species.")
@@ -1069,7 +1151,7 @@ class CellData(GeometryObject):
                 except:
                     raise PositionError("Invalid atomic position value : "+j)
             # Improve precision
-            self.ineqsites[i] = LatticeVector(self.ineqsites[i])
+            self.ineqsites[i] = Vector(self.ineqsites[i])
             # dictionary of elements and occupancies
             k = elements[i]
             try:

@@ -20,6 +20,7 @@
 \section*{Introduction -- Of CIF's and Cells}
 An electronic structure program needs atomic positions and, at least in the case of band structure programs, unit cell vectors to calculate the electronic structure of a crystal. Experimental data on the other hand tends to be given as a space group and a set of irreducible, or wyckoff positions, and are often distributed in the form of CIF files. There is a wide range of sources of CIF files -- it is actually used for communication of crystallographic data by virtually everyone outside of the electronic structure community! Yet far from all electronic structure programs can read the CIF format, and from this circumstance a small set of my convenience scripts one day turned into the program \ciftocell.
 
+What the program does is simply to 
 
 The code was published in Computer Physics Communications {\bf 182}, 1183--1186 (2011) and is distributed with the . I hope you find it useful.
 
@@ -47,7 +48,7 @@ python setup.py --help
 The program comes with a small set of sample CIF files which can be found either in the source distribution or in the directory \texttt{[prefix]/lib/cif2cell/sample\_cifs}, where \texttt{[prefix]} is the path where you installed \ciftocell. The examples below assume that you stand in a directory containing these sample files. In the following, some arbitrary command line input will be specified within brackets \texttt{[like this]}.
 
 \subsection{Help!}
-The most immediate way to get help in \ciftocell{} is to type
+The quickest way to get help in \ciftocell{} is to type
 \begin{verbatim}
 cif2cell -h
 \end{verbatim}
@@ -76,9 +77,10 @@ Database reference code: 51688.
 Toebbens, D.M. et al., Materials Science Forum 378, 288-293 (2001) 
 
  SYMMETRY INFORMATION
-Space group number      : 227
-Space group symbol (H-M): Fd-3mS
 Cubic crystal system.
+Space group number     : 227
+Hall symbol            : F 4d 2 3 -1d
+Hermann-Mauguin symbol : Fd-3mS
 
  INPUT CELL INFORMATION
 Lattice parameters:
@@ -98,39 +100,42 @@ Bravais lattice vectors :
 All sites, (lattice coordinates):
 Atom           a1          a2          a3 
 Si      0.0000000   0.0000000   0.0000000
-Si      0.2500000   0.2500000   0.2500000\end{verbatim}
+Si      0.2500000   0.2500000   0.2500000
+\end{verbatim}
 
 \newpage
 First there is some information about the program itself and a description of the compound derived from information in the CIF file. If the file comes from a databases known to \ciftocell, information about that is also printed. Then follows any bibliographic information found in the file. Then starts the actual crystal information with data about the space group. If the \texttt{-v} or \texttt{--print-symmetry-operations} flags are given, all symmetry operations will also be printed here. Next comes the lattice parameters and representative sites (occupied wyckoff positions), with the the chemical elements and, in case of an alloy, another column with the site occupancies.
 
-Then follows the things we actually want -- the Bravais lattice vectors and all positions of the atoms.  In the case of Si in the diamond structure the result is probably familiar:  the standard fcc lattice vectors and two atoms in the basis, one at $(0,0,0)$ and another in $(\frac{1}{4},\frac{1}{4},\frac{1}{4})$. 
+Then follows the things we actually want -- the Bravais lattice vectors and all positions of the atoms.  In the case of Si in the diamond structure the result is probably familiar:  the standard fcc lattice vectors and two atoms in the basis, one at $(0,0,0)$ and another in $(\frac{1}{4},\frac{1}{4},\frac{1}{4})$. For the fcc lattice the choice of primitive lattice vectors is straightforward, but in many systems of lower symmetry, in particular monoclinic systems, the choice is not always as simple. \ciftocell{} has default choices for the Bravais lattice vectors that were selected to produce calculation cells similar to those listed at the Naval Research Laboratory site \texttt{http://cst-www.nrl.navy.mil/lattice/}.
 
 By default, \ciftocell{} will reduce the cell to the primitive cell, anticipating that the user wants to calculate something as small as possible, but we can also get the conventional cell. The diamond structure is a cubic system, and the primitive cell has only two atoms. Now try to also give the program the option \texttt{--no-reduce}. You should now get 8 atoms and cubic lattice vectors. Note that the conventional and primitive cell are the same in many systems.\footnote{In all systems which has a space group (or Hermann-Mauguin) symbol that starts with ''P'', for ''primitive'', see the output above.}
 
 \subsection{Output to your electronic structure program}
 
 \begin{table}[htdp]
-\caption{Supported Electronic structure programs and the files output by \ciftocell.}
+\caption{Supported electronic structure programs (ESP) and the files output by \ciftocell. Also shown is whether the ESP implements some alloy theory and whether \ciftocell{} currently supports full output.}
 \begin{center}
-\begin{tabular}{l|c|c}
-Code  & Alloy support & Output file(s)\\ \hline
-VASP & no  &POSCAR \\
-ABINIT & no & [compoundname].in\\
-Siesta & no & [compoundname].fdf\\
-CPMD & no & [compoundname].inp\\
-CASTEP & no & [compoundname].cell\\
-Crystal09 & no & [compoundname].d12\\
-RSPt & no & symt.inp\\
-Fleur & no & inp\_[compoundname]\\
-cellgen & no & cellgen.inp\\
-elk & no & GEOMETRY.OUT\\
-exciting & no & input.xml\\
-spacegroup & no & spacegroup.in\\
-\multirow{2}{*}{ncol} & no & [spacegroupname/compoundname].dat \\
- &  &  for bstr and ncol. \\
-\multirow{3}{*}{emto} & & [spacegroupname/compoundname].dat \\ 
- & yes & for kstr, bmdl, shape, kgrn and kfcd \\
- &  & in separate directories.
+\begin{tabular}{l|c|c|c}
+ESP  & Alloy support & Full setup & Output file(s)\\ \hline
+ABINIT & no & no & [compoundname].in\\
+CASTEP & no & no & [compoundname].cell\\
+cellgen & no & no & cellgen.inp\\
+CPMD & no & no & [compoundname].inp\\
+Crystal09 & no & no & [compoundname].d12\\
+Fleur & no & no & inp\_[compoundname]\\
+RSPt & no & no & symt.inp\\
+Elk & no & no & GEOMETRY.OUT\\
+\multirow{3}{*}{EMTO} & & & [spacegroupname/compoundname].dat \\ 
+ & yes & no & for kstr, bmdl, shape, kgrn and kfcd \\
+ &  & & in separate directories.\\
+exciting & no & no & input.xml\\
+\multirow{2}{*}{ncol} & no & no & [spacegroupname/compoundname].dat \\
+ &  &  & for bstr and ncol. \\
+Siesta & no & no & [compoundname].fdf\\
+spacegroup & no & no & spacegroup.in\\
+SPRKKR & yes & no & [compoundname].sys (via XBAND) \\
+VASP & no  & yes & POSCAR \\
+XBAND & yes & no & [compoundname].sys\\
 \end{tabular}
 \end{center}
 \label{default}
