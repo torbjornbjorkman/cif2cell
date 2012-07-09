@@ -18,7 +18,7 @@
 #************************************************************************************
 #  Description: A command-line tool to generate the geometrical setup
 #               for various electronic structure codes from a CIF format file.
-#               This code was published in Comp. Phys, Comm. 182, 1183-1186 (2011).
+#               This code was published in Comp. Phys. Comm. 182, 1183-1186 (2011).
 #  Author:      Torbjorn Bjorkman, torbjorn.bjorkman(at)aalto.fi
 #  Affiliation: COMP, Aaalto University School of Science,
 #               Department of Applied Physics, Espoo, Finland

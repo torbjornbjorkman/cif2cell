@@ -293,15 +293,15 @@ class CellData(GeometryObject):
                         raise SymmetryError("Found neither Hall nor H-M symbol and space group %i does not have a unique setting."%self.spacegroupnr)
                 else:
                     if self.force:
-                        print "***Warning: CIF file contains neither space group symbols nor space group number."
-                        print "            Defaulting to P 1. Check results carefully!"
+                        sys.stderr.write("***Warning: CIF file contains neither space group symbols nor space group number.\n")
+                        sys.stderr.write("            Defaulting to P 1. Check results carefully!\n")
                         self.HallSymbol = "P 1"
                     else:
                         raise SymmetryError("CIF file contains neither space group symbols nor space group number.")
             try:
                 self.HallSymbol = HM2Hall[self.HMSymbol]
             except:
-                print "***Warning: Cannot convert "+self.HMSymbol+" to Hall symbol."
+                sys.stderr.write("***Warning: Cannot convert "+self.HMSymbol+" to Hall symbol.\n")
 
         # Set space group number and H-M symbol if not set
         if not 0 < self.spacegroupnr <= 230:
@@ -955,8 +955,8 @@ class CellData(GeometryObject):
                         raise SymmetryError("Found neither Hall nor H-M symbol and space group %i does not have a unique setting."%self.spacegroupnr)
                 else:
                     if self.force:
-                        print "***Warning: CIF file contains neither space group symbols nor space group number."
-                        print "            Defaulting to P 1. Check results carefully!"
+                        sys.stderr.write("***Warning: CIF file contains neither space group symbols nor space group number.\n")
+                        sys.stderr.write("            Defaulting to P 1. Check results carefully!\n")
                         self.HallSymbol = "P 1"
                     else:
                         raise SymmetryError("CIF file contains neither space group symbols nor space group number.")
@@ -1038,8 +1038,8 @@ class CellData(GeometryObject):
                                           [float(t31),float(t32),float(t33)]]
             except:
                 if self.force:
-                    print "***Warning: Cartesian coordinates in CIF, but no transformation matrix given."
-                    print "            Using choice implied by the default lattice vectors. Check results carefully!"
+                    sys.stderr.write("***Warning: Cartesian coordinates in CIF, but no transformation matrix given.\n")
+                    sys.stderr.write("            Using choice implied by the default lattice vectors. Check results carefully!\n")
                 else:
                     raise PositionError("Cartesian coordinates in CIF, but no transformation matrix given.")
             # Try to get transformation matrix to interpret cartesian positions
@@ -1050,8 +1050,8 @@ class CellData(GeometryObject):
                 self.cart_trans_vector = Vector([float(t1),float(t2),float(t3)])
             except:
                 if self.force:
-                    print "***Warning: Cartesian coordinates in CIF, but no translation vector given."
-                    print "            Using [0,0,0]. Check results carefully!"
+                    sys.stderr.write("***Warning: Cartesian coordinates in CIF, but no translation vector given.\n")
+                    sys.stderr.write("            Using [0,0,0]. Check results carefully!\n")
                     self.cart_trans_vector = Vector([0., 0., 0.])
                 else:
                     raise PositionError("Cartesian coordinates in CIF, but no translation vector given.")
@@ -1078,7 +1078,7 @@ class CellData(GeometryObject):
             elementsymbs = tmpdata.get('_atom_site_label')
             if type(elementsymbs) == NoneType:
                 # Fill up with question marks if not found
-                print "***Warning: Could not find element names."
+                sys.stderr.write("***Warning: Could not find element names.\n")
                 elementsymbs = ["??" for site in sitexer]
 
         # Find charge state
@@ -1127,7 +1127,7 @@ class CellData(GeometryObject):
         elements[:] = [element[0].upper()+element[1:].lower() for element in elements]
         for element in elements:
             if not element in ElementData().elementnr:
-                print "***Warning: "+element+" is not a chemical element."
+                sys.stderr.write("***Warning: "+element+" is not a chemical element.\n")
         # Find occupancies
         try:
             siteoccer = tmpdata.get('_atom_site_occupancy')
@@ -1135,7 +1135,7 @@ class CellData(GeometryObject):
             raise PositionError("Error reading site occupancies.")
         if siteoccer == None or '?' in siteoccer or '.' in siteoccer:
             if not self.quiet:
-                print "***Warning : Site occupancies not found, assuming all occupancies = 1."
+                sys.stderr.write("***Warning : Site occupancies not found, assuming all occupancies = 1.\n")
             siteoccer = []
             for site in elements:
                 siteoccer.append("1.0")
