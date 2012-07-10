@@ -6,12 +6,15 @@
 \usepackage{epstopdf}
 \usepackage{multirow}
 \DeclareGraphicsRule{.tif}{png}{.png}{`convert #1 `dirname #1`/`basename #1 .tif`.png}
+\usepackage{hyperref}
 
 \newcommand{\ciftocell}{\texttt{cif2cell}}
 
+\newenvironment{warning}[1][Warning!]{\begin{trivlist}
+\item[\hskip \labelsep {\bfseries #1}]}{\end{trivlist}}
 
 
-\title{CIF2Cell manual}
+\title{The \ciftocell{} manual}
 \author{Torbj\"orn Bj\"orkman}
 %\date{}                                           % Activate to display a given date or no date
 
@@ -20,9 +23,11 @@
 \section*{Introduction -- Of CIF's and Cells}
 An electronic structure program needs atomic positions and, at least in the case of band structure programs, unit cell vectors to calculate the electronic structure of a crystal. Experimental data on the other hand tends to be given as a space group and a set of irreducible, or wyckoff positions, and are often distributed in the form of CIF files. There is a wide range of sources of CIF files -- it is actually used for communication of crystallographic data by virtually everyone outside of the electronic structure community! Yet far from all electronic structure programs can read the CIF format, and from this circumstance a small set of my convenience scripts one day turned into the program \ciftocell.
 
-What the program does is simply to 
+What the program does is simply to take the crystal structure information in a CIF file, typically space group information and a set of irreducible coordinates, and then set up a calculation cell which is then output to your favourite electronic structure program (ESP). As you are probably aware, the choice of calculation cell for a given crystal is arbitrary and infinitely many possibilities exist for any given crystal. Perhaps the simplest example is when a problem require us to set up a supercell, which is just describing the same crystal in a different cell than the primitive one, but even the primitive cell can often be chosen in many different ways. \ciftocell{} contains working solutions for choices of primitive cells for (almost) any possible crystal and will make a choice automatically. You may choose either the primitive cell for the given structure, such as the rhombohedral cell with one atom for fcc Cu, or the conventional cell, a cubic cell with four atoms for fcc Cu. These cells can then be used as building blocks for generating supercells by multiplying them up and/or inputting extra vacuum in the structure. 
 
-The code was published in Computer Physics Communications {\bf 182}, 1183--1186 (2011) and is distributed with the . I hope you find it useful.
+This manual is intended as a document for computational physicists and materials scientists. The problems that you solve when generating a computational cell from crystallographic data belongs to the field of crystallography and the program is not intended to replace a working knowledge of basic crystallography. Remember this, and refer to your textbook in crystallography or solid state physics/chemistry when you get confused and your life with \ciftocell{} will be happy.
+
+The code was published in \href{http://dx.doi.org/10.1016/j.cpc.2011.01.013}{Computer Physics Communications {\bf 182}, 1183--1186 (2011)}, please cite generously. Happy computing!
 
 \newpage
 \section{Installation}
@@ -43,9 +48,9 @@ python setup.py --help
 \end{verbatim}
 
 
-\section{Basic running}
+\section{Getting started}
 
-The program comes with a small set of sample CIF files which can be found either in the source distribution or in the directory \texttt{[prefix]/lib/cif2cell/sample\_cifs}, where \texttt{[prefix]} is the path where you installed \ciftocell. The examples below assume that you stand in a directory containing these sample files. In the following, some arbitrary command line input will be specified within brackets \texttt{[like this]}.
+This section is meant to give you a quick overview of how you generate cells to get you started as quickly as possible. Running \ciftocell{} is quick, so the best way to learning to work with it is to simply run it over and over, testing different settings and options until you have what you want. The program comes with a small set of sample CIF files which can be found either in the source distribution or in the directory \texttt{[prefix]/lib/cif2cell/sample\_cifs}, where \texttt{[prefix]} is the path where you installed \ciftocell. The examples below assume that you stand in a directory containing these sample files. In the following, some arbitrary command line input will be specified within brackets \texttt{[like this]}. 
 
 \subsection{Help!}
 The quickest way to get help in \ciftocell{} is to type
@@ -65,7 +70,6 @@ cif2cell [someoptions] -f Si.cif [otheroptions]
 \end{verbatim}
 and if no output program is specified, the cell information is output to screen:
 
-\newpage
 \begin{verbatim}
 CIF2CELL 0.4.0
 2011-03-25 16:35
@@ -106,39 +110,46 @@ Si      0.2500000   0.2500000   0.2500000
 \newpage
 First there is some information about the program itself and a description of the compound derived from information in the CIF file. If the file comes from a databases known to \ciftocell, information about that is also printed. Then follows any bibliographic information found in the file. Then starts the actual crystal information with data about the space group. If the \texttt{-v} or \texttt{--print-symmetry-operations} flags are given, all symmetry operations will also be printed here. Next comes the lattice parameters and representative sites (occupied wyckoff positions), with the the chemical elements and, in case of an alloy, another column with the site occupancies.
 
-Then follows the things we actually want -- the Bravais lattice vectors and all positions of the atoms.  In the case of Si in the diamond structure the result is probably familiar:  the standard fcc lattice vectors and two atoms in the basis, one at $(0,0,0)$ and another in $(\frac{1}{4},\frac{1}{4},\frac{1}{4})$. For the fcc lattice the choice of primitive lattice vectors is straightforward, but in many systems of lower symmetry, in particular monoclinic systems, the choice is not always as simple. \ciftocell{} has default choices for the Bravais lattice vectors that were selected to produce calculation cells similar to those listed at the Naval Research Laboratory site \texttt{http://cst-www.nrl.navy.mil/lattice/}.
+Then follows the things we actually want -- the Bravais lattice vectors and all positions of the atoms.  In the case of Si in the diamond structure the result is probably familiar:  the standard fcc lattice vectors and two atoms in the basis, one at $(0,0,0)$ and another in $(\frac{1}{4},\frac{1}{4},\frac{1}{4})$. For the fcc lattice the choice of primitive lattice vectors is straightforward, but in many systems of lower symmetry, in particular monoclinic systems, the choice is not always as simple. \ciftocell{} has default choices for the Bravais lattice vectors that were selected to produce calculation cells similar to those listed at the Naval Research Laboratory site \href{http://cst-www.nrl.navy.mil/lattice/}{\texttt{http://cst-www.nrl.navy.mil/lattice/}.}
 
-By default, \ciftocell{} will reduce the cell to the primitive cell, anticipating that the user wants to calculate something as small as possible, but we can also get the conventional cell. The diamond structure is a cubic system, and the primitive cell has only two atoms. Now try to also give the program the option \texttt{--no-reduce}. You should now get 8 atoms and cubic lattice vectors. Note that the conventional and primitive cell are the same in many systems.\footnote{In all systems which has a space group (or Hermann-Mauguin) symbol that starts with ''P'', for ''primitive'', see the output above.}
+By default, \ciftocell{} will reduce the cell to the primitive cell, anticipating that the user wants to calculate something as small as possible, but we can also get the conventional cell. The diamond structure is a cubic system, and the primitive cell has only two atoms. Now try to also give the program the option \texttt{--no-reduce}. You should now get 8 atoms and cubic lattice vectors. Note that the conventional and primitive cell are the same in many systems.\footnote{In all systems which has a space group, or Hermann-Mauguin (H-M), symbol that starts with ''P'' (for ''primitive''). See the example for fcc Si above, where the H-M symbol is 'F', (from German ''Fl\"achenzentriert'', meaning face-centered).}
 
 \subsection{Output to your electronic structure program}
+
+Having generated the basic cell we want to export that to our favourite ESP. This is done by simply giving the option \texttt{-p espname} or \texttt{--program=espname}. The possible choices for \texttt{espname} can be found in Table \ref{esptable}, where you also find what files will be generated. You may also decide the output file name yourself by giving the option \texttt{-o outputfilename} or \texttt{---outputfile=outputfilename}. If you wish to append the output from \ciftocell{} at the end of some existing file, give the option \texttt{-a} or \texttt{--append}, but note that this requires that you also specify the output file name. Appending to existing files is useful for example if you have a template file with your magic settings and just wish to add the cell with the atoms. You will notice that for nearly all ESP's, \ciftocell{} generates \emph{only} the geometric part of the setup, unless you specify the \texttt{--setup-all} flag, which not supported for many ESP's right now. 
+
+Generation of cells for alloy theory calculations is possible for ESP's that implement such features. For other ESP's, you may use the \texttt{--force-alloy} option to generate as much of the geometric input as possible. 
+\begin{warning}
+Output generated with \texttt{--force-alloy} \emph{always} needs further editing. The partially occupied sites will get some placeholder string where the element should be specified, no attempt is made by \ciftocell{} to guess what you want to do.
+\end{warning}
 
 \begin{table}[htdp]
 \caption{Supported electronic structure programs (ESP) and the files output by \ciftocell. Also shown is whether the ESP implements some alloy theory and whether \ciftocell{} currently supports full output.}
 \begin{center}
 \begin{tabular}{l|c|c|c}
 ESP  & Alloy support & Full setup & Output file(s)\\ \hline
-ABINIT & no & no & [compoundname].in\\
-CASTEP & no & no & [compoundname].cell\\
-cellgen & no & no & cellgen.inp\\
-CPMD & no & no & [compoundname].inp\\
-Crystal09 & no & no & [compoundname].d12\\
-Fleur & no & no & inp\_[compoundname]\\
-RSPt & no & no & symt.inp\\
-Elk & no & no & GEOMETRY.OUT\\
+\href{http://www.abinit.org/}{ABINIT} & no & no & [compoundname].in\\
+\href{http://www.castep.org/}{CASTEP} & no & no & [compoundname].cell\\
+\href{http://www.fplmto-rspt.org/}{cellgen} & no & no & cellgen.inp\\
+\href{http://www.cpmd.org}{CPMD} & no & no & [compoundname].inp\\
+\href{http://www.crystal.unito.it/}{Crystal09} & no & no & [compoundname].d12\\
+\href{http://www.flapw.de}{Fleur} & no & no & inp\_[compoundname]\\
+\href{http://www.fplmto-rspt.org/}{RSPt} & no & no & symt.inp\\
+\href{http://elk.sourceforge.net}{Elk} & no & no & GEOMETRY.OUT\\
 \multirow{3}{*}{EMTO} & & & [spacegroupname/compoundname].dat \\ 
  & yes & no & for kstr, bmdl, shape, kgrn and kfcd \\
  &  & & in separate directories.\\
-exciting & no & no & input.xml\\
+\href{http://exciting-code.org}{Exciting} & no & no & input.xml\\
 \multirow{2}{*}{ncol} & no & no & [spacegroupname/compoundname].dat \\
  &  &  & for bstr and ncol. \\
-Siesta & no & no & [compoundname].fdf\\
-spacegroup & no & no & spacegroup.in\\
-SPRKKR & yes & no & [compoundname].sys (via XBAND) \\
-VASP & no  & yes & POSCAR \\
-XBAND & yes & no & [compoundname].sys\\
+\href{http://www.icmab.es/dmmis/leem/siesta/}{Siesta} & no & no & [compoundname].fdf\\
+\href{http://elk.sourceforge.net}{Spacegroup} & no & no & spacegroup.in\\
+\href{http://ebert.cup.uni-muenchen.de/sprkkr}{SPRKKR} & yes & no & [compoundname].sys (via XBAND) \\
+\href{http://www.vasp.at/}{VASP} & no  & yes & POSCAR \\
+\href{http://ebert.cup.uni-muenchen.de/sprkkr}{XBAND} & yes & no & [compoundname].sys\\
 \end{tabular}
 \end{center}
-\label{default}
+\label{esptable}
 \end{table}%
 
 

@@ -48,42 +48,44 @@ warnings.simplefilter("ignore",DeprecationWarning)
 ############################
 #      INPUT OPTIONS       #
 ############################
-# General stuff
 description = "A program for generating input lattice structures to various electronic structure programs from a CIF (Crystallographic Information Framework) file. This code was published in Comput. Phys. Commun. 182, 1183 (2011). Please cite generously."
 usage = "usage: %prog FILE [-p PROGRAM] [other options]"
 parser = OptionParser(usage=usage, description=description)
-parser.add_option("-v","--verbose",dest="verbose",help="Print a lot of extra information to screen",action="store_true")
 parser.add_option("--version",dest="version",help="Print version number.",action="store_true")
+parser.add_option("-v","--verbose",dest="verbose",help="Print a lot of extra information to screen",action="store_true")
 parser.add_option("-q","--quiet",dest="quiet",help="Suppress most screen output, such as warnings and overrides --verbose flag, but will print all other requested output.",action="store_true")
-parser.add_option("-f","--file",dest="file",help="Input CIF file, unless given as first argument to the program.",metavar="FILE")
-parser.add_option("-p","--program",dest="program",help="The electronic structure code you want to create input file(s) for. Currently supports: abinit, castep, cpmd, cellgen, crystal09, elk, emto, exciting, fleur, ncol, rspt, siesta, spacegroup, sprkkr, vasp, xband. This keyword is case insensitive.")
-parser.add_option("-o","--outputfile",dest="outputfile",help="Name of output file (if other than default for you electronic structure code).",metavar="FILE")
-parser.add_option("-a","--append",dest="append",help="Append the output to given output file rather than overwriting.",action="store_true")
-parser.add_option("--grammar",dest="grammar",help="Set the CIF grammar to be used when parsing the input file (default is 1.1).")
-parser.add_option("--which-filename",dest="filenamequery",help="If given together with the --program-name option, the name of the output file will be printed to screen.",action="store_true")
-parser.add_option("-b","--block",dest="block",help="Block of data in input file (if there are more than one block in the CIF file).")
-parser.add_option("--force",dest="force",help="Attempt to force generation of output file despite problems and/or ambiguities in the input file. There are no guarantees that what you get makes sense, but the program makes an honest attempt. Implies --force-alloy.",action="store_true")
-parser.add_option("--force-alloy",dest="forcealloy",help="Force generation of output file for an alloy compound for an electronic structure code that does not implement any alloy theory (such as CPA).",action="store_true")
-parser.add_option("--coordinate-tolerance",dest="coordtol",help="Parameter for determining when two coordinates are the same (default=0.0002).")
-parser.add_option("--setup-all",dest="setupall",help="Make a complete setup, not just the geometrical part. This is currently only available for VASP.",action="store_true")
-parser.add_option("--k-resolution",dest="kresolution",help="The desired resolution in k-space (default=0.2). Used for generating k-space grid options if --setup-all is specified.")
-# OUTPUT OPTIONS
-parser.add_option("--print-digits",dest="printdigits",help="Number of digits used when printing coordinates etc. to screen (default=8). Useful if you need to tweak the screen output for cutting and pasting into some unsupported program. There is no point in going over 16 because of the floating point accuracy.")
-parser.add_option("--print-atomic-units",dest="printau",help="Output lattice parameters in bohrradii rather than angstrom.",action="store_true")
-parser.add_option("--print-cartesian",dest="printcart",help="Atomic sites printed to screen in cartesian rather than lattice coordinates.",action="store_true")
-parser.add_option("--print-symmetry-operations",dest="printsymops",help="Print symmetry operations of the generated cell.",action="store_true")
-parser.add_option("--print-seitz-matrices",dest="printseitz",help="Print symmetry operations of the generated cell in Seitz matrix form.",action="store_true")
-parser.add_option("--print-charge-state","--print-oxidation-numbers",dest="printcharges",help="Print information about the oxidation state from the CIF file.",action="store_true")
-parser.add_option("--print-reference-bibtex",dest="bibtexref",help="Print citation in BibTeX format and exit.",action="store_true")
+# GENERAL OPTIONS
+generalopts = OptionGroup(parser, "General options")
+generalopts.add_option("-f","--file",dest="file",help="Input CIF file, unless given as first argument to the program.",metavar="FILE")
+generalopts.add_option("-p","--program",dest="program",help="The electronic structure code you want to create input file(s) for. Currently supports: abinit, castep, cpmd, cellgen, crystal09, elk, emto, exciting, fleur, ncol, rspt, siesta, spacegroup, sprkkr, vasp, xband. This keyword is case insensitive.")
+generalopts.add_option("-o","--outputfile",dest="outputfile",help="Name of output file (if other than default for you electronic structure code).",metavar="FILE")
+generalopts.add_option("-a","--append",dest="append",help="Append the output to given output file rather than overwriting.",action="store_true")
+generalopts.add_option("--grammar",dest="grammar",help="Set the CIF grammar to be used when parsing the input file (default is 1.1).")
+generalopts.add_option("--which-filename",dest="filenamequery",help="If given together with the --program option, the name of the output file will be printed to screen.",action="store_true")
+generalopts.add_option("-b","--block",dest="block",help="Block of data in input file (if there are more than one block in the CIF file).")
 # CELL GENERATION OPTIONS
-#cellgenopts = OptionGroup(parser, "Cell generation options")
+cellgenopts = OptionGroup(parser, "Cell generation options")
 #parser.add_option("--rhombohedral-diagonal",dest="rhombdiag",help="Set up rhombohedral cell with threefold axis along [111].",action="store_true")
-parser.add_option("--no-reduce",dest="noreduce",help="Do not reduce to the primitive cell.",action="store_true")
+cellgenopts.add_option("--no-reduce",dest="noreduce",help="Do not reduce to the primitive cell.",action="store_true")
+cellgenopts.add_option("--force",dest="force",help="Attempt to force generation of output file despite problems and/or ambiguities in the input file. There are no guarantees that what you get makes sense, but the program makes an honest attempt. Implies --force-alloy.",action="store_true")
+cellgenopts.add_option("--force-alloy",dest="forcealloy",help="Force generation of output file for an alloy compound for an electronic structure code that does not implement any alloy theory (such as CPA).",action="store_true")
+cellgenopts.add_option("--coordinate-tolerance",dest="coordtol",help="Parameter for determining when two coordinates are the same (default=0.0002).")
+cellgenopts.add_option("--setup-all",dest="setupall",help="Make a complete setup, not just the geometrical part. This is currently only available for VASP.",action="store_true")
+cellgenopts.add_option("--k-resolution",dest="kresolution",help="The desired resolution in k-space (default=0.2). Used for generating k-space grid options if --setup-all is specified.")
 # Supercell options
-parser.add_option("--supercell",dest="supercellmap",help="Three integers separated with commas and enclosed in square brackets that specify the dimensions of a supercell to be constructed from the primitive cell. If combined with the --no-reduce option the supercell will instead be generated based on the conventional cell.",metavar="[k,l,m]")
-parser.add_option("--supercell-vacuum",dest="supercellvacuum",help="Three numbers >=0 separated with commas and enclosed in square brackets that specify a number of unit cell units of vacuum to be added along the first, second or third of the generated lattice vectors.",metavar="[k,l,m]")
-parser.add_option("--supercell-translation-vector",dest="supercelltransvec",help="Three numbers separated with commas and enclosed in square brackets that specify a final shift of all atomic positions in the final cell (in units of the lattice vectors of the new cell).",metavar="[k,l,m]")
-parser.add_option("--supercell-sort",dest="supercellsort",help="Sort the atom positions by some scheme. Currently available are:     1) By cartesian coordinate - example: xzy will sort first on x then on z then on y.     2) by lattice vector - example: 132 will sort first by lattice vector 1 then by lattice vector 3 and last by lattice vector 2.")
+cellgenopts.add_option("--supercell",dest="supercellmap",help="Three integers separated with commas and enclosed in square brackets that specify the dimensions of a supercell to be constructed from the primitive cell. If combined with the --no-reduce option the supercell will instead be generated based on the conventional cell.",metavar="[k,l,m]")
+cellgenopts.add_option("--supercell-vacuum",dest="supercellvacuum",help="Three numbers >=0 separated with commas and enclosed in square brackets that specify a number of unit cell units of vacuum to be added along the first, second or third of the generated lattice vectors.",metavar="[k,l,m]")
+cellgenopts.add_option("--supercell-translation-vector",dest="supercelltransvec",help="Three numbers separated with commas and enclosed in square brackets that specify a final shift of all atomic positions in the final cell (in units of the lattice vectors of the new cell).",metavar="[k,l,m]")
+cellgenopts.add_option("--supercell-sort",dest="supercellsort",help="Sort the atom positions by some scheme. Currently available are:     1) By cartesian coordinate - example: xzy will sort first on x then on z then on y.     2) by lattice vector - example: 132 will sort first by lattice vector 1 then by lattice vector 3 and last by lattice vector 2.")
+# PRINTING OPTIONS
+printopts = OptionGroup(parser, "Printing options")
+printopts.add_option("--print-digits",dest="printdigits",help="Number of digits used when printing coordinates etc. to screen (default=8). Useful if you need to tweak the screen output for cutting and pasting into some unsupported program. There is no point in going over 16 because of the floating point accuracy.")
+printopts.add_option("--print-atomic-units",dest="printau",help="Output lattice parameters in bohrradii rather than angstrom.",action="store_true")
+printopts.add_option("--print-cartesian",dest="printcart",help="Atomic sites printed to screen in cartesian rather than lattice coordinates.",action="store_true")
+printopts.add_option("--print-symmetry-operations",dest="printsymops",help="Print symmetry operations of the generated cell.",action="store_true")
+printopts.add_option("--print-seitz-matrices",dest="printseitz",help="Print symmetry operations of the generated cell in Seitz matrix form.",action="store_true")
+printopts.add_option("--print-charge-state","--print-oxidation-numbers",dest="printcharges",help="Print information about the oxidation state from the CIF file.",action="store_true")
+printopts.add_option("--print-reference-bibtex",dest="bibtexref",help="Print citation in BibTeX format and exit.",action="store_true")
 # PROGRAM SPECIFIC OPTIONS
 progspec = OptionGroup(parser, "Program specific options")
 # emto
@@ -111,6 +113,9 @@ progspec.add_option("--vasp-cartesian",dest="vaspcart",help="Write lattice vecto
 progspec.add_option("--vasp-cartesian-lattice-vectors",dest="vaspcartvecs",help="Write lattice vectors to POSCAR file in cartesian coordinates and set the length scale to 1.",action="store_true")
 progspec.add_option("--vasp-cartesian-positions",dest="vaspcartpos",help="Write atomic positions to POSCAR file in Cartesian rather than Direct coordinates.",action="store_true")
 progspec.add_option("--vasp-pseudo-libdr",dest="vasppseudolib",help="Path to the VASP pseudopotential library.")
+parser.add_option_group(generalopts)
+parser.add_option_group(cellgenopts)
+parser.add_option_group(printopts)
 parser.add_option_group(progspec)
 (options,args) = parser.parse_args()
 
@@ -119,6 +124,24 @@ if options.version:
     print programname+" version "+version
     sys.exit(0)
 
+#############################################################
+# Check that options given are possible
+if options.append and not options.outputfile:
+    sys.stderr.write("***Error: option --append requires an output file to be specified.\n")
+    sys.exit(1)
+if options.append and (options.program == 'emto' or options.program == 'ncol'):
+    sys.stderr.write("***Error: option --append can not be used with "+options.program+".\n")
+    sys.exit(1)
+if options.setupall and options.program != 'vasp':
+    sys.stderr.write("***Error: option --setup-all not supported for "+options.program+".\n")
+    sys.exit(1)
+if options.filenamequery and not options.program:
+    sys.stderr.write("***Error: option --which-filename requires that --program is given.\n")
+    sys.exit(1)
+    
+    
+
+#############################################################
 # Electronic structure program
 if options.program:
     outputprogram = options.program.lower()
