@@ -139,8 +139,6 @@ if options.filenamequery and not options.program:
     sys.stderr.write("***Error: option --which-filename requires that --program is given.\n")
     sys.exit(1)
     
-    
-
 #############################################################
 # Electronic structure program
 if options.program:
