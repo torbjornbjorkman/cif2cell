@@ -25,9 +25,11 @@
 #******************************************************************************************
 import copy
 import os
+import math
 from utils import *
 from elementdata import *
 from uctools import *
+from re import search
 
 ################################################################################################
 class GeometryOutputFile:
@@ -39,6 +41,105 @@ class GeometryOutputFile:
         self.cell = crystalstructure
         self.docstring = string
 
+################################################################################################
+# ASE FILE
+class ASEFile(GeometryOutputFile):
+    """
+    Class for storing the geometrical data needed for outputting data for ASE
+    and the method __str__ that outputs the contents of the file as a string of
+    python code.
+    """
+    def __init__(self,crystalstructure,docstring):
+        GeometryOutputFile.__init__(self,crystalstructure,docstring)
+        # Variables
+        self.cartesian = True  # Cartesian coordinates?
+        # Make sure the docstring has comment form
+        self.docstring = self.docstring.rstrip("\n")
+        tmpstrings = self.docstring.split("\n")
+        self.docstring = ""
+        for string in tmpstrings:
+            string = string.lstrip("#")
+            string = "#"+string+"\n"
+            self.docstring += string
+        # set up species list
+        tmp = set([])
+        for a in self.cell.atomdata:
+            for b in a:
+                tmp.add(b.spcstring())
+        self.species = list(tmp)
+    def __str__(self):
+        filestring = "from ase import *\n\n"
+        # Cartesian or lattice coordinates?
+        if self.cartesian:
+            transmtx = []
+            for i in range(3):
+                transmtx.append([])
+                for j in range(3):
+                    transmtx[i].append(self.cell.latticevectors[i][j] * self.cell.lengthscale)
+        else:
+            transmtx = [[1,0,0],[0,1,0],[0,0,1]]
+        # positions and number of species
+        nspcs = []
+        positionstring = ""
+        for sp in self.species:
+            nsp = 0
+            for a in self.cell.atomdata:
+                for b in a:
+                    if b.spcstring() == sp:
+                        nsp += 1
+                        p = Vector(mvmult3(transmtx,b.position))
+                        positionstring += "%11f, %11f, %11f),\n               ("%(p[0],p[1],p[2])
+            nspcs.append(nsp)
+        positionstring = positionstring.rstrip("\n (,")+"],\n"
+
+        # Atoms object
+        filestring += "atoms = Atoms("
+        # Species
+        for i in range(len(self.species)):
+            filestring += "['"+self.species[i]+"' for i in range("+str(nspcs[i])+")]+"
+        filestring = filestring.rstrip("+")+",\n"
+        # Positions
+        filestring += "              [("
+        filestring += positionstring
+        # Boundary conditions
+        filestring += "              pbc = (True,True,True))\n"
+        # Set lattice vectors
+        filestring += "atoms.set_cell([["
+        for i in range(3):
+            for j in range(3):
+                filestring += "%12f, "%(self.cell.latticevectors[i][j]*self.cell.lengthscale)
+            filestring = filestring.rstrip(", ")+"],\n                ["
+        filestring = filestring.rstrip(",[ ]\n")+"]],\n"
+        filestring += "                scale_atoms = %s)\n"%str(not self.cartesian)
+        
+        return filestring
+    
+################################################################################################
+# XYZ FILE
+class XYZFile(GeometryOutputFile):
+    """
+    Class for storing the geometrical data needed for outputting an .xyz file
+    and the method __str__ that outputs the contents of the .xyz file as a string.
+    """
+    def __init__(self,crystalstructure,string):
+        GeometryOutputFile.__init__(self,crystalstructure,string)
+        # To be put on the second line
+        self.programdoc = ""
+    def __str__(self):
+        filestring = ""
+        filestring += "%i \n"%sum([len(v) for v in self.cell.atomdata])
+        filestring += self.docstring+"\n"
+        lv = []
+        for i in range(3):
+            lv.append([])
+            for j in range(3):
+                lv[i].append(self.cell.lengthscale*self.cell.latticevectors[i][j])
+        for a in self.cell.atomdata:
+            for b in a:
+                t = Vector(mvmult3(lv,b.position))
+                filestring += str(b).split()[0]+"  "+str(t)+"\n"
+        return filestring
+    
 ################################################################################################
 # NCOL FILES
 class OldNCOLFile(GeometryOutputFile):
@@ -1066,6 +1167,7 @@ class POSCARFile(GeometryOutputFile):
         self.printcartvecs = False
         self.printcartpos = False
         self.vasp5format = False
+        self.selectivedyn = False
         # set up species list
         tmp = set([])
         for a in self.cell.atomdata:
@@ -1086,6 +1188,8 @@ class POSCARFile(GeometryOutputFile):
         # Assign some local variables
         a = self.cell.lengthscale
         lattice = self.cell.latticevectors
+        # VASP needs lattice vector matrix to have positive triple product
+        
         # For output of atomic positions
         if self.printcartpos:
             positionunits = "Cartesian\n"
@@ -1099,6 +1203,8 @@ class POSCARFile(GeometryOutputFile):
             transmtx = [[1, 0, 0],
                         [0, 1, 0],
                         [0, 0, 1]]
+        if self.selectivedyn:
+            positionunits += "Selective dynamics\n"
         # The first line with info from input docstring
         filestring = self.docstring
         if not self.vasp5format:
@@ -1131,7 +1237,10 @@ class POSCARFile(GeometryOutputFile):
                     if b.spcstring() == sp:
                         nsp += 1
                         p = Vector(mvmult3(transmtx,b.position))
-                        positionstring += str(p)+"\n"
+                        positionstring += str(p)
+                        if self.selectivedyn:
+                            positionstring += "   T  T  T"
+                        positionstring += "\n"
             nspstring += (" "+str(nsp)).rjust(4)
         filestring += nspstring+"\n"
         filestring += positionunits
@@ -1203,7 +1312,7 @@ class KPOINTSFile:
         tmp = self.docstring
         tmp += " k-space resolution ~"+str(self.kresolution)+"/A\n"
         tmp += " 0\n"
-        tmp += "Monkhorst-Pack\n"
+        tmp += "Gamma\n"
         tmp += str(self.kgrid[0])+" "+str(self.kgrid[1])+" "+str(self.kgrid[2])+"\n"
         tmp += "0 0 0\n"
         return tmp
@@ -1243,31 +1352,40 @@ class INCARFile:
                     self.species[spcstr] = 1
         # get potcar list
         prioritylist = ["_d", "_pv", "_sv", "", "_h", "_s"]
-        potcarlist = []
+        potcars = dict([])
+        specieslist = []
         for a in self.species:
             for version in prioritylist:
                 potcarfile = self.potcardir+"/"+a+version+"/POTCAR"
                 if os.path.exists(potcarfile):
-                    potcarlist.append(potcarfile)
+                    potcars[a] = potcarfile
+                    specieslist.append(a)
                     break        
-        # get maximal encut from potcars
-        self.maxencut = 0.0
-        for f in potcarlist:
+        # get maximal encut and number of electrons from potcars
+        enmaxs = dict([])
+        zvals = dict([])
+        for a,f in potcars.iteritems():
             potcar = open(f,"r")
             for line in potcar:
-                words = line.split()
-                if len(words) > 0:
-                    if words[0] == "ENMAX":
-                        self.maxencut = max(float(words[2].rstrip(";")), self.maxencut)
-                        break
+                if search("ZVAL",line):
+                    zvals[a] = float(line.split("ZVAL")[1].lstrip("= ").split()[0].strip(string.punctuation))
+                if search("ENMAX",line):
+                    enmaxs[a] = float(line.split("ENMAX")[1].lstrip("= ").split()[0].strip(string.punctuation))
+                if search("END of PSCTR",line):
+                    break
             potcar.close()
+        self.maxencut = max([k for v,k in enmaxs.iteritems()])
         # ecut = max(encuts found in potcars)*encutfac
         self.encutfac = 1.5
         # do we suspect that this might be magnetic?
         self.magnetic = False
         self.magmomlist = []
-        suspiciouslist = set(["Cr", "Mn", "Fe", "Co", "Ni"])
-        initialmoments = {"Cr" : 3, "Mn" : 3, "Fe" : 3, "Co" : 3, "Ni" : 1}
+        suspiciouslist = set(["Cr", "Mn", "Fe", "Co", "Ni",
+                              "Ce","Pr","Nd","Pm","Sm","Eu",
+                              "Gd","Tb","Dy","Ho","Er","Tm"])
+        initialmoments = {"Cr" : 3, "Mn" : 3, "Fe" : 3, "Co" : 3, "Ni" : 1,
+                          "Ce" : 1, "Pr" : 2, "Nd" : 3, "Pm" : 4, "Sm" : 5, "Eu" : 6,
+                          "Gd" : 7, "Tb" : 8, "Dy" : 9, "Ho" : 10, "Er" : 11, "Tm" : 12}
         for s in self.species:
             if s in suspiciouslist:
                 self.magnetic = True
@@ -1276,9 +1394,26 @@ class INCARFile:
             else:
                 for i in range(self.species[s]):
                     self.magmomlist.append("0")
+        # Determine NBANDS
+        nmag = sum([int(i) for i in self.magmomlist])
+        nelect = 0.0
+        for sp,z in zvals.iteritems():
+            for a in self.cell.atomdata:
+                for b in a:
+                    if sp == b.spcstring():
+                        nelect += z
+        if nmag > 0:
+            nstates = int(math.ceil(nelect))
+        else:
+            nstates = int(math.ceil(nelect/2))
+        # NBANDS is max of the default VASP definition and occupied bands+20
+        natoms = sum([len(a) for a in self.cell.atomdata])
+        self.nbands = max(max(max(int(math.ceil(nelect/2))+int(natoms/2),3), math.ceil(0.6*nelect))+nmag, nstates+20)
+            
     def __str__(self):
         tmp = self.docstring
         tmp += "ENCUT = "+str(self.maxencut*self.encutfac)+"\n"
+        tmp += "NBANDS = "+str(self.nbands)+"\n"
         ## tmp += "IBRION = 1\n"
         ## tmp += "POTIM = 0.4\n"
         ## tmp += "ISIF = 2\n"
@@ -1749,11 +1884,14 @@ class XBandSysFile(GeometryOutputFile):
         filestring += "structure type\n"
         filestring += "UNKNOWN\n"
         filestring += "lattice parameter A  [a.u.]\n"
-        filestring += "%18.12f\n"%self.cell.a
+        filestring += "%18.12f\n"%self.cell.lengthscale
         filestring += "ratio of lattice parameters  b/a  c/a\n"
         filestring += "%18.12f%18.12f\n"%(self.cell.boa,self.cell.coa)
         filestring += "lattice parameters  a b c  [a.u.]\n"
-        filestring += "%18.12f%18.12f%18.12f\n"%(self.cell.a,self.cell.b,self.cell.c)
+        a = self.cell.lengthscale
+        b = self.cell.b * self.cell.lengthscale / self.cell.a
+        c = self.cell.c * self.cell.lengthscale / self.cell.a
+        filestring += "%18.12f%18.12f%18.12f\n"%(a,b,c)
         filestring += "lattice angles  alpha beta gamma  [deg]\n"
         filestring += "%18.12f%18.12f%18.12f\n"%(self.cell.alpha,self.cell.beta,self.cell.gamma)
         filestring += "primitive vectors     (cart. coord.) [A]\n"
@@ -1770,7 +1908,7 @@ class XBandSysFile(GeometryOutputFile):
         filestring += "%3i\n"%nq
         filestring += " IQ ICL     basis vectors     (cart. coord.) [A]                      RWS [a.u.]  NLQ  NOQ ITOQ\n"
         # Average Wigner-Seitz radius
-        rws = pow(3*self.cell.volume()/(4*pi*len(self.cell.atomset)),1.0/3.0)*self.cell.a
+        rws = pow(3*self.cell.volume()/(4*pi*len(self.cell.atomset)),1.0/3.0)*self.cell.lengthscale
         iq = 0
         icl = 0
         itoq = 0

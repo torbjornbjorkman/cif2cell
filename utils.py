@@ -15,14 +15,14 @@
 # along with cif2cell.  If not, see <http://www.gnu.org/licenses/>.
 #
 #******************************************************************************************
-#  Description: Definitions of basic classes for CIF2Cell.
+#  Description: Definitions of basic classes  and functions for CIF2Cell.
 #
 #  Author:      Torbjorn Bjorkman, torbjorn.bjorkman(at)aalto.fi
 #  Affiliation: COMP, Aaalto University School of Science,
 #               Department of Applied Physics, Espoo, Finland
 #******************************************************************************************
 from __future__ import division
-from math import sqrt
+from math import sqrt,acos
 from elementdata import *
 ################################################################################################
 # Miscellaneous
@@ -38,7 +38,9 @@ fourth = one/four
 sixth = one/six
 occepsilon = 0.000001
 floatlist = [third, 2*third, half, fourth, one, zero, sqrt(2.0),sixth,5*sixth]
-
+angtobohr = 1.8897261
+uperatogpercm = 1.6605388
+uperautogpercm = 11.205871
 ################################################################################################
 # Exception classes
 class SymmetryError(Exception):
@@ -75,11 +77,28 @@ class SetupError(Exception):
 class GeometryObject:
     """
     Parent class for anything geometrical contains:
-    compeps  : epsilon for determining when two floats are equal
+    compeps    : epsilon for determining when two floats are equal
+    invcompeps : 1/compeps
     """
-    def __init__(self):
-        self.compeps = 0.0002
+    def __init__(self,compeps=0.0002):
+        self.compeps = compeps
+        self.invcompeps = 1./self.compeps
 
+class CellFloat(float, GeometryObject):
+    """
+    Hashable float with comparison inherited from GeometryObject.
+    """
+    def __init__(self,t):
+        float.__init__(self)
+        GeometryObject.__init__(self)
+    def __hash__(self):
+        return int(self*self.invcompeps)
+    def __eq__(self, other):
+        if abs(self-other) > self.compeps:
+            return False
+        else:
+            return True
+        
 class Charge(float):
     """
     Class for representing the charge state/oxidation number of an atom (ion).
@@ -115,18 +134,17 @@ class Vector(list,GeometryObject):
     transform(matrix) : returns matrix*vector
     improveprecision  : identify some conspicuous numbers and improve precision
     """
-    def __init__(self, vec):
-        GeometryObject.__init__(self)
-        list.__init__(self, vec)
+    def __init__(self, vec, *args, **kwargs):
+        GeometryObject.__init__(self, *args, **kwargs)
+        list.__init__(self, [float(v) for v in vec])
     def __hash__(self):
-        return hash(1.1*self[0]+1.2*self[1]+1.3*self[2])
+        t = self.invcompeps*self[0]+1.1*self.invcompeps*self[1]+1.2*self.invcompeps*self[2]
+        return int(round(t))
     def __eq__(self,other):
         for i in range(3):
             if abs(self[i]-other[i]) > self.compeps:
                 return False
         return True
-    def length(self):
-        return sqrt(self[0]**2+self[1]**2+self[2]**2)
     def __lt__(self, other):
         sl = self[0]**2+self[1]**2+self[2]**2
         ol = other[0]**2+other[1]**2+other[2]**2
@@ -149,17 +167,25 @@ class Vector(list,GeometryObject):
             else:
                 s+= "%19.15f "%e
         return s
-    # multiplication by scalar
+    # Length of the vectors
+    def length(self):
+        return sqrt(self[0]**2+self[1]**2+self[2]**2)
+    # Multiplication by scalar
     def scalmult(self, a):
+        t = []
         for i in range(3):
-            self[i] *= a
-        return self
+            t.append(self[i]*a)
+        return t
     # dot product
     def dot(self,a):
         t = 0.0
         for i in range(3):
             t += self[i]*a[i]
         return t
+    # triple product
+    def triple(self,a,b):
+        t = [a,b,c]
+        return det3(t)
     # coordinate transformation
     def transform(self, matrix):
         t = Vector(mvmult3(matrix, self))
@@ -171,18 +197,21 @@ class Vector(list,GeometryObject):
                     # 0
                     self[i] = f
                     break
+    # Angle between this vector and another vector
+    def angle(self, other):
+        return acos(self.dot(other)/(self.length() * other.length()))
 
 class LatticeVector(Vector):
     """
     Vector of length three that maps back things into the cell
     """
-    def __init__(self, vec):
-        Vector.__init__(self, vec)
+    def __init__(self, vec, interval=(0.0, 1.0), *args, **kwargs):
+        Vector.__init__(self, vec, *args, **kwargs)
         # Interval we wish to use for the coordinates.
         # In practice either [0,1] or [-.5, 0.5]
-        self.interval = [0.0, 1.0]
-        self.intocell()
+        self.interval = interval
         self.improveprecision()
+        self.intocell()
     # Addition of two vectors, putting the result back
     # into the cell if necessary
     def __add__(self, other):
@@ -194,8 +223,7 @@ class LatticeVector(Vector):
     # Change interval
     def change_interval(self, interval):
         self.interval = interval
-        t = LatticeVector([0,0,0])
-        t.interval = interval
+        t = LatticeVector([0,0,0],interval=interval)
         self = self + t
     # coordinate transformation
     def transform(self, matrix):
@@ -205,8 +233,10 @@ class LatticeVector(Vector):
     # Put the vector components into the cell interval defined by self.interval
     def intocell(self):
         for i in range(3):
-            while not (self.interval[0] <= self[i] < self.interval[1]):
-                self[i] -= copysign(1,self[i])
+            while self[i] < self.interval[0]:
+                self[i] += 1.0
+            while self[i] >= self.interval[1]-self.compeps:
+                self[i] -= 1.0
 
 class LatticeMatrix(GeometryObject, list):
     """
@@ -220,10 +250,10 @@ class LatticeMatrix(GeometryObject, list):
         list.__init__(self, t)
     # no idea whether this is a clever choice of hash function...
     def __hash__(self):
-        t = 0.1*self[0][0] + 0.2*self[0][1] + 0.3*self[0][2] +\
-            0.4*self[0][0] + 0.5*self[0][1] + 0.6*self[0][2] +\
-            0.7*self[0][0] + 0.8*self[0][1] + 0.9*self[0][2]
-        return hash(t)
+        t = self.invcompeps*(self[0][0] + self[0][1] + self[0][2] +\
+                             self[0][0] + self[0][1] + self[0][2] +\
+                             self[0][0] + self[0][1] + self[0][2])
+        return int(t)
     def __str__(self):
         matstr = ""
         for l in self:
@@ -259,6 +289,7 @@ class AtomSite(GeometryObject):
     Functions:
         __eq__    : compare equality
         __str__   : one line with species and position info
+        distance  : distance to some other atom
         spcstring : species string ('Mn', 'La/Sr' ...)
         alloy     : true if there are more than one species occupying the site
         
@@ -339,6 +370,11 @@ class AtomSite(GeometryObject):
                 return max(t)
         except:
             return None
+    #
+    # The distance to another atom site
+    def distance(self,other):
+        v = self.position-other.position
+        return v.length()
 
 class SymmetryOperation(GeometryObject):
     """
@@ -354,11 +390,7 @@ class SymmetryOperation(GeometryObject):
             self.rotation = None
             self.translation = None
     def __hash__(self):
-        t = 0.1*self.rotation[0][0] + 0.2*self.rotation[0][1] + 0.3*self.rotation[0][2] +\
-            0.4*self.rotation[0][0] + 0.5*self.rotation[0][1] + 0.6*self.rotation[0][2] +\
-            0.7*self.rotation[0][0] + 0.8*self.rotation[0][1] + 0.9*self.rotation[0][2] +\
-            1.1*self.translation[0] + 1.2*self.translation[1] + 1.3*self.translation[2]
-        return hash(t)
+        return hash(self.rotation)+hash(self.translation)
     # This way of printing was useful for outputting to CASTEP.
     def __str__(self):
         return str(self.rotation)+str(self.translation)+"\n"
@@ -426,6 +458,10 @@ class SymmetryOperation(GeometryObject):
             return True
         else:
             return False
+    # Operate on a vector and return the result
+    def operate(self,vector):
+        t = Vector(mvmult3(self.rotation, vector)) + self.translation
+        return t
 
 ################################################################################################
 # Dictionaries

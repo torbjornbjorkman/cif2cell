@@ -40,7 +40,7 @@ from elementdata import *
 
 # Name and version
 programname = "cif2cell"
-version = "0.4.6"
+version = "supercell"
 
 # Turn of warnings about deprecated stuff
 warnings.simplefilter("ignore",DeprecationWarning)
@@ -57,7 +57,7 @@ parser.add_option("-q","--quiet",dest="quiet",help="Suppress most screen output,
 # GENERAL OPTIONS
 generalopts = OptionGroup(parser, "General options")
 generalopts.add_option("-f","--file",dest="file",help="Input CIF file, unless given as first argument to the program.",metavar="FILE")
-generalopts.add_option("-p","--program",dest="program",help="The electronic structure code you want to create input file(s) for. Currently supports: abinit, castep, cpmd, cellgen, crystal09, elk, emto, exciting, fleur, ncol, rspt, siesta, spacegroup, sprkkr, vasp, xband. This keyword is case insensitive.")
+generalopts.add_option("-p","--program",dest="program",help="The electronic structure code you want to create input file(s) for. Currently supports: abinit, ase, castep, cpmd, cellgen, crystal09, elk, emto, exciting, fleur, ncol, rspt, siesta, spacegroup, sprkkr, vasp, xband, xyz. This keyword is case insensitive.")
 generalopts.add_option("-o","--outputfile",dest="outputfile",help="Name of output file (if other than default for you electronic structure code).",metavar="FILE")
 generalopts.add_option("-a","--append",dest="append",help="Append the output to given output file rather than overwriting.",action="store_true")
 generalopts.add_option("--grammar",dest="grammar",help="Set the CIF grammar to be used when parsing the input file (default is 1.1).")
@@ -65,15 +65,19 @@ generalopts.add_option("--which-filename",dest="filenamequery",help="If given to
 generalopts.add_option("-b","--block",dest="block",help="Block of data in input file (if there are more than one block in the CIF file).")
 # CELL GENERATION OPTIONS
 cellgenopts = OptionGroup(parser, "Cell generation options")
-#parser.add_option("--rhombohedral-diagonal",dest="rhombdiag",help="Set up rhombohedral cell with threefold axis along [111].",action="store_true")
 cellgenopts.add_option("--no-reduce",dest="noreduce",help="Do not reduce to the primitive cell.",action="store_true")
 cellgenopts.add_option("--force",dest="force",help="Attempt to force generation of output file despite problems and/or ambiguities in the input file. There are no guarantees that what you get makes sense, but the program makes an honest attempt. Implies --force-alloy.",action="store_true")
 cellgenopts.add_option("--force-alloy",dest="forcealloy",help="Force generation of output file for an alloy compound for an electronic structure code that does not implement any alloy theory (such as CPA).",action="store_true")
 cellgenopts.add_option("--coordinate-tolerance",dest="coordtol",help="Parameter for determining when two coordinates are the same (default=0.0002).")
 cellgenopts.add_option("--setup-all",dest="setupall",help="Make a complete setup, not just the geometrical part. This is currently only available for VASP.",action="store_true")
 cellgenopts.add_option("--k-resolution",dest="kresolution",help="The desired resolution in k-space (default=0.2). Used for generating k-space grid options if --setup-all is specified.")
+cellgenopts.add_option("--transform-cell",dest="celltransformation",help="Transformation matrix applied to the lattice vectors and the symmetry operations if you, for example, want to realign the cell.",metavar="[[],[],[]]")
+cellgenopts.add_option("--cubic-diagonal-z",dest="cubediagz",help="Set up cubic cell with [111] direction along the z-axis.",action="store_true")
+cellgenopts.add_option("--rhombohedral-diagonal",dest="rhombdiag",help="Set up rhombohedral cell with threefold axis along pseudocubic [111] direction.",action="store_true")
+cellgenopts.add_option("--random-displacements",dest="randomdisp",help="Randomly displace all atoms. Depending on the distribution, the displacement size is either the maximal displacement (for uniform distribution) or the standard deviation (for gaussian distribution) in Angstrom.",metavar="displacementsize")
+cellgenopts.add_option("--random-displacements-distribution",dest="randomdistr",help="The distribution used for displacing the atoms.",metavar="uniform/gaussian")
 # Supercell options
-cellgenopts.add_option("--supercell",dest="supercellmap",help="Three integers separated with commas and enclosed in square brackets that specify the dimensions of a supercell to be constructed from the primitive cell. If combined with the --no-reduce option the supercell will instead be generated based on the conventional cell.",metavar="[k,l,m]")
+cellgenopts.add_option("--supercell",dest="supercellmap",help="Three integers separated with commas and enclosed in square brackets that specify the dimensions of a supercell OR three vectors of integers that gives the map to the supercell to be constructed from the primitive cell. If combined with the --no-reduce option the supercell will instead be generated based on the conventional cell.",metavar="[k,l,m]/[[],[],[]]")
 cellgenopts.add_option("--supercell-vacuum",dest="supercellvacuum",help="Three numbers >=0 separated with commas and enclosed in square brackets that specify a number of unit cell units of vacuum to be added along the first, second or third of the generated lattice vectors.",metavar="[k,l,m]")
 cellgenopts.add_option("--supercell-translation-vector",dest="supercelltransvec",help="Three numbers separated with commas and enclosed in square brackets that specify a final shift of all atomic positions in the final cell (in units of the lattice vectors of the new cell).",metavar="[k,l,m]")
 cellgenopts.add_option("--supercell-sort",dest="supercellsort",help="Sort the atom positions by some scheme. Currently available are:     1) By cartesian coordinate - example: xzy will sort first on x then on z then on y.     2) by lattice vector - example: 132 will sort first by lattice vector 1 then by lattice vector 3 and last by lattice vector 2.")
@@ -112,7 +116,11 @@ progspec.add_option("--vasp-print-species",dest="vaspprintspcs",help="Print the 
 progspec.add_option("--vasp-cartesian",dest="vaspcart",help="Write lattice vectors and positions to POSCAR file in cartesian coordinates and set length to 1.",action="store_true")
 progspec.add_option("--vasp-cartesian-lattice-vectors",dest="vaspcartvecs",help="Write lattice vectors to POSCAR file in cartesian coordinates and set the length scale to 1.",action="store_true")
 progspec.add_option("--vasp-cartesian-positions",dest="vaspcartpos",help="Write atomic positions to POSCAR file in Cartesian rather than Direct coordinates.",action="store_true")
+progspec.add_option("--vasp-selective-dynamics",dest="vaspselectivedyn",help="Output POSCAR in selective dynamics format (without any constrained atoms).",action="store_true")
 progspec.add_option("--vasp-pseudo-libdr",dest="vasppseudolib",help="Path to the VASP pseudopotential library.")
+# xyz
+progspec.add_option("--xyz-atomic-units",dest="xyzatomicunits",help="Output xyz file in atomic units rather than angstrom.",action="store_true")
+#
 parser.add_option_group(generalopts)
 parser.add_option_group(cellgenopts)
 parser.add_option_group(printopts)
@@ -140,6 +148,7 @@ if options.filenamequery and not options.program:
     sys.exit(1)
     
 #############################################################
+# INITIAL PARSING OF VARIOUS INPUT DATA
 # Electronic structure program
 if options.program:
     outputprogram = options.program.lower()
@@ -147,10 +156,15 @@ else:
     outputprogram = None
 
 # recast some input parameters
-if options.noreduce or outputprogram == "cif":
+if options.noreduce:
     reducetoprim = False
 else:
     reducetoprim = True
+
+try:
+    printdigits = int(options.printdigits)
+except:
+    printdigits = 8
 
 # Set verbosity level
 if options.verbose and not options.quiet:
@@ -176,6 +190,12 @@ if options.force:
     force = True
 else:
     force = False
+
+# Make supercell?
+if options.supercellmap or options.supercellvacuum or options.supercelltransvec:
+    makesupercell = True
+else:
+    makesupercell = False
 
 # Initialize element data
 ed = ElementData()
@@ -218,6 +238,13 @@ if options.kresolution:
 else:
     kresolution=0.2
 
+# Cell transformations
+if options.celltransformation or options.cubediagz or options.rhombdiag:
+    transformcell = True
+else:
+    transformcell = False
+    
+#################################################################
 # Open and read CIF file
 cif_file = None
 if len(sys.argv) > 1:
@@ -243,16 +270,18 @@ if cif_file:
     ## val_report = CifFile.ValidationResult(val_results)
     try:
         cf = CifFile.ReadCif(cif_file,grammar=cif_grammar)
-    except:
+    except Exception, e:
         sys.stderr.write("***Error: could not read "+cif_file+".\n")
+        sys.stderr.write("Something may be wrong with the CIF file, you can check it with ")
+        sys.stderr.write("the free IUCr CIF valitation tool at http://http://checkcif.iucr.org/\n")
+        sys.stderr.write(e.value+"\n")
         sys.exit(2)
 else:
     sys.stderr.write("***Error: No input CIF file given\n")
     sys.exit(2)
 
 # Make supercell?
-if options.supercellmap or options.supercellvacuum or options.supercelltransvec:
-    makesupercell = True
+if makesupercell:
     if options.supercellmap:
         supercellmap = eval(options.supercellmap)
     else:
@@ -270,8 +299,6 @@ if options.supercellmap or options.supercellvacuum or options.supercelltransvec:
         supercellsort = options.supercellsort.lower()
     else:
         supercellsort = ""
-else:
-    makesupercell = False
 
 ##############################################
 # Get blocks
@@ -314,11 +341,9 @@ except SymmetryError, e:
 # Generate cell
 try:
     if reducetoprim:
-    ## if options.rhombdiag:
-    ##     cd.rhombohedral_diagonal = True
-        cell = cd.primitive()
+        cd.primitive()
     else:
-        cell = cd.conventional()
+        cd.conventional()
 except SymmetryError, e:
     sys.stderr.write("***Error: cell setup: "+e.value+"\n")
     sys.exit(2)
@@ -326,6 +351,18 @@ except CellError, e:
     sys.stderr.write("***Error: cell setup: "+e.value+"\n")
     sys.exit(2)
 
+# Randomly displace atoms if requested. This erases all symmetry operations.
+if options.randomdisp and not makesupercell:
+    if options.randomdistr:
+        distr = options.randomdistr
+    else:
+        distr = "uniform"
+    try:
+        cd.randomDisplacements(float(options.randomdisp),distribution=distr)
+    except SetupError, e:
+        sys.stderr.write("***Error: random displacements: "+e.value+"\n")
+        sys.exit(3)
+    cd.symops = set([SymmetryOperation(['x','y','z'])])
 
 # Print cell
 if verbose or not options.program and not options.quiet:
@@ -342,7 +379,7 @@ if verbose or not options.program and not options.quiet:
     print compoundstring
     # Print database
     print ref.databasestring
-    if cell.alloy and forcealloy and options.program:
+    if cd.alloy and forcealloy and options.program:
         print "\nEnforcing generation of file(s) for "+outputprogram+" for an alloy."
     print "\n BIBLIOGRAPHIC INFORMATION"
     refstrings = ref.referencestring().split()
@@ -370,32 +407,6 @@ if verbose or not options.program and not options.quiet:
         print "Symmetry equivalent sites:"
         for i in range(len(cd.symops)):
             print "%4i  %8s, %8s, %8s" % (i+1, cd.symops[i].eqsite[0], cd.symops[i].eqsite[1], cd.symops[i].eqsite[2])
-    if printsymops or printseitz or verbose:
-        # Print symmetry operations. Need to make list of it to control order.
-        symoplist = sorted(list(cell.symops))
-        if printsymops or verbose:
-            print "\nSymmetry operations : "
-            print "  3x3 rotation matrix +"
-            print "  3x1 translation vector"
-            i = 1
-            for op in symoplist:
-                print "Operation "+str(i)
-                for v in op.rotation:
-                    print threedecs%(v[0],v[1],v[2])
-                print threedecs%(op.translation[0],op.translation[1],op.translation[2])
-                i += 1
-        if printseitz:
-            print "\nSymmetry operations :"
-            print "  In Seitz matrix form"
-            i = 1
-            for op in symoplist:
-                print "Operation "+str(i)
-                tmpstring = ""
-                for j in range(3):
-                    tmpstring += fourdecs%(op.rotation[j][0],op.rotation[j][1],op.rotation[j][2],op.translation[j])+"\n"
-                tmpstring += fourdecs%(0,0,0,1)
-                print tmpstring
-                i += 1    
     print "\n INPUT CELL INFORMATION"
     print "Lattice parameters:"
     tmpstring = ""
@@ -431,12 +442,12 @@ if verbose or not options.program and not options.quiet:
     # w2 = width of a decimal column
     # w3 = width of the occupancy column
     # w4 = width of the charge state column
-    if cell.alloy:
+    if cd.alloy:
         w1 = 0
         w3 = 0
         w4 = 0
         # Find atom and occupation column widths
-        for a in cell.atomdata:
+        for a in cd.atomdata:
             for b in a:
                 tmpstring1 = ""
                 tmpstring2 = ""
@@ -445,7 +456,7 @@ if verbose or not options.program and not options.quiet:
                     tmpstring1 += k+"/"
                     tmpstring2 += str(v).rstrip("0.")+"/"
                     # charge output
-                    for k2,v2 in cell.chargedict.iteritems():
+                    for k2,v2 in cd.chargedict.iteritems():
                         if k2.strip(string.punctuation+string.digits) == k:
                             tmpstring3 += str(v2)+"/"
                 tmpstring1 = tmpstring1.rstrip("/")
@@ -476,7 +487,7 @@ if verbose or not options.program and not options.quiet:
         for i in range(3):
             transmtx.append([])
             for j in range(3):
-                transmtx[i].append(cell.latticevectors[i][j]*cd.a)
+                transmtx[i].append(cd.latticevectors[i][j]*cd.lengthscale)
             i += 1
         for i in ["x","y","z"]:
             siteheader += i.rjust(decpos)+" "
@@ -486,7 +497,7 @@ if verbose or not options.program and not options.quiet:
                     [0, 0, 1]]
         for i in ["a1","a2","a3"]:
             siteheader += i.rjust(decpos)+" "
-    if cell.alloy:
+    if cd.alloy:
         if w3 > 13:
             siteheader += "occupancies".rjust(w3)
         else:
@@ -495,163 +506,137 @@ if verbose or not options.program and not options.quiet:
         siteheader += " "+"charge".rjust(w4)
     print siteheader
     # Representative sites
-    for i in range(len(cell.ineqsites)):
+    for i in range(len(cd.ineqsites)):
         tmpstring = ""
         occstring = ""
         chargestring = ""
-        for k,v in cell.occupations[i].iteritems():
+        for k,v in cd.occupations[i].iteritems():
             tmpstring += k+"/"
             occstring += str(v)+"/"
             # charge output
-            for k2,v2 in cell.chargedict.iteritems():
+            for k2,v2 in cd.chargedict.iteritems():
                 if k2.strip(string.punctuation+string.digits) == k:
                     chargestring += str(v2)+"/"
         tmpstring = tmpstring.rstrip("/")
         occstring = occstring.rstrip("/")
         chargestring = chargestring.rstrip("/")
-        v = [t for t in cell.ineqsites[i]]
+        v = [t for t in cd.ineqsites[i]]
         tmpstring = tmpstring.ljust(w1) + threedecs % (v[0],v[1],v[2])
-        if cell.alloy:
+        if cd.alloy:
             tmpstring += " "+occstring.rjust(w3)
         if printcharges:
             tmpstring += " "+chargestring.rjust(w4)
         print tmpstring
-    print "\n OUTPUT CELL INFORMATION"
-    tmpstring = "Bravais lattice vectors :"
-    if options.printcart:
-        fact = cd.a
-    else:
-        fact = 1
-    print tmpstring
-    formatstring = ""
-    for i in range(3):
-        formatstring = formatstring+decform+" "
-    for i in range(3):
-        print formatstring % (cell.latticevectors[i][0]*fact, cell.latticevectors[i][1]*fact, cell.latticevectors[i][2]*fact)
-    # Print out all sites
-    tmpstring = "All sites, "
-    if options.printcart:
-        tmpstring += "(cartesian coordinates):"
-    else:
-        tmpstring += "(lattice coordinates):"
-    print tmpstring
-    print siteheader
-    for a in cell.atomdata:
+    # Print volume and density 
+    weight = 0.0
+    for a in cd.atomdata:
         for b in a:
-            spcsstring = ""
-            occstring = ""
-            chargestring = ""
             for k,v in b.species.iteritems():
-                spcsstring += k+"/"
-                occstring += str(v).rstrip("0.")+"/"
-                # charge output
-                for k2,v2 in cell.chargedict.iteritems():
-                    if k2.strip(string.punctuation+string.digits) == k:
-                        chargestring += str(v2)+"/"
-            spcsstring = spcsstring.rstrip("/")
-            occstring = occstring.rstrip("/")
-            chargestring = chargestring.rstrip("/")
-            v = mvmult3(transmtx,b.position)
-            tmpstring = spcsstring.ljust(w1)+threedecs%(v[0],v[1],v[2])
-            if cell.alloy:
-                tmpstring += " "+occstring.rjust(w3)
-            if printcharges:
-                tmpstring += " "+chargestring.rjust(w4)
-            print tmpstring
+                weight += ed.elementweight[k]*v
+    if options.printau:
+        volume = cd.volume()*(cd.lengthscale*angtobohr)**3
+        density = weight/volume
+        print "\nUnit cell volume  : "+decform%volume+" (a.u.)^3"
+        print "Unit cell density : "+decform%density+" u/(a.u.)^3 = "+decform%(density*uperautogpercm)+" g/cm^3"
+    else:
+        volume = cd.volume()*cd.lengthscale**3
+        density = weight/volume
+        print "\nUnit cell volume  : "+decform%volume+" A^3"
+        print "Unit cell density : "+decform%density+" u/A^3 = "+decform%(density*uperatogpercm)+" g/cm^3"
+    
+    # Output cell
+    print "\n OUTPUT CELL INFORMATION"
+    cd.printCell(printcart=options.printcart, printdigits=printdigits, printcharges=options.printcharges)
 
+##############################################
+# Rotate cell
+if transformcell:
+    # pre-defined transformations
+    if options.cubediagz:
+        # Put [111] direction along z axis.
+        celltransformation = LatticeMatrix([[0.577350269189626,-1.000000000000000,0.816496580927725],
+                                            [0.577350269189626, 1.000000000000000,0.816496580927725],
+                                            [-1.154700538379250,0.000000000000000,0.816496580927726]])
+    if options.rhombdiag:
+        # Put z direction along pseudocubic [111]. Kind of the opposite of the cubediagz.
+        celltransformation = LatticeMatrix([[0.816496580927726,-0.408248290463863,-0.408248290463863],
+                                            [0.000000000000000, 0.707106781186547,-0.707106781186547],
+                                            [0.577350269189626, 0.577350269189626, 0.577350269189626]])
+    # explicitly giving the transformation overrides any other transformation
+    if options.celltransformation:
+        celltransformation = eval(options.celltransformation)
+    try:
+        cd.transformCell(celltransformation)
+    except CellError, e:
+        sys.stderr.write("***Error: Cell transformation: "+e.value+"\n")
+        sys.exit(2)
+    if verbose or not options.program and not options.quiet:
+        print "\n TRANSFORMED CELL"
+        cd.printCell(printcart=options.printcart, printdigits=printdigits, printcharges=options.printcharges)
+    
 ##############################################
 # Generate supercell
 if makesupercell:
     try:
-        supercell = cd.getSuperCell(supercellmap,supercellvacuum,supercelltransvec,sort=supercellsort)
+        cd.getSuperCell(supercellmap,supercellvacuum,supercelltransvec,sort=supercellsort)
     except CellError, e:
         sys.stderr.write("***Error: Supercell setup: "+e.value+"\n")
         sys.exit(2)
+    # Randomly displace atoms if requested. This erases all symmetry operations.
+    if options.randomdisp:
+        if options.randomdistr:
+            distr = options.randomdistr
+        else:
+            distr = "uniform"
+        try:
+            cd.randomDisplacements(float(options.randomdisp),distribution=distr)
+        except SetupError,e:
+            sys.stderr.write("***Error: random displacements: "+e.value+"\n")
+            sys.exit(3)
+        cd.symops = set([SymmetryOperation(['x','y','z'])])
+    
     # Print supercell
     if verbose or not options.program and not options.quiet:
         print "\n SUPERCELL INFORMATION"
-        tmpstring = "Bravais lattice vectors :"
-        if options.printcart:
-            fact = cd.a
-        else:
-            fact = 1
-        print tmpstring
-        formatstring = ""
-        for i in range(3):
-            formatstring = formatstring+decform+" "
-        for i in range(3):
-            print formatstring % (supercell.latticevectors[i][0]*fact, supercell.latticevectors[i][1]*fact, supercell.latticevectors[i][2]*fact)
-        # Print out all sites
-        tmpstring = "All sites, "
-        if options.printcart:
-            tmpstring += "(cartesian coordinates):"
-            transmtx = []
-            for i in range(3):
-                transmtx.append([])
-                for j in range(3):
-                    transmtx[i].append(cell.latticevectors[i][j]*cd.a)
-                i += 1
-        else:
-            tmpstring += "(lattice coordinates):"
-            transmtx = [[1, 0, 0],
-                        [0, 1, 0],
-                        [0, 0, 1]]
-        print tmpstring
-        print siteheader
-        for a in cell.atomdata:
-            for b in a:
-                spcsstring = ""
-                occstring = ""
-                for k,v in b.species.iteritems():
-                    spcsstring += k+"/"
-                    occstring += str(v).rstrip("0.")+"/"
-                spcsstring = spcsstring.rstrip("/")
-                occstring = occstring.rstrip("/")
-                v = mvmult3(transmtx,b.position)
-                tmpstring = spcsstring.ljust(w1)+threedecs%(v[0],v[1],v[2])
-                if cell.alloy:
-                    tmpstring += " "+occstring.rjust(w3)
-                print tmpstring
-    if printsymops or printseitz or verbose:
-        # Print symmetry operations. Need to make list of it to control order.
-        symoplist = sorted(list(cell.symops))
-        if printsymops or verbose:
-            print "\nSymmetry operations : "
-            print "  3x3 rotation matrix +"
-            print "  3x1 translation vector"
-            i = 1
-            for op in symoplist:
-                print "Operation "+str(i)
-                for v in op.rotation:
-                    print threedecs%(v[0],v[1],v[2])
-                print threedecs%(op.translation[0],op.translation[1],op.translation[2])
-                i += 1
-        if printseitz:
-            print "\nSymmetry operations :"
-            print "  In Seitz matrix form"
-            i = 1
-            for op in symoplist:
-                print "Operation "+str(i)
-                tmpstring = ""
-                for j in range(3):
-                    tmpstring += fourdecs%(op.rotation[j][0],op.rotation[j][1],op.rotation[j][2],op.translation[j])+"\n"
-                tmpstring += fourdecs%(0,0,0,1)
-                print tmpstring
-                i += 1    
-                
-    # update cell to the supercell
-    cell = supercell
+        cd.printCell(printcart=options.printcart, printdigits=printdigits, printcharges=options.printcharges)
+        
+if printsymops or printseitz or verbose:
+    # Print symmetry operations. Need to make list of it to control order.
+    symoplist = sorted(list(cd.symops))
+    if printsymops or verbose:
+        print "\nSymmetry operations : "
+        print "  3x3 rotation matrix +"
+        print "  3x1 translation vector"
+        i = 1
+        for op in symoplist:
+            print "Operation "+str(i)
+            for v in op.rotation:
+                print threedecs%(v[0],v[1],v[2])
+            print threedecs%(op.translation[0],op.translation[1],op.translation[2])
+            i += 1
+    if printseitz:
+        print "\nSymmetry operations :"
+        print "  In Seitz matrix form"
+        i = 1
+        for op in symoplist:
+            print "Operation "+str(i)
+            tmpstring = ""
+            for j in range(3):
+                tmpstring += fourdecs%(op.rotation[j][0],op.rotation[j][1],op.rotation[j][2],op.translation[j])+"\n"
+            tmpstring += fourdecs%(0,0,0,1)
+            print tmpstring
+            i += 1    
 
 ##############################################
 # Sort sites so that the ones occupied by the heaviest elements come first,
 # if the Python version supports this form of the max function and there is
 # nothing wrong with the site data.
 try:
-    cell.atomdata.sort(key = lambda a: ed.elementnr[max(a[0].species, key = a[0].species.get)], reverse=True)
+    cd.atomdata.sort(key = lambda a: ed.elementnr[max(a[0].species, key = a[0].species.get)], reverse=True)
 except:
     pass
 
-##############################################
+############################################################################################
 # Output file mode (overwrite or append?)
 if options.append:
     outmode = "a"
@@ -675,88 +660,43 @@ else:
         outputfile = "input.xml"
     elif outputprogram == "spacegroup":
         outputfile = "spacegroup.in"
-    elif outputprogram == "abinit":
-        outputfile = ref.cpd.replace(" ", "").replace("(","").replace(")","")
-        # If the filename seems too long or strange, replace by the name of the cif file
-        if len(outputfile.strip(string.punctuation)) == 0:
-            outputfile = cif_file_name.replace(".cif","")
-        if len(outputfile) > 24:
-            if len(cif_file_name) < len(outputfile):
-                outputfile = cif_file_name.replace(".cif","")
-            else:
-                outputfile = outputfile[0:9]
-        outputfile = outputfile+".in"
-    elif outputprogram == "siesta":
-        outputfile = ref.cpd.replace(" ", "").replace("(","").replace(")","")
-        # If the filename seems too long or strange, replace by the name of the cif file
-        if len(outputfile.strip(string.punctuation)) == 0:
-            outputfile = cif_file_name.replace(".cif","")
-        if len(outputfile) > 24:
-            if len(cif_file_name) < len(outputfile):
-                outputfile = cif_file_name.replace(".cif","")
-            else:
-                outputfile = outputfile[0:9]
-        outputfile = outputfile+".fdf"
-    elif outputprogram == "cpmd":
-        outputfile = ref.cpd.replace(" ", "").replace("(","").replace(")","")
-        # If the filename seems too long or strange, replace by the name of the cif file
-        if len(outputfile.strip(string.punctuation)) == 0:
-            outputfile = cif_file_name.replace(".cif","")
-        if len(outputfile) > 24:
-            if len(cif_file_name) < len(outputfile):
-                outputfile = cif_file_name.replace(".cif","")
-            else:
-                outputfile = outputfile[0:9]
-        outputfile = outputfile+".inp"
-    elif outputprogram == "castep":
-        outputfile = ref.cpd.replace(" ", "").replace("(","").replace(")","")
-        # If the filename seems too long or strange, replace by the name of the cif file
-        if len(outputfile.strip(string.punctuation)) == 0:
-            outputfile = cif_file_name.replace(".cif","")
-        if len(outputfile) > 24:
-            if len(cif_file_name) < len(outputfile):
-                outputfile = cif_file_name.replace(".cif","")
-            else:
-                outputfile = outputfile[0:9]
-        outputfile = outputfile+".cell"
-    elif outputprogram == "fleur":
-        outputfile = ref.cpd.replace(" ", "").replace("(","").replace(")","")
-        # If the filename seems too long or strange, replace by the name of the cif file
-        if len(outputfile.strip(string.punctuation)) == 0:
-            outputfile = cif_file_name.replace(".cif","")
-        if len(outputfile) > 24:
-            if len(cif_file_name) < len(outputfile):
-                outputfile = cif_file_name.replace(".cif","")
-            else:
-                outputfile = outputfile[0:9]
-        outputfile = "inp_"+outputfile
-    elif outputprogram == "crystal09":
-        outputfile = ref.cpd.replace(" ", "").replace("(","").replace(")","")
-        # If the filename seems too long or strange, replace by the name of the cif file
-        if len(outputfile.strip(string.punctuation)) == 0:
-            outputfile = cif_file_name.replace(".cif","")
-        if len(outputfile) > 24:
-            if len(cif_file_name) < len(outputfile):
-                outputfile = cif_file_name.replace(".cif","")
-            else:
-                outputfile = outputfile[0:9]
-        # This is the naming convention from a large bunch of test cases, no idea why
-        outputfile = outputfile+".d12"
-    elif outputprogram == "sprkkr" or outputprogram == "xband":
-        outputfile = ref.cpd.replace(" ", "").replace("(","").replace(")","")
-        # If the filename seems too long or strange, replace by the name of the cif file
-        if len(outputfile.strip(string.punctuation)) == 0:
-            outputfile = cif_file_name.replace(".cif","")
-        if len(outputfile) > 24:
-            if len(cif_file_name) < len(outputfile):
-                outputfile = cif_file_name.replace(".cif","")
-            else:
-                outputfile = outputfile[0:9]
-        outputfile = outputfile+".sys"
     elif outputprogram == "cif":
         outputfile = cif_file_name.replace(".cif","")+"_allatoms.cif"
+    elif outputprogram == "ase":
+        outputfile = "positions.py"
     else:
-        outputfile = ""
+        # A bunch of programs get default output constructed as:
+        # 1. chemical abbreviation (i.e. something like "H2SO4" or CeRhIn5)
+        # 2. if this is too long, use the original cif filename
+        outputfile = ref.cpd.replace(" ", "").replace("(","").replace(")","")
+        # If the filename seems too long or strange, replace by the name of the cif file
+        if len(outputfile.strip(string.punctuation)) == 0:
+            outputfile = cif_file_name.replace(".cif","")
+        if len(outputfile) > 24:
+            if len(cif_file_name) < len(outputfile):
+                outputfile = cif_file_name.replace(".cif","")
+            else:
+                outputfile = outputfile[0:9]
+        # Append file endings etc.
+        if outputprogram == "abinit":
+            outputfile = outputfile+".in"
+        elif outputprogram == "siesta":
+            outputfile = outputfile+".fdf"
+        elif outputprogram == "cpmd":
+            outputfile = outputfile+".inp"
+        elif outputprogram == "castep":
+            outputfile = outputfile+".cell"
+        elif outputprogram == "fleur":
+            outputfile = "inp_"+outputfile
+        elif outputprogram == "crystal09":
+            # This is the naming convention from a large bunch of test cases, no idea why
+            outputfile = outputfile+".d12"
+        elif outputprogram == "sprkkr" or outputprogram == "xband":
+            outputfile = outputfile+".sys"
+        elif outputprogram == "xyz":
+            outputfile = outputfile+".xyz"
+        else:
+            pass
 
 # Print output filename to screen
 if outputprogram !="":
@@ -765,7 +705,7 @@ if outputprogram !="":
 
 ################################################################################################
 # stuff that should be printed irrespective of the verbose flag
-if cell.alloy and forcealloy and options.program and not verbose:
+if cd.alloy and forcealloy and options.program and not verbose:
     tmpstring = "Enforcing file generation for alloy. "
     if outputprogram == 'bstr' or outputprogram == 'vasp' or outputprogram == 'cpmd':
         print tmpstring
@@ -779,7 +719,7 @@ if not options.program:
     sys.exit(0)
 
 # Don't generate output for alloys (for most programs)
-if cell.alloy and not forcealloy and not outputprogram in alloyprograms:
+if cd.alloy and not forcealloy and not outputprogram in alloyprograms:
     print "Error: This system is an alloy, but the electronic structure code "+outputprogram+" has no way of dealing with alloys.\nRun again with --force-alloy (or --force) if you want to generate an (incomplete) output file anyway."
     sys.exit(17)
 
@@ -813,18 +753,19 @@ if outputprogram == 'cif':
     cf = CifFile.CifFile()
     cb = CifFile.CifBlock()
     if makesupercell:
-        a = cd.latticevectors[0].scalmult(cd.lengthscale)
-        b = cd.latticevectors[1].scalmult(cd.lengthscale)
-        c = cd.latticevectors[2].scalmult(cd.lengthscale)
+        a = Vector(cd.latticevectors[0].scalmult(cd.lengthscale))
+        b = Vector(cd.latticevectors[1].scalmult(cd.lengthscale))
+        c = Vector(cd.latticevectors[2].scalmult(cd.lengthscale))
 	cb['_cell_length_a'] = a.length()
 	cb['_cell_length_b'] = b.length()
 	cb['_cell_length_c'] = c.length()
 	cb['_cell_angle_alpha'] = acos(b.dot(c)/(b.length()*c.length()))*180/pi
 	cb['_cell_angle_beta'] = acos(a.dot(c)/(a.length()*c.length()))*180/pi
 	cb['_cell_angle_gamma'] = acos(b.dot(a)/(a.length()*b.length()))*180/pi
-    # Supercell may have broken symmetry, so just put P1
+        # Supercell may have broken symmetry, so just put P1
         cb['_space_group_IT_number'] = 1
         cb['_space_group_name_H-M_alt'] = "P1"
+        cb['_space_group_name_Hall'] = "P 1"
     else:
         # Cell parameters
         cb['_cell_length_a'] = cd.a
@@ -844,24 +785,32 @@ if outputprogram == 'cif':
     fracty = []
     fractz = []
     occup = []
-    for a in cell.atomdata:
+    i = 0
+    for a in cd.atomdata:
+        if not makesupercell:
+            i += 1
         for b in a:
+            if makesupercell:
+                i += 1
             for k in b.species:
-                labels.append(k)
+                labels.append(k+str(i))
                 symbols.append(k)
-                symmult.append(str(len(a)))
-                fractx.append(str(b.position[0]))
-                fracty.append(str(b.position[1]))
-                fractz.append(str(b.position[2]))
+                if makesupercell:
+                    symmult.append("1")
+                else:
+                    symmult.append(str(len(a)))
+                fractx.append(("%19.16f"%b.position[0]).strip(" "))
+                fracty.append(("%19.16f"%b.position[1]).strip(" "))
+                fractz.append(("%19.16f"%b.position[2]).strip(" "))
                 occup.append(str(b.species[k]))
     #
     cb.AddCifItem(([['_atom_site_label',
-                    '_atom_site_type_symbol',
-                    '_atom_site_symmetry_multiplicity',
-                    '_atom_site_fract_x',
-                    '_atom_site_fract_y',
-                    '_atom_site_fract_z',
-                    '_atom_site_occupancy']],
+                     '_atom_site_type_symbol',
+                     '_atom_site_symmetry_multiplicity',
+                     '_atom_site_fract_x',
+                     '_atom_site_fract_y',
+                     '_atom_site_fract_z',
+                     '_atom_site_occupancy']],
                    [[labels,symbols,symmult,fractx,fracty,fractz,occup]]))
     #
     cf['1-cif2cell'] = cb
@@ -874,7 +823,7 @@ if outputprogram == 'crystal09':
     # Get documentation string
     docstring = StandardDocstring()
     # Get output file object
-    crystal09file = Crystal09File(cell, docstring)
+    crystal09file = Crystal09File(cd, docstring)
     crystal09file.spacegroupnr = cd.spacegroupnr
     crystal09file.a = cd.a
     crystal09file.b = cd.b
@@ -905,7 +854,7 @@ if outputprogram == 'crystal09':
 if outputprogram == 'fleur':
     # The first line with info from the CIF file and species order
     docstring = "Generated by "+programname+" "+version+" : "+ref.cpd+" ("+ref.compound+")"+" :  "+ref.referencestring()
-    fleurinput = FleurFile(cell, docstring)
+    fleurinput = FleurFile(cd, docstring)
     f = open(outputfile, outmode)
     f.write(str(fleurinput))
     f.close()
@@ -914,7 +863,7 @@ if outputprogram == 'fleur':
 # Output for CASTEP
 if outputprogram == 'castep':
     docstring = StandardDocstring()
-    castepinput = CASTEPFile(cell, docstring)
+    castepinput = CASTEPFile(cd, docstring)
     f = open(outputfile, outmode)
     f.write(str(castepinput))
     f.close()
@@ -923,7 +872,7 @@ if outputprogram == 'castep':
 # Output for CPMD
 if outputprogram == 'cpmd':
     docstring = StandardDocstring()
-    cpmdinput = CPMDFile(cell, docstring)
+    cpmdinput = CPMDFile(cd, docstring)
     f = open(outputfile, outmode)
     f.write(str(cpmdinput))
     f.close()
@@ -932,7 +881,7 @@ if outputprogram == 'cpmd':
 # Output for Siesta
 if outputprogram == 'siesta':
     docstring = StandardDocstring()
-    siestainput = SiestaFile(cell, docstring)
+    siestainput = SiestaFile(cd, docstring)
     f = open(outputfile, outmode)
     f.write(str(siestainput))
     f.close()
@@ -941,7 +890,7 @@ if outputprogram == 'siesta':
 # Output for ABINIT
 if outputprogram == 'abinit':
     docstring = StandardDocstring()
-    abinitinput = ABINITFile(cell, docstring)
+    abinitinput = ABINITFile(cd, docstring)
     f = open(outputfile, outmode)
     f.write(str(abinitinput))
     f.close()
@@ -960,7 +909,7 @@ if outputprogram == 'vasp':
         docstring += ref.cpd
     docstring += " :  "+ref.referencestring()+"."
     # Initialize the POSCARFile structure
-    poscar = POSCARFile(cell, docstring)
+    poscar = POSCARFile(cd, docstring)
     # Convert to cartesian coordinates if requested
     if options.vaspcartpos:
         poscar.printcartpos = True
@@ -971,6 +920,8 @@ if outputprogram == 'vasp':
         poscar.printcartvecs = True
     if options.vaspformat == "5":
         poscar.vasp5format = True
+    if options.vaspselectivedyn:
+        poscar.selectivedyn = True
     f = open(outputfile, outmode)
     f.write(str(poscar))
     f.close()
@@ -984,18 +935,18 @@ if outputprogram == 'vasp':
             lib = options.vasppseudolib
         else:
             lib = ""
-        potcarfile = POTCARFile(cell,directory=lib)
+        potcarfile = POTCARFile(cd,directory=lib)
         f = open("POTCAR", "w")
         f.write(str(potcarfile))
         f.close()
         # KPOINTS
         docstring="Generated by cif2cell "+version+"."
-        kpointsfile = KPOINTSFile(cell,docstring=docstring,kresolution=kresolution)
+        kpointsfile = KPOINTSFile(cd,docstring=docstring,kresolution=kresolution)
         f = open("KPOINTS", "w")
         f.write(str(kpointsfile))
         f.close()
         # INCAR
-        incarfile = INCARFile(cell,docstring=docstring)
+        incarfile = INCARFile(cd,docstring=docstring)
         f = open("INCAR", "w")
         f.write(str(incarfile))
         f.close()
@@ -1007,7 +958,7 @@ if outputprogram == 'elk':
     # Get documentation string
     docstring = StandardDocstring()
     # Get output file object
-    geometryfile = ElkFile(cell, docstring)
+    geometryfile = ElkFile(cd, docstring)
     f = open(outputfile, outmode)
     f.write(str(geometryfile))
     f.close()
@@ -1019,7 +970,7 @@ if outputprogram == 'exciting':
     # Get documentation string
     docstring = StandardDocstring()
     # Get output file object
-    excitingfile = ExcitingFile(cell, docstring)
+    excitingfile = ExcitingFile(cd, docstring)
     f = open(outputfile, outmode)
     f.write(str(excitingfile))
     f.close()
@@ -1031,7 +982,7 @@ if outputprogram == 'spacegroup':
     # Get documentation string
     docstring = StandardDocstring()
     # Get output file object
-    spacegroupfile = SpacegroupFile(cell, docstring)
+    spacegroupfile = SpacegroupFile(cd, docstring)
     angtobohr = 1e-10 * 4 * pi * 10973731.568527/7.2973525376e-3
     spacegroupfile.HermannMauguin = cd.HMSymbol.replace("/","")
     spacegroupfile.a = cd.a*angtobohr
@@ -1055,7 +1006,7 @@ if outputprogram == 'rspt':
     docstring = StandardDocstring()
     # Get file string and print to symt.inp
     if options.newsymt:
-        symtfile = SymtFile2(cell, docstring)
+        symtfile = SymtFile2(cd, docstring)
         # spin polarization and relativity
         if options.rsptspinpol:
             symtfile.spinpol = True
@@ -1064,7 +1015,7 @@ if outputprogram == 'rspt':
         if options.rsptmtradii:
             symtfile.mtradii = int(options.rsptmtradii)
     else:
-        symtfile = SymtFile(cell, docstring)
+        symtfile = SymtFile(cd, docstring)
     # spin axis 
     if options.rsptspinaxis:
         symtfile.spinaxis = eval(options.rsptspinaxis)
@@ -1079,7 +1030,7 @@ if outputprogram == 'cellgen':
     # Construct documentation string
     docstring = StandardDocstring()
     # Initialize file object
-    cellgenfile = CellgenFile(cell, docstring)
+    cellgenfile = CellgenFile(cd, docstring)
     if options.cellgenrefvec:
         cellgenfile.referencevector = eval(options.cellgenrefvec)
     if options.cellgensupercelldims:
@@ -1125,7 +1076,7 @@ if outputprogram == 'ncol' or outputprogram == 'bstr':
 # Output for TB-LMTO structure constant program bstr
 if outputprogram == 'bstr' or outputprogram == 'ncol':
     # Initialize BSTRFile
-    bstrfile = BSTRFile(cell, docstring)
+    bstrfile = BSTRFile(cd, docstring)
     bstrfile.jobnam = bstrjobnam
     bstrfile.a = cd.a
     bstrfile.b = cd.b
@@ -1140,7 +1091,7 @@ if outputprogram == 'bstr' or outputprogram == 'ncol':
 
 if outputprogram == 'ncol':
     # Initialize ncolfile
-    ncolfile = OldNCOLFile(cell, docstring)
+    ncolfile = OldNCOLFile(cd, docstring)
     ncolfile.jobnam = jobnam
     ncolfile.bstrjobnam = bstrjobnam
     # Document program
@@ -1223,7 +1174,7 @@ if outputprogram == 'kstr' or outputprogram == 'emto':
     except OSError:
         pass
     # Initialize BSTRFile
-    kstrfile = KSTRFile(cell, docstring)
+    kstrfile = KSTRFile(cd, docstring)
     kstrfile.jobnam = kstrjobnam
     if options.hardsphereradii:
         kstrfile.hardsphere = float(options.hardsphereradii)
@@ -1253,7 +1204,7 @@ if outputprogram == 'bmdl' or outputprogram == 'emto':
     except OSError:
         pass
     # Initialize BMDLFile
-    bmdlfile = BMDLFile(cell, docstring)
+    bmdlfile = BMDLFile(cd, docstring)
     bmdlfile.jobnam = kstrjobnam
     bmdlfile.latticenr = latticenr
     bmdlfile.a = cd.a
@@ -1281,7 +1232,7 @@ if outputprogram == 'shape' or outputprogram == 'emto':
     except OSError:
         pass
     # Initialize ShapeFile
-    shapefile = ShapeFile(cell, docstring)
+    shapefile = ShapeFile(cd, docstring)
     shapefile.jobnam = kstrjobnam
     # Document program
     shapefile.programdoc = programdoc
@@ -1306,7 +1257,7 @@ if outputprogram == 'kgrn' or outputprogram == 'emto':
     except OSError:
         pass
     # Initialize KGRNFile
-    kgrnfile = KGRNFile(cell, docstring)
+    kgrnfile = KGRNFile(cd, docstring)
     kgrnfile.jobnam = kgrnjobnam
     kgrnfile.kstrjobnam = kstrjobnam
     kgrnfile.latticenr = latticenr
@@ -1325,7 +1276,7 @@ if outputprogram == 'kfcd' or outputprogram == 'emto':
     except OSError:
         pass
     # Initialize KFCDFile
-    kfcdfile = KFCDFile(cell, docstring)
+    kfcdfile = KFCDFile(cd, docstring)
     kfcdfile.jobnam = kgrnjobnam
     kfcdfile.kstrjobnam = kstrjobnam
     # Document program
@@ -1351,8 +1302,8 @@ if outputprogram == 'xband' or outputprogram == 'sprkkr':
     else:
         docstring += ref.cpd
     docstring += " :  "+ref.referencestring()+"."
-    # Initialize the POSCARFile structure
-    sysfile = XBandSysFile(cell, docstring)
+    # Initialize the file
+    sysfile = XBandSysFile(cd, docstring)
     sysfile.filename = outputfile
     if options.sprkkrminangmom:
         sysfile.minangmom=int(options.sprkkrminangmom)
@@ -1361,3 +1312,36 @@ if outputprogram == 'xband' or outputprogram == 'sprkkr':
     f.close()
     sys.exit(0)
     
+################################################################################################
+# Output for xyz file
+if outputprogram == 'xyz':
+    # The second comment line with info from the CIF file 
+    docstring =  "Generated by "+programname+" "+version
+    if ref.database != "" and ref.databasecode != "":
+        docstring += " from "+ref.databaseabbr[ref.database]+" reference: "+ref.databasecode
+    docstring += ". "
+    if len(ref.cpd) > len(ref.compound):
+        docstring += ref.compound
+    else:
+        docstring += ref.cpd
+    docstring += " :  "+ref.referencestring()+"."
+    # Initialize the XYZFile structure
+    if options.xyzatomicunits:
+        cd.newunit("bohr")
+    sysfile = XYZFile(cd, docstring)
+    f = open(outputfile, outmode)
+    f.write(str(sysfile))
+    f.close()
+    sys.exit(0)
+
+################################################################################################
+# Output for ASE file (python script)
+if outputprogram == 'ase':
+    # The second comment line with info from the CIF file 
+    docstring = StandardDocstring()
+    # Initialize the ASEFile structure
+    sysfile = ASEFile(cd, docstring)
+    f = open(outputfile, outmode)
+    f.write(str(sysfile))
+    f.close()
+    sys.exit(0)
