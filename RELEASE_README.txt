@@ -1,5 +1,28 @@
 CIF2CELL RELEASE INFORMATION
 
+VERSION 1.0.0
+
+MAJOR NEW RELEASE. 
+CIF2Cell leaves beta stage. Wohoo! 
+
+New features include:
+* Usable manual/tutorial (in pdf format).
+* Major rework of the supercell generator to support general
+  map matrices. This should make it possible to generate any
+  possible supercell.
+* Possibility to realign the unit cell vectors. In combination with
+  the general map matrix, this makes it easy to generate surface
+  supercells. For convenience, there are also two predefined rotations
+  for aligning the cubic (111) direction with the z axis and for
+  aligning the threefold rotation axis of a rhombohedral system 
+  with the pseudocubic (111) direction.
+* Possibility to add random displacements to all atoms.
+* Support for xyz format output.
+* An experimental, more general --force flag to try to enforce cell
+  creation despite any problems encountered. Not completely 
+  supported yet.
+
+-------------------------------------------------------------- 
 VERSION 0.4.5
 
 * New interface to xband/SPRKKR.

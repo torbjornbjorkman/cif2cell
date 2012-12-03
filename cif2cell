@@ -40,7 +40,7 @@ from elementdata import *
 
 # Name and version
 programname = "cif2cell"
-version = "supercell"
+version = "1.0.0"
 
 # Turn of warnings about deprecated stuff
 warnings.simplefilter("ignore",DeprecationWarning)
@@ -180,16 +180,16 @@ else:
     bibtexref = False
 # Programs that can deal with alloys
 alloyprograms = set(["emto","kstr","bmdl","shape","kgrn","kfcd","cif","sprkkr","xband"])
-# force output for alloys
-if options.forcealloy or options.force:
-    forcealloy = True
-else:
-    forcealloy = False
 # Force generation despite problems?
 if options.force:
     force = True
 else:
     force = False
+# force output for alloys
+if options.forcealloy or force:
+    forcealloy = True
+else:
+    forcealloy = False
 
 # Make supercell?
 if options.supercellmap or options.supercellvacuum or options.supercelltransvec:
@@ -556,12 +556,25 @@ if transformcell:
         # Put [111] direction along z axis.
         celltransformation = LatticeMatrix([[0.577350269189626,-1.000000000000000,0.816496580927725],
                                             [0.577350269189626, 1.000000000000000,0.816496580927725],
-                                            [-1.154700538379250,0.000000000000000,0.816496580927726]])
+                                            [-1.154700538379250,0.000000000000000,0.816496580927725]])
+        if cd.crystal_system() != 'cubic':
+            sys.stderr.write("***Error: Only cubic structures are properly aligned to the z axis by --cubic-diagonal-z.\n")
+            if not force:
+                sys.stderr.write("          Use --force to go ahead anyway.\n")
+                sys.exit(1)
+            
     if options.rhombdiag:
         # Put z direction along pseudocubic [111]. Kind of the opposite of the cubediagz.
-        celltransformation = LatticeMatrix([[0.816496580927726,-0.408248290463863,-0.408248290463863],
-                                            [0.000000000000000, 0.707106781186547,-0.707106781186547],
-                                            [0.577350269189626, 0.577350269189626, 0.577350269189626]])
+        t = 1/cd.latticevectors[0].length()   # Normalization to 1
+        celltransformation = LatticeMatrix([[0.816496580927726*t,-0.408248290463863*t,-0.408248290463863*t],
+                                            [0.000000000000000, 0.707106781186547*t,-0.707106781186547*t],
+                                            [0.577350269189626*t, 0.577350269189626*t, 0.577350269189626*t]])
+        if not cd.rhombohedral:
+            sys.stderr.write("***Error: Only rhombohedral cells are properly aligned to the\n")
+            sys.stderr.write("          pseudocubic (111) axis by --rhombohedral-diagonal.\n")
+            if not force:
+                sys.stderr.write("          Use --force to go ahead anyway.\n")
+                sys.exit(1)
     # explicitly giving the transformation overrides any other transformation
     if options.celltransformation:
         celltransformation = eval(options.celltransformation)
@@ -626,6 +639,11 @@ if printsymops or printseitz or verbose:
             tmpstring += fourdecs%(0,0,0,1)
             print tmpstring
             i += 1    
+
+# Remind that the result may be junk when using --force
+if force:
+    sys.stderr.write("\n***Warning: You invoked the --force flag, presumably to bypass some error message.\n")
+    sys.stderr.write("            Carefully check the results, which may be rubbish, nonsense or both!\n")
 
 ##############################################
 # Sort sites so that the ones occupied by the heaviest elements come first,

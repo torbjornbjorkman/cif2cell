@@ -130,7 +130,7 @@ class CellData(GeometryObject):
         # Lattice vector choices
         self.primcell = False
         self.rhomb2hex = False
-        self.cubediagz = False
+        self.rhombohedral = False
 
     def newunit(self,newunit="angstrom"):
         """ Set new unit for the length scale. Valid choices are:
@@ -509,6 +509,7 @@ class CellData(GeometryObject):
             elif self.HallSymbol in Hex2RhombHall or self.HallSymbol in Rhomb2HexHall:
                 if abs(self.gamma - 120) < self.coordepsilon:
                     # rhombohedral from hexagonal setting
+                    self.rhombohedral = True
                     self.transvecs = [LatticeVector([zero,zero,zero]),
                                       LatticeVector([third, 2*third, 2*third]),
                                       LatticeVector([2*third, third, third])]
@@ -700,9 +701,12 @@ class CellData(GeometryObject):
                          CellFloat(t[0].length()/fac),
                          CellFloat(t[1].length()/fac),
                          CellFloat(t[2].length()/fac)])
-        if oldanglen==newanglen:
+        if oldanglen==newanglen or self.force:
             self.latticevectors = t
             self.lengthscale /= fac
+            if oldanglen!=newanglen and self.force:
+                sys.stderr.write("***Error: The transformation matrix skews the lattice. Only combinations of \n"+
+                                 "          rotations and rescaling of the whole cell are allowed.")
         else:
             raise CellError("The transformation matrix skews the lattice. Only combinations of "+
                             "rotations and rescaling of the whole cell are allowed.")

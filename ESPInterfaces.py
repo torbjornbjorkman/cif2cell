@@ -1189,7 +1189,19 @@ class POSCARFile(GeometryOutputFile):
         a = self.cell.lengthscale
         lattice = self.cell.latticevectors
         # VASP needs lattice vector matrix to have positive triple product
-        
+        if det3(lattice) < 0:
+            if lattice[0].length() == lattice[1].length() == lattice[2].length():
+                # Shift the first and last for cubic lattices
+                lattice[0],lattice[2] = lattice[2],lattice[0]
+            else:
+                # Else shift the two shortest
+                if lattice[0].length() > lattice[1].length() and lattice[0].length() > lattice[2].length():
+                    lattice[1],lattice[2] = lattice[2],lattice[1]
+                elif lattice[1].length() > lattice[2].length() and lattice[1].length() > lattice[0].length():
+                    lattice[0],lattice[2] = lattice[2],lattice[0]
+                else:
+                    lattice[1],lattice[0] = lattice[0],lattice[1]
+                
         # For output of atomic positions
         if self.printcartpos:
             positionunits = "Cartesian\n"
