@@ -1141,6 +1141,7 @@ class CellData(GeometryObject):
                 else:
                     raise PositionError("Cartesian coordinates in CIF, but no translation vector given.")
         # Positions
+        removedefective = set([])
         try:
             if self.cartesianInput:
                 sitexer = tmpdata.get('_atom_site_Cartn_x')
@@ -1150,10 +1151,18 @@ class CellData(GeometryObject):
                 sitexer = tmpdata.get('_atom_site_fract_x')
                 siteyer = tmpdata.get('_atom_site_fract_y')
                 sitezer = tmpdata.get('_atom_site_fract_z')
-            if type(sitexer) == NoneType or type(siteyer) == NoneType or type(sitezer) == NoneType or \
-                   '?' in sitexer or '?' in siteyer or '?' in sitezer or \
-                   '.' in sitexer or '.' in siteyer or '.' in sitezer:
-                raise PositionError("Positions not found for one or more species.")
+            if (type(sitexer) == NoneType or type(siteyer) == NoneType or type(sitezer) == NoneType or \
+                '?' in sitexer or '?' in siteyer or '?' in sitezer or \
+                '.' in sitexer or '.' in siteyer or '.' in sitezer):
+                if self.force:
+                    sys.stderr.write("***Warning: Positions are missing, generating cell with the remaining atoms anyway.\n")
+                    # Remove defective sites from arrays.
+                    for i in range(len(sitexer)):
+                        if (sitexer[i] == '?' or siteyer[i] == '?' or sitezer[i] == '?' or \
+                            sitexer[i] == '.' or siteyer[i] == '.' or sitezer[i] == '.'):
+                            removedefective.add(i)
+                else:
+                    raise PositionError("Positions not found for one or more species.")
         except KeyError:
             raise PositionError("Positions not found for one or more species.")
         
@@ -1234,7 +1243,11 @@ class CellData(GeometryObject):
                 try:
                     self.ineqsites[i].append(float(removeerror(j)))
                 except:
-                    raise PositionError("Invalid atomic position value : "+j)
+                    if self.force:
+                        removedefective.add(i)
+                        sys.stderr.write("***Warning : Invalid atomic position value : "+j+"\n")
+                    else:
+                        raise PositionError("Invalid atomic position value : "+j)
             # Improve precision
             self.ineqsites[i] = Vector(self.ineqsites[i])
             # dictionary of elements and occupancies
@@ -1244,6 +1257,18 @@ class CellData(GeometryObject):
             except ValueError:
                 v = 1.0
             self.occupations.append({ k : v })
+            
+        # If there is a set of defective sites, remove them if forced.
+        if removedefective and self.force:
+            removedefective = list(removedefective)
+            removedefective.sort(reverse=True)
+            for i in removedefective:
+                try:
+                    self.ineqsites.pop(i)
+                    self.occupations.pop(i)
+                except:
+                    pass
+                
 
     def printCell(self,printsym=False,printinput=False,printcart=False,printdigits=8,printcharges=False):
         # format string for outputting decimal numbers to screen

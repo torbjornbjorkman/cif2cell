@@ -554,39 +554,51 @@ class Crystal09File(GeometryOutputFile):
         # Add docstring
         filestring = self.docstring
         filestring += "CRYSTAL\n"
-        # Space group 
-        filestring += str(self.spacegroupnr)+"\n"
         system = crystal_system(self.spacegroupnr)
         # Space group setting and crystal parameters
         if system == "triclinic":
             filestring += "0 0 0\n"
+            filestring += str(self.spacegroupnr)+"\n"
             filestring += "%13.8f %13.8f %13.8f %13.8f %13.8f %13.8f\n"%(self.a, self.b, self.c, self.alpha, self.beta, self.gamma)
         elif system == "monoclinic":
             filestring += "0 0 0\n"
+            filestring += str(self.spacegroupnr)+"\n"
             filestring += "%13.8f %13.8f %13.8f %13.8f\n"%(self.a, self.b, self.c, self.beta)
         elif system == "orthorhombic":
             filestring += "0 0 0\n"
+            filestring += str(self.spacegroupnr)+"\n"
             filestring += "%13.8f %13.8f %13.8f\n"%(self.a, self.b, self.c)
         elif system == "tetragonal":
             filestring += "0 0 0\n"
+            filestring += str(self.spacegroupnr)+"\n"
             filestring += "%13.8f %13.8f\n"%(self.a, self.c)
         elif system == "trigonal":
             if self.trigonalsetting == "H":
                 filestring += "0 0 0\n"
+                filestring += str(self.spacegroupnr)+"\n"
                 filestring += "%13.8f %13.8f\n"%(self.a, self.c)
             elif self.trigonalsetting == "R":
                 filestring += "0 1 0\n"
+                filestring += str(self.spacegroupnr)+"\n"
                 filestring += "%13.8f %13.8f\n"%(self.a, self.alpha)
             else:
-                return "ERROR: No such trigonal setting : "+self.trigonalsetting
+                return "***Error: No such trigonal setting : "+self.trigonalsetting
         elif system == "hexagonal":
             filestring += "0 0 0\n"
+            filestring += str(self.spacegroupnr)+"\n"
             filestring += "%13.8f %13.8f\n"%(self.a, self.c)
         elif system == "cubic":
             filestring += "0 0 0\n"
+            filestring += str(self.spacegroupnr)+"\n"
             filestring += "%13.8f\n"%(self.a)
         else:
-            return "ERROR: Could not determine crystal system corresponding to space group "+str(self.spacegroupnr)+"."
+            if self.force:
+                sys.stderr.write("***Warning: Could not determine crystal system corresponding to space group "+str(self.spacegroupnr)+".")
+                filestring += "0 0 0\n"
+                filestring += str(self.spacegroupnr)+"\n"
+                filestring += "%13.8f %13.8f %13.8f %13.8f %13.8f %13.8f\n"%(self.a, self.b, self.c, self.alpha, self.beta, self.gamma)
+            else:
+                return "***Error: Could not determine crystal system corresponding to space group "+str(self.spacegroupnr)+"."
         # Number of atoms
         filestring += str(len(self.cell.ineqsites))+"\n"
         # Atomic numbers and representative positions
