@@ -1031,8 +1031,8 @@ class CellData(GeometryObject):
             self.symops = None
 
         # Only Hall symbols are used internally.
-        if self.HallSymbol == "":
-            if self.HMSymbol == "":
+        if self.HallSymbol == "" or self.HallSymbol == "?" or self.HallSymbol == "." or not self.HallSymbol in Hall2HM:
+            if self.HMSymbol == "" or self.HMSymbol == "?" or self.HMSymbol == ".":
                 if 0 < self.spacegroupnr <= 230:
                     try:
                         self.HallSymbol = Number2Hall[self.spacegroupnr]
@@ -1041,7 +1041,7 @@ class CellData(GeometryObject):
                 else:
                     if self.force:
                         sys.stderr.write("***Warning: CIF file contains neither space group symbols nor space group number.\n")
-                        sys.stderr.write("            Defaulting to P 1. Check results carefully!\n")
+                        sys.stderr.write("            Defaulting to P1. Check results carefully!\n")
                         self.HallSymbol = "P 1"
                     else:
                         raise SymmetryError("CIF file contains neither space group symbols nor space group number.")
@@ -1049,16 +1049,25 @@ class CellData(GeometryObject):
                 self.HallSymbol = HM2Hall[self.HMSymbol]
             except:
                 pass
-                
+                    
         # Set space group number and H-M symbol, if not in file.
         if self.spacegroupnr < 1 or self.spacegroupnr > 230:
             self.spacegroupnr = Hall2Number[self.HallSymbol]
         if self.HMSymbol == "":
-            self.HMSymbol == Hall2HM[self.HallSymbol]
+            self.HMSymbol = Hall2HM[self.HallSymbol]            
 
         # If no symmetry operations in file, get internally stored.
         if type(eqsites) == type(None):
             eqsites = SymOpsHall[self.HallSymbol]
+        else:
+            # Check if symmetry operations are consistent with current space group
+            if len(eqsites) != len(SymOpsHall[self.HallSymbol]):
+                if self.force:
+                    sys.stderr.write("***Warning: Number of space group operations (%3i) is inconsistent "%len(eqsites)\
+                                     +"with the given space group (%s).\n"%self.HMSymbol)
+                else:
+                    raise SymmetryError("Number of space group operations (%3i) is inconsistent "%len(eqsites)\
+                                        +"with the given space group (%s)."%self.HallSymbol)
 
         # Define the set of space group operations.
         self.symops = set([])

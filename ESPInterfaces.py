@@ -1215,6 +1215,8 @@ class POSCARFile(GeometryOutputFile):
                     lattice[1],lattice[0] = lattice[0],lattice[1]
                 
         # For output of atomic positions
+        if self.selectivedyn:
+            positionunits += "Selective dynamics\n"
         if self.printcartpos:
             positionunits = "Cartesian\n"
             transmtx = []
@@ -1227,8 +1229,6 @@ class POSCARFile(GeometryOutputFile):
             transmtx = [[1, 0, 0],
                         [0, 1, 0],
                         [0, 0, 1]]
-        if self.selectivedyn:
-            positionunits += "Selective dynamics\n"
         # The first line with info from input docstring
         filestring = self.docstring
         if not self.vasp5format:

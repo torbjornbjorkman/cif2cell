@@ -1,5 +1,19 @@
 CIF2CELL RELEASE INFORMATION
 
+VERSION 1.0.3
+
+* Fixed buggy behaviour when inconsistent space group symbols are given.
+* Allow for '?' and '.' for unknown space group symbols.
+* Fixed bug with selective dynamics in the VASP interface.
+
+-------------------------------------------------------------- 
+VERSION 1.0.2
+
+* Extended support for --force flag.
+* Bugfix in CRYSTAL interface.
+* Bugfix in EMTO interface.
+
+-------------------------------------------------------------- 
 VERSION 1.0.0
 
 MAJOR NEW RELEASE. 
