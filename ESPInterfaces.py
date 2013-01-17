@@ -950,10 +950,10 @@ class CASTEPFile(GeometryOutputFile):
         i = 0
         for a in self.cell.atomdata:
             for b in a:
-                i = i + 1
                 # Check for VCA calculation
                 if self.cell.alloy and self.vca:
                     if len(b.species) > 1:
+                        i = i + 1
                         for sp,conc in b.species.iteritems():
                             filestring += sp.ljust(2)+" "+str(b.position)+"  MIXTURE:( %i %6.5f )\n"%(i,conc)
                     else:
