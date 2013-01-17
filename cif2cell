@@ -40,10 +40,15 @@ from elementdata import *
 
 # Name and version
 programname = "cif2cell"
-version = "1.0.3"
+version = "1.0.4"
 
 # Turn of warnings about deprecated stuff
 warnings.simplefilter("ignore",DeprecationWarning)
+
+# All supported output formats
+outputprograms = set(['abinit','castep','cpmd','crystal09','elk','emto','exciting',
+                    'fleur','ncol','rspt','siesta','sprkkr','vasp',
+                    'ase','bmdl','cellgen','cif','kfcd','kstr','shape','spacegroup','xband','xyz'])
 
 ############################
 #      INPUT OPTIONS       #
@@ -68,6 +73,7 @@ cellgenopts = OptionGroup(parser, "Cell generation options")
 cellgenopts.add_option("--no-reduce",dest="noreduce",help="Do not reduce to the primitive cell.",action="store_true")
 cellgenopts.add_option("--force",dest="force",help="Attempt to force generation of output file despite problems and/or ambiguities in the input file. There are no guarantees that what you get makes sense, but the program makes an honest attempt. Implies --force-alloy.",action="store_true")
 cellgenopts.add_option("--force-alloy",dest="forcealloy",help="Force generation of output file for an alloy compound for an electronic structure code that does not implement any alloy theory (such as CPA).",action="store_true")
+cellgenopts.add_option("--vca",dest="vca",help="Set up an alloy using the virtual crystal approximation (VCA). Currently only supported by the CASTEP interface.",action="store_true")
 cellgenopts.add_option("--coordinate-tolerance",dest="coordtol",help="Parameter for determining when two coordinates are the same (default=0.0002).")
 cellgenopts.add_option("--setup-all",dest="setupall",help="Make a complete setup, not just the geometrical part. This is currently only available for VASP.",action="store_true")
 cellgenopts.add_option("--k-resolution",dest="kresolution",help="The desired resolution in k-space (default=0.2). Used for generating k-space grid options if --setup-all is specified.")
@@ -146,12 +152,14 @@ if options.setupall and options.program != 'vasp':
 if options.filenamequery and not options.program:
     sys.stderr.write("***Error: option --which-filename requires that --program is given.\n")
     sys.exit(1)
-    
 #############################################################
 # INITIAL PARSING OF VARIOUS INPUT DATA
 # Electronic structure program
 if options.program:
     outputprogram = options.program.lower()
+    if not outputprogram in outputprograms:
+        print "Error: Unknown output format: "+outputprogram
+        sys.exit(1)
 else:
     outputprogram = None
 
@@ -180,6 +188,7 @@ else:
     bibtexref = False
 # Programs that can deal with alloys
 alloyprograms = set(["emto","kstr","bmdl","shape","kgrn","kfcd","cif","sprkkr","xband"])
+vcaprograms = set(["castep"])
 # Force generation despite problems?
 if options.force:
     force = True
@@ -649,10 +658,11 @@ if force:
 # Sort sites so that the ones occupied by the heaviest elements come first,
 # if the Python version supports this form of the max function and there is
 # nothing wrong with the site data.
-try:
-    cd.atomdata.sort(key = lambda a: ed.elementnr[max(a[0].species, key = a[0].species.get)], reverse=True)
-except:
-    pass
+if not (makesupercell and supercellsort):
+    try:
+        cd.atomdata.sort(key = lambda a: ed.elementnr[max(a[0].species, key = a[0].species.get)], reverse=True)
+    except:
+        pass
 
 ############################################################################################
 # Output file mode (overwrite or append?)
@@ -737,10 +747,35 @@ if not options.program:
     sys.exit(0)
 
 # Don't generate output for alloys (for most programs)
-if cd.alloy and not forcealloy and not outputprogram in alloyprograms:
-    print "Error: This system is an alloy, but the electronic structure code "+outputprogram+" has no way of dealing with alloys.\nRun again with --force-alloy (or --force) if you want to generate an (incomplete) output file anyway."
+if cd.alloy and not forcealloy and not (outputprogram in alloyprograms or outputprogram in vcaprograms):
+    print "Error: This system is an alloy, but "+codename[outputprogram]+" has no way of dealing with alloys.\n       Run again with --force-alloy (or --force) if you want to generate an (incomplete) output file anyway."
     sys.exit(17)
-
+# Deal with VCA
+if outputprogram in vcaprograms:
+    if not options.vca:
+        print "Error: This system is an alloy. "+codename[outputprogram]+" can deal with some alloys using the virtual crystal approximation (VCA).\n       Run again with the flag --vca if you want to produce a VCA setup."
+        sys.exit(17)
+vcawarning1 = False
+vcawarning2 = False
+if options.vca:
+    # Issue warning for precarious VCA setups
+    groups = []
+    for a in cd.atomdata:
+        if len(a[0].species) > 1:
+            t = [ed.elementgroup[sp] for sp,conc in a[0].species.iteritems()]
+            groups.append((min(t),max(t)))
+            if len(a[0].species) > 2:
+                vcawarning1 = True
+    for g in groups:
+        if g[1] - g[0] > 1:
+            vcawarning2 = True
+    if vcawarning1 and vcawarning2:
+        sys.stderr.write("Warning: You are setting up a VCA calculation for an alloy with more than two components\n         and not all alloy sites are occupied by species from neighbouring groups in the periodic\n         table. If you go ahead with this, pray that I don't get to referee your paper...\n")
+    elif vcawarning1:
+        sys.stderr.write("Warning: You are setting up a VCA calculation for an alloy with more than two components.\n         Make sure that you know what you are doing!\n")
+    elif vcawarning2:
+        sys.stderr.write("Warning: You are setting up a VCA calculation but not all alloy sites are occupied by species\n         from neighbouring groups in the periodic table. Make sure that you know what you are doing!\n")
+        
 # Function for printing a standard docstring
 def StandardDocstring():
     stringlen = max(len(ref.referencestring()),len(ref.cpd+"   ("+ref.compound+")"))
@@ -882,6 +917,8 @@ if outputprogram == 'fleur':
 if outputprogram == 'castep':
     docstring = StandardDocstring()
     castepinput = CASTEPFile(cd, docstring)
+    if options.vca:
+        castepinput.vca = True
     f = open(outputfile, outmode)
     f.write(str(castepinput))
     f.close()

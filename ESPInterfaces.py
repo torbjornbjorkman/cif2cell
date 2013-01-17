@@ -926,6 +926,8 @@ class CASTEPFile(GeometryOutputFile):
             string = string.lstrip("#")
             string = "#"+string+"\n"
             self.docstring += string
+        # VCA calculation?
+        self.vca = False
     def __str__(self):
         # Assign some local variables
         a = self.cell.lengthscale
@@ -945,13 +947,32 @@ class CASTEPFile(GeometryOutputFile):
         filestring += "%ENDBLOCK LATTICE_CART\n\n"
         # The atom position info
         filestring += "%BLOCK POSITIONS_FRAC\n"
+        i = 0
         for a in self.cell.atomdata:
             for b in a:
-                filestring += b.spcstring().ljust(2)+" "+str(b.position)+"\n"
+                i = i + 1
+                # Check for VCA calculation
+                if self.cell.alloy and self.vca:
+                    if len(b.species) > 1:
+                        for sp,conc in b.species.iteritems():
+                            filestring += sp.ljust(2)+" "+str(b.position)+"  MIXTURE:( %i %6.5f )\n"%(i,conc)
+                    else:
+                        filestring += b.spcstring().ljust(2)+" "+str(b.position)+"\n"
+                else:
+                    filestring += b.spcstring().ljust(2)+" "+str(b.position)+"\n"
         filestring += "%ENDBLOCK POSITIONS_FRAC\n"
         # pseudo-potential block
+        species = set([])
+        for a in self.cell.atomdata:
+            if self.vca:
+                for sp,conc in a[0].species.iteritems():
+                    species.add(sp)
+            else:
+                species.add(a[0].spcstring())
         filestring += "\n"
         filestring += "%BLOCK SPECIES_POT\n"
+        for sp in species:
+            filestring += sp.ljust(2)+"  ???\n"
         filestring += "%ENDBLOCK SPECIES_POT\n"
         # Put in the symmetry operations
         filestring += "\n%BLOCK SYMMETRY_OPS\n"

@@ -1,10 +1,11 @@
 CIF2CELL RELEASE INFORMATION
 
-VERSION 1.0.3
+VERSION 1.0.4
 
+* Implemented support for virtual crystal approximation setups in CASTEP.
 * Fixed buggy behaviour when inconsistent space group symbols are given.
 * Allow for '?' and '.' for unknown space group symbols.
-* Fixed bug with selective dynamics in the VASP interface.
+Thanks again to Keith Refson for bug reports and feature requests.
 
 -------------------------------------------------------------- 
 VERSION 1.0.2

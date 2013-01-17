@@ -915,7 +915,7 @@ class CellData(GeometryObject):
                 for vec in lv:
                     t = Vector(mvmult3(op.rotation,vec))
         else:
-            # Otherwise just zero the symmetry operation (just keep identity)
+            # Otherwise just keep identity
             self.symops = set([SymmetryOperation(['x','y','z'])])
 
 

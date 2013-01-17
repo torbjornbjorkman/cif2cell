@@ -41,6 +41,25 @@ floatlist = [third, 2*third, half, fourth, one, zero, sqrt(2.0),sixth,5*sixth]
 angtobohr = 1.8897261
 uperatogpercm = 1.6605388
 uperautogpercm = 11.205871
+#
+codename = { 'abinit' : 'ABINIT',
+             'ase' : 'ASE',
+             'castep' : 'CASTEP',
+             'cpmd' : 'CPMD',
+             'cellgen' : 'cellgen',
+             'crystal09' : 'CRYSTAL09',
+             'elk' : 'Elk',
+             'emto' : 'EMTO',
+             'exciting' : 'exciting',
+             'fleur' : 'Fleur',
+             'ncol' : 'NCOL',
+             'rspt' : 'RSPt',
+             'siesta' : 'Siesta',
+             'spacegroup' : 'spacegroup',
+             'sprkkr' : 'SPR-KKR',
+             'vasp' : 'VASP',
+             'xband' : 'XBAND',
+             'xyz' : 'xyz' }
 ################################################################################################
 # Exception classes
 class SymmetryError(Exception):
