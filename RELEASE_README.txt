@@ -6,6 +6,7 @@ VERSION 1.0.5
 * New functionality for CASTEP interface: --castep-cartesian and --castep-atomic-units.
 * The CASTEP interface now supplies a full, commented out, pseudopotential block for
   easy editing.
+* The program can now take arguments and options in any order.
 * Fixed buggy behaviour when inconsistent space group symbols are given.
 * Allow for '?' and '.' for unknown space group symbols.
 Thanks again to Keith Refson for bug reports and help with CASTEP features.
