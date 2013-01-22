@@ -72,13 +72,9 @@ cif2cell -h
 This will list all available input options along with a description.
 
 \subsection{The first run}\label{firstrun}
-There is only one required piece of input, and that is the CIF file itself which is given either as the first argument to the program:
+There is only one required piece of input, and that is the CIF file itself which is given either as an argument to the program:
 \begin{verbatim}
-cif2cell Si.cif [options]
-\end{verbatim}
-or anywhere in the argument list with the \texttt{-f} flag:
-\begin{verbatim}
-cif2cell [someoptions] -f Si.cif [otheroptions]
+cif2cell [someoptions] Si.cif [otheroptions]
 \end{verbatim}
 and if no output program is specified, the cell information is output to screen:
 

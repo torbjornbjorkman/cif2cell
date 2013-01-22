@@ -917,6 +917,10 @@ class CASTEPFile(GeometryOutputFile):
     """
     def __init__(self, crystalstructure, string):
         GeometryOutputFile.__init__(self,crystalstructure,string)
+        # Cartesian units?
+        self.cartesian = False
+        # What units?
+        self.unit = "angstrom"
         self.cell.newunit("angstrom")
         # Make sure the docstring has comment form
         self.docstring = self.docstring.rstrip("\n")
@@ -929,6 +933,8 @@ class CASTEPFile(GeometryOutputFile):
         # VCA calculation?
         self.vca = False
     def __str__(self):
+        # Set units
+        self.cell.newunit(self.unit)
         # Assign some local variables
         a = self.cell.lengthscale
         lattice = self.cell.latticevectors
@@ -937,7 +943,10 @@ class CASTEPFile(GeometryOutputFile):
         filestring = self.docstring+"\n"
         filestring += "%BLOCK LATTICE_CART\n"
         # units
-        filestring += "ang    # angstrom units\n"
+        if self.cell.unit == "angstrom":
+            filestring += "ang    # angstrom units\n"
+        elif self.cell.unit == "bohr":
+            filestring += "bohr   # atomic units\n"
         # lattice
         for vec in lattice:
             for coord in vec:
@@ -946,21 +955,36 @@ class CASTEPFile(GeometryOutputFile):
         # Cutoff
         filestring += "%ENDBLOCK LATTICE_CART\n\n"
         # The atom position info
-        filestring += "%BLOCK POSITIONS_FRAC\n"
+        if self.cartesian:
+            # Correct block name and units
+            filestring += "%BLOCK POSITIONS_ABS\n"
+            if self.cell.unit == "angstrom":
+                filestring += "ang    # angstrom units\n"
+            elif self.cell.unit == "bohr":
+                filestring += "bohr   # atomic units\n"
+            # Set transformation matrix
+            transmat = LatticeMatrix(self.cell.latticevectors)            
+        else:
+            filestring += "%BLOCK POSITIONS_FRAC\n"
+            transmat = LatticeMatrix([[1,0,0],[0,1,0],[0,0,1]])
         i = 0
         for a in self.cell.atomdata:
             for b in a:
+                pos = Vector(mvmult3(transmat,b.position)).scalmult(self.cell.a)
                 # Check for VCA calculation
                 if self.cell.alloy and self.vca:
                     if len(b.species) > 1:
                         i = i + 1
                         for sp,conc in b.species.iteritems():
-                            filestring += sp.ljust(2)+" "+str(b.position)+"  MIXTURE:( %i %6.5f )\n"%(i,conc)
+                            filestring += sp.ljust(2)+" "+str(pos)+"  MIXTURE:( %i %6.5f )\n"%(i,conc)
                     else:
-                        filestring += b.spcstring().ljust(2)+" "+str(b.position)+"\n"
+                        filestring += b.spcstring().ljust(2)+" "+str(pos)+"\n"
                 else:
-                    filestring += b.spcstring().ljust(2)+" "+str(b.position)+"\n"
-        filestring += "%ENDBLOCK POSITIONS_FRAC\n"
+                    filestring += b.spcstring().ljust(2)+" "+str(pos)+"\n"
+        if self.cartesian:
+            filestring += "%BLOCK POSITIONS_ABS\n"
+        else:
+            filestring += "%BLOCK POSITIONS_FRAC\n"
         # pseudo-potential block
         species = set([])
         for a in self.cell.atomdata:
@@ -970,10 +994,11 @@ class CASTEPFile(GeometryOutputFile):
             else:
                 species.add(a[0].spcstring())
         filestring += "\n"
-        filestring += "%BLOCK SPECIES_POT\n"
+        filestring += "# Commented out pseudopotential block for easy editing\n"
+        filestring += "#%BLOCK SPECIES_POT\n"
         for sp in species:
-            filestring += sp.ljust(2)+"  ???\n"
-        filestring += "%ENDBLOCK SPECIES_POT\n"
+            filestring += "# "+sp.ljust(2)+"  "+sp+"_00.usp\n"
+        filestring += "#%ENDBLOCK SPECIES_POT\n"
         # Put in the symmetry operations
         filestring += "\n%BLOCK SYMMETRY_OPS\n"
         latvect = self.cell.conventional_latticevectors()

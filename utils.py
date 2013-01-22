@@ -194,7 +194,7 @@ class Vector(list,GeometryObject):
         t = []
         for i in range(3):
             t.append(self[i]*a)
-        return t
+        return Vector(t)
     # dot product
     def dot(self,a):
         t = 0.0

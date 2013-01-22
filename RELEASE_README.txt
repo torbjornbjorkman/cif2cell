@@ -1,11 +1,14 @@
 CIF2CELL RELEASE INFORMATION
 
-VERSION 1.0.4
+VERSION 1.0.5
 
-* Implemented support for virtual crystal approximation setups in CASTEP.
+* Implemented support for virtual crystal approximation setups of alloys in CASTEP.
+* New functionality for CASTEP interface: --castep-cartesian and --castep-atomic-units.
+* The CASTEP interface now supplies a full, commented out, pseudopotential block for
+  easy editing.
 * Fixed buggy behaviour when inconsistent space group symbols are given.
 * Allow for '?' and '.' for unknown space group symbols.
-Thanks again to Keith Refson for bug reports and feature requests.
+Thanks again to Keith Refson for bug reports and help with CASTEP features.
 
 -------------------------------------------------------------- 
 VERSION 1.0.2

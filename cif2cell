@@ -40,7 +40,7 @@ from elementdata import *
 
 # Name and version
 programname = "cif2cell"
-version = "1.0.4"
+version = "1.0.5"
 
 # Turn of warnings about deprecated stuff
 warnings.simplefilter("ignore",DeprecationWarning)
@@ -98,6 +98,15 @@ printopts.add_option("--print-charge-state","--print-oxidation-numbers",dest="pr
 printopts.add_option("--print-reference-bibtex",dest="bibtexref",help="Print citation in BibTeX format and exit.",action="store_true")
 # PROGRAM SPECIFIC OPTIONS
 progspec = OptionGroup(parser, "Program specific options")
+# cellgen
+progspec.add_option("--cellgen-map",dest="cellgenmap",help="Nine integers separated with commas and enclosed three and three in square brackets (this is a matrix in Python) that specify the map to a supercell to be output for the RSPt supercell generator 'cellgen'. Overrides --cellgen-supercell-dims.",metavar="[[k,l,m],[n,o,p],[q,r,s]]")
+progspec.add_option("--cellgen-supercell-dimensions",dest="cellgensupercelldims",help="Three integers separated with commas and enclosed in square brackets that specify the dimensions of a supercell to be output to the RSPt supercell generator 'cellgen' (the diagonal elements of the 'map').",metavar="[k,l,m]")
+progspec.add_option("--cellgen-reference-vector",dest="cellgenrefvec",help="Three reals separated with commas and enclosed in square brackets that specify an optional shift of the origin used by the RSPt supercell generator 'cellgen'.",metavar="[x,y,z]")
+# CASTEP
+progspec.add_option("--castep-cartesian",dest="castepcartesian",help="Output atom positions in cartesian rather than lattice coordinates.",action="store_true")
+progspec.add_option("--castep-atomic-units",dest="castepatomicunits",help="Output to CASTEP in atomic units (bohr radii) rather than angstrom.",action="store_true")
+# CPMD
+progspec.add_option("--cpmd-cutoff",dest="cpmdcutoff",help="Set the cutoff written to the &SYSTEM block (default=100.0 Ry).")
 # emto
 progspec.add_option("--emto-hard-sphere-radii",dest="hardsphereradii",help="Set hard spheres in KSTR to something other than the default (=0.67).")
 # RSPt
@@ -106,12 +115,6 @@ progspec.add_option("--rspt-spinpol", dest="rsptspinpol", help="Generate new for
 progspec.add_option("--rspt-relativistic", dest="rsptrelativistic", help="Generate new format symt.inp file with relativistic effects.", action="store_true")
 progspec.add_option("--rspt-spinaxis", dest="rsptspinaxis", help="Spin axis for symt.inp (default is [0.0,0.0,0.0].", metavar="[x,y,z]")
 progspec.add_option("--rspt-mtradii", dest="rsptmtradii", help="Integer that gives the method for setting muffin tin radii.", metavar="N")
-# cellgen
-progspec.add_option("--cellgen-map",dest="cellgenmap",help="Nine integers separated with commas and enclosed three and three in square brackets (this is a matrix in Python) that specify the map to a supercell to be output for the RSPt supercell generator 'cellgen'. Overrides --cellgen-supercell-dims.",metavar="[[k,l,m],[n,o,p],[q,r,s]]")
-progspec.add_option("--cellgen-supercell-dimensions",dest="cellgensupercelldims",help="Three integers separated with commas and enclosed in square brackets that specify the dimensions of a supercell to be output to the RSPt supercell generator 'cellgen' (the diagonal elements of the 'map').",metavar="[k,l,m]")
-progspec.add_option("--cellgen-reference-vector",dest="cellgenrefvec",help="Three reals separated with commas and enclosed in square brackets that specify an optional shift of the origin used by the RSPt supercell generator 'cellgen'.",metavar="[x,y,z]")
-# CPMD
-progspec.add_option("--cpmd-cutoff",dest="cpmdcutoff",help="Set the cutoff written to the &SYSTEM block (default=100.0 Ry).")
 # SPRKKR/xband
 progspec.add_option("--sprkkr-minangmom",dest="sprkkrminangmom",help="Enforce minimum onsite angular momentum (=l+1, so that 3 will be d-states).")
 # spacegroup
@@ -125,7 +128,7 @@ progspec.add_option("--vasp-cartesian-positions",dest="vaspcartpos",help="Write 
 progspec.add_option("--vasp-selective-dynamics",dest="vaspselectivedyn",help="Output POSCAR in selective dynamics format (without any constrained atoms).",action="store_true")
 progspec.add_option("--vasp-pseudo-libdr",dest="vasppseudolib",help="Path to the VASP pseudopotential library.")
 # xyz
-progspec.add_option("--xyz-atomic-units",dest="xyzatomicunits",help="Output xyz file in atomic units rather than angstrom.",action="store_true")
+progspec.add_option("--xyz-atomic-units",dest="xyzatomicunits",help="Output xyz file in atomic units (bohr radii) rather than angstrom.",action="store_true")
 #
 parser.add_option_group(generalopts)
 parser.add_option_group(cellgenopts)
@@ -256,9 +259,9 @@ else:
 #################################################################
 # Open and read CIF file
 cif_file = None
-if len(sys.argv) > 1:
+if len(args) > 0:
     # input CIF file as argument
-    cif_file = sys.argv[1]
+    cif_file = args[0]
 if options.file:
     # input CIF file as option (overrides argument)
     cif_file = options.file
@@ -751,8 +754,8 @@ if cd.alloy and not forcealloy and not (outputprogram in alloyprograms or output
     print "Error: This system is an alloy, but "+codename[outputprogram]+" has no way of dealing with alloys.\n       Run again with --force-alloy (or --force) if you want to generate an (incomplete) output file anyway."
     sys.exit(17)
 # Deal with VCA
-if outputprogram in vcaprograms:
-    if not options.vca:
+if cd.alloy and outputprogram in vcaprograms:
+    if not options.vca and not forcealloy:
         print "Error: This system is an alloy. "+codename[outputprogram]+" can deal with some alloys using the virtual crystal approximation (VCA).\n       Run again with the flag --vca if you want to produce a VCA setup."
         sys.exit(17)
 vcawarning1 = False
@@ -770,7 +773,7 @@ if options.vca:
         if g[1] - g[0] > 1:
             vcawarning2 = True
     if vcawarning1 and vcawarning2:
-        sys.stderr.write("Warning: You are setting up a VCA calculation for an alloy with more than two components\n         and not all alloy sites are occupied by species from neighbouring groups in the periodic\n         table. If you go ahead with this, pray that I don't get to referee your paper...\n")
+        sys.stderr.write("Warning: You are setting up a VCA calculation for an alloy with more than two components\n         and not all alloy sites are occupied by species from neighbouring groups in the periodic\n         table. Make doubly sure that you know what you are doing!\n")
     elif vcawarning1:
         sys.stderr.write("Warning: You are setting up a VCA calculation for an alloy with more than two components.\n         Make sure that you know what you are doing!\n")
     elif vcawarning2:
@@ -917,6 +920,10 @@ if outputprogram == 'fleur':
 if outputprogram == 'castep':
     docstring = StandardDocstring()
     castepinput = CASTEPFile(cd, docstring)
+    if options.castepatomicunits:
+        castepinput.unit = "bohr"
+    if options.castepcartesian:
+        castepinput.cartesian = True
     if options.vca:
         castepinput.vca = True
     f = open(outputfile, outmode)
