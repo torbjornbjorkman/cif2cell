@@ -602,23 +602,31 @@ class Crystal09File(GeometryOutputFile):
         # Number of atoms
         filestring += str(len(self.cell.ineqsites))+"\n"
         # Atomic numbers and representative positions
-        occ = self.cell.occupations
-        for i in range(len(self.cell.ineqsites)):
-            spcstring = ""
-            if len(occ[i]) > 1:
-                # don't know what to put for alloy
+        for a in self.cell.atomdata:
+            if len(a[0].species) > 1:
+                # don't know what to put for an alloy
                 filestring += "??"
-                for k in occ[i]:
-                    spcstring += str(ed.elementnr[k])+"/"
-                spcstring = spcstring.rstrip("/")+"  "
-                for k in occ[i]:
-                    spcstring += k+"/"
-                spcstring = spcstring.rstrip("/")
             else:
-                for k in occ[i]:
+                for k in a[0].species:
                     filestring += str(ed.elementnr[k]).rjust(2)
-                    spcstring = k
-            filestring += str(self.cell.ineqsites[i])+"      ! "+spcstring+"\n"
+            filestring += "  "+str(a[0].position)+"      ! "+a[0].spcstring()+"\n"
+        ## occ = self.cell.occupations
+        ## for i in range(len(self.cell.ineqsites)):
+        ##     spcstring = ""
+        ##     if len(occ[i]) > 1:
+        ##         # don't know what to put for alloy
+        ##         filestring += "??"
+        ##         for k in occ[i]:
+        ##             spcstring += str(ed.elementnr[k])+"/"
+        ##         spcstring = spcstring.rstrip("/")+"  "
+        ##         for k in occ[i]:
+        ##             spcstring += k+"/"
+        ##         spcstring = spcstring.rstrip("/")
+        ##     else:
+        ##         for k in occ[i]:
+        ##             filestring += str(ed.elementnr[k]).rjust(2)
+        ##             spcstring = k
+        ##     filestring += str(self.cell.ineqsites[i])+"      ! "+spcstring+"\n"
         filestring += "END\n"
         return filestring
 
@@ -963,14 +971,16 @@ class CASTEPFile(GeometryOutputFile):
             elif self.cell.unit == "bohr":
                 filestring += "bohr   # atomic units\n"
             # Set transformation matrix
-            transmat = LatticeMatrix(self.cell.latticevectors)            
+            transmat = LatticeMatrix(self.cell.latticevectors)
+            scalfac = self.cell.a
         else:
             filestring += "%BLOCK POSITIONS_FRAC\n"
             transmat = LatticeMatrix([[1,0,0],[0,1,0],[0,0,1]])
+            scalfac = 1.0
         i = 0
         for a in self.cell.atomdata:
             for b in a:
-                pos = Vector(mvmult3(transmat,b.position)).scalmult(self.cell.a)
+                pos = Vector(mvmult3(transmat,b.position)).scalmult(scalfac)
                 # Check for VCA calculation
                 if self.cell.alloy and self.vca:
                     if len(b.species) > 1:
@@ -982,9 +992,9 @@ class CASTEPFile(GeometryOutputFile):
                 else:
                     filestring += b.spcstring().ljust(2)+" "+str(pos)+"\n"
         if self.cartesian:
-            filestring += "%BLOCK POSITIONS_ABS\n"
+            filestring += "%ENDBLOCK POSITIONS_ABS\n"
         else:
-            filestring += "%BLOCK POSITIONS_FRAC\n"
+            filestring += "%ENDBLOCK POSITIONS_FRAC\n"
         # pseudo-potential block
         species = set([])
         for a in self.cell.atomdata:

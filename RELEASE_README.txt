@@ -1,5 +1,10 @@
 CIF2CELL RELEASE INFORMATION
 
+VERSION 1.0.6
+
+* Fixed bug with rhombohedral/hexagonal settings in the CRYSTAL interface.
+
+-------------------------------------------------------------- 
 VERSION 1.0.5
 
 * Implemented support for virtual crystal approximation setups of alloys in CASTEP.
