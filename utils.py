@@ -329,7 +329,7 @@ class AtomSite(GeometryObject):
             if self.species != None:
                 self.charges = {}
                 for k in self.species.keys():
-                    self.charges[k] = charge(0)
+                    self.charges[k] = Charge(0)
             else:
                 self.charges = {}
         self.label = label

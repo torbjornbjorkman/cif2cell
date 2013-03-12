@@ -774,8 +774,8 @@ class CellData(GeometryObject):
             sumset.add(M[i][0]-M[i][2])
             sumset.add(M[i][1]-M[i][2])
             sumset.add(M[i][0]-M[i][1]-M[i][2])
-            lo.append(min(sumset))
-            up.append(max(sumset))
+            lo.append(min(sumset)-1)  # Don't really understand why I need to add/subtract
+            up.append(max(sumset)+1)  # 1 here... but things sometimes fail if I don't.
         # Translation vector search
         newtranslations = set([])
         for k in range(lo[0], up[0]+1):
