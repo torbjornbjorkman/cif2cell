@@ -731,10 +731,10 @@ class CellData(GeometryObject):
 
         # Map matrix
         try:
-            mapmatrix = LatticeMatrix([[supercellmap[0],0,0],[0,supercellmap[1],0],[0,0,supercellmap[2]]])
+            mapmatrix = [[supercellmap[0],0,0],[0,supercellmap[1],0],[0,0,supercellmap[2]]]
         except:
             try:
-                mapmatrix = LatticeMatrix(supercellmap)
+                mapmatrix = supercellmap
             except:
                 raise CellError("The supercell map must be a vector or a matrix.")
         # Inverse of map matrix.
