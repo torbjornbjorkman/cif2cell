@@ -1,8 +1,11 @@
 CIF2CELL RELEASE INFORMATION
 
-VERSION 1.0.6
 
+VERSION 1.0.7
+
+* Bug with supercell generation with python 2.7.
 * Fixed bug with rhombohedral/hexagonal settings in the CRYSTAL interface.
+* Miscellaneous minor fixes.
 
 -------------------------------------------------------------- 
 VERSION 1.0.5
