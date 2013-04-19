@@ -23,10 +23,10 @@ from os import chdir
 docfiles = ['docs/cif2cell.pdf']
 
 # Get list of the cif example files
-ciffiles = glob('cifs/*.cif')
+ciffiles = glob('cifs/*.cif')+glob('cifs/periodic_table/*.cif')
 
 setup(name='cif2cell',
-      version='1.0.7',
+      version='1.0.8',
       description='Construct a unit cell from CIF data',
       long_description='A command-line tool to generate the geometrical setup for various electronic structure codes from a CIF format file.',
       author='Torbjorn Bjorkman',

@@ -283,6 +283,8 @@ class CellData(GeometryObject):
         The random displacements are uniformly distributed in the interval ]-size,size[.
         """
         invlatvecs = minv3(self.latticevectors)
+        tmp = []
+        i = 0
         for a in self.atomdata:
             for b in a:
                 if distribution == "gaussian":
@@ -297,6 +299,9 @@ class CellData(GeometryObject):
                     raise SetupError("Unknown distribution for random displacements.")
                 d = Vector([r*sin(theta)*cos(phi), r*sin(theta)*sin(phi), r*cos(theta)]).transform(invlatvecs)
                 b.position = LatticeVector([b.position[i] + d[i] for i in range(3)])
+                tmp.append([b])
+        # We need to reset implicit symmetry information here
+        self.atomdata = tmp
     
     def getCrystalStructure(self, reduce=False):
         """

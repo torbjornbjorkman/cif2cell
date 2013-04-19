@@ -40,7 +40,7 @@ from elementdata import *
 
 # Name and version
 programname = "cif2cell"
-version = "1.0.7"
+version = "1.0.8"
 
 # Turn of warnings about deprecated stuff
 warnings.simplefilter("ignore",DeprecationWarning)
@@ -374,7 +374,8 @@ if options.randomdisp and not makesupercell:
     except SetupError, e:
         sys.stderr.write("***Error: random displacements: "+e.value+"\n")
         sys.exit(3)
-    cd.symops = set([SymmetryOperation(['x','y','z'])])
+    # Reset space group operations
+    cd.symops = set([SymmetryOperation(['x','y','z'])])    
 
 # Print cell
 if verbose or not options.program and not options.quiet:
