@@ -1,6 +1,16 @@
 CIF2CELL RELEASE INFORMATION
 
 
+VERSION 1.0.8
+
+* The code now correctly destroys the symmetry of the system when
+  using the --random-displacements flag. Use --random-displacements=0.0
+  to remove all symmetries from the output  without distorting the structure.
+* Output to screen has been made consistent with the above change.
+* Included CIF's for the crystal structures of all elements in the 
+  periodic table to the CIF collection.
+
+-------------------------------------------------------------- 
 VERSION 1.0.7
 
 * Bug with supercell generation with python 2.7.
