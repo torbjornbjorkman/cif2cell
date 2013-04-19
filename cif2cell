@@ -27,6 +27,7 @@ from __future__ import division
 import os
 import sys
 import string
+import copy
 from math import *
 from datetime import datetime
 from optparse import OptionParser, OptionGroup
@@ -47,8 +48,9 @@ warnings.simplefilter("ignore",DeprecationWarning)
 
 # All supported output formats
 outputprograms = set(['abinit','castep','cpmd','crystal09','elk','emto','exciting',
-                    'fleur','ncol','rspt','siesta','sprkkr','vasp',
-                    'ase','bmdl','cellgen','cif','kfcd','kstr','shape','spacegroup','xband','xyz'])
+                      'fleur','ncol','rspt','siesta','sprkkr','vasp',
+                      'ase','bmdl','cellgen','cif','kfcd','kstr','shape','spacegroup',
+                      'xband','xyz'])
 
 ############################
 #      INPUT OPTIONS       #
@@ -363,6 +365,7 @@ except CellError, e:
     sys.stderr.write("***Error: cell setup: "+e.value+"\n")
     sys.exit(2)
 
+inputcell = copy.copy(cd)
 # Randomly displace atoms if requested. This erases all symmetry operations.
 if options.randomdisp and not makesupercell:
     if options.randomdistr:
@@ -375,7 +378,10 @@ if options.randomdisp and not makesupercell:
         sys.stderr.write("***Error: random displacements: "+e.value+"\n")
         sys.exit(3)
     # Reset space group operations
-    cd.symops = set([SymmetryOperation(['x','y','z'])])    
+    cd.HallSymbol = "P 1"
+    cd.spacegroupnr = 1
+    cd.HMSymbol = "P1"
+    cd.symops = set([SymmetryOperation(['x','y','z'])])
 
 # Print cell
 if verbose or not options.program and not options.quiet:
@@ -407,40 +413,40 @@ if verbose or not options.program and not options.quiet:
             tmpstring = ""
     if tmpstring != "":
         print tmpstring
-    print "\n SYMMETRY INFORMATION"
-    if cd.HallSymbol != "":
-        print cd.crystal_system()[0].upper()+cd.crystal_system()[1:]+" crystal system."
-        print "Space group number     : ".rjust(2)+str(cd.spacegroupnr)
-        print "Hall symbol            : "+cd.HallSymbol
-        print "Hermann-Mauguin symbol : "+cd.HMSymbol
+    print "\n INPUT CELL INFORMATION"
+    print "Symmetry information:"
+    if inputcell.HallSymbol != "":
+        print inputcell.crystal_system()[0].upper()+inputcell.crystal_system()[1:]+" crystal system."
+        print "Space group number     : ".rjust(2)+str(inputcell.spacegroupnr)
+        print "Hall symbol            : "+inputcell.HallSymbol
+        print "Hermann-Mauguin symbol : "+inputcell.HMSymbol
     else:
         print "No space group information found."
     # only print these if verbose
     if verbose:
         print "Symmetry equivalent sites:"
         for i in range(len(cd.symops)):
-            print "%4i  %8s, %8s, %8s" % (i+1, cd.symops[i].eqsite[0], cd.symops[i].eqsite[1], cd.symops[i].eqsite[2])
-    print "\n INPUT CELL INFORMATION"
-    print "Lattice parameters:"
+            print "%4i  %8s, %8s, %8s" % (i+1, inputcell.symops[i].eqsite[0], inputcell.symops[i].eqsite[1], inputcell.symops[i].eqsite[2])
+    print "\nLattice parameters:"
     tmpstring = ""
     for i in ["a", "b", "c"]:
         tmpstring += i.rjust(decpos)+" "
     print tmpstring
     formatstring = ""
     if options.printau:
-        ## aprint = cd.ainit*angtobohr
-        ## bprint = cd.binit*angtobohr
-        ## cprint = cd.cinit*angtobohr
-        aprint = cd.a*angtobohr
-        bprint = cd.b*angtobohr
-        cprint = cd.c*angtobohr
+        ## aprint = inputcell.ainit*angtobohr
+        ## bprint = inputcell.binit*angtobohr
+        ## cprint = inputcell.cinit*angtobohr
+        aprint = inputcell.a*angtobohr
+        bprint = inputcell.b*angtobohr
+        cprint = inputcell.c*angtobohr
     else:
-        ## aprint = cd.ainit
-        ## bprint = cd.binit
-        ## cprint = cd.cinit
-        aprint = cd.a
-        bprint = cd.b
-        cprint = cd.c
+        ## aprint = inputcell.ainit
+        ## bprint = inputcell.binit
+        ## cprint = inputcell.cinit
+        aprint = inputcell.a
+        bprint = inputcell.b
+        cprint = inputcell.c
     for i in range(3):
         formatstring = formatstring+decform+" "
     print formatstring % (aprint, bprint, cprint)
@@ -448,19 +454,19 @@ if verbose or not options.program and not options.quiet:
     for i in ["alpha", "beta", "gamma"]:
         tmpstring += i.rjust(decpos)+" "
     print tmpstring
-    print formatstring % (cd.alpha, cd.beta, cd.gamma)
-    ## print formatstring % (cd.alphainit, cd.betainit, cd.gammainit)
+    print formatstring % (inputcell.alpha, inputcell.beta, inputcell.gamma)
+    ## print formatstring % (inputcell.alphainit, inputcell.betainit, inputcell.gammainit)
     # Pretty printing in columns that need to have variable width
     # w1 = width of the atomic species column
     # w2 = width of a decimal column
     # w3 = width of the occupancy column
     # w4 = width of the charge state column
-    if cd.alloy:
+    if inputcell.alloy:
         w1 = 0
         w3 = 0
         w4 = 0
         # Find atom and occupation column widths
-        for a in cd.atomdata:
+        for a in inputcell.atomdata:
             for b in a:
                 tmpstring1 = ""
                 tmpstring2 = ""
@@ -469,7 +475,7 @@ if verbose or not options.program and not options.quiet:
                     tmpstring1 += k+"/"
                     tmpstring2 += str(v).rstrip("0.")+"/"
                     # charge output
-                    for k2,v2 in cd.chargedict.iteritems():
+                    for k2,v2 in inputcell.chargedict.iteritems():
                         if k2.strip(string.punctuation+string.digits) == k:
                             tmpstring3 += str(v2)+"/"
                 tmpstring1 = tmpstring1.rstrip("/")
@@ -500,7 +506,7 @@ if verbose or not options.program and not options.quiet:
         for i in range(3):
             transmtx.append([])
             for j in range(3):
-                transmtx[i].append(cd.latticevectors[i][j]*cd.lengthscale)
+                transmtx[i].append(inputcell.latticevectors[i][j]*inputcell.lengthscale)
             i += 1
         for i in ["x","y","z"]:
             siteheader += i.rjust(decpos)+" "
@@ -510,7 +516,7 @@ if verbose or not options.program and not options.quiet:
                     [0, 0, 1]]
         for i in ["a1","a2","a3"]:
             siteheader += i.rjust(decpos)+" "
-    if cd.alloy:
+    if inputcell.alloy:
         if w3 > 13:
             siteheader += "occupancies".rjust(w3)
         else:
@@ -519,27 +525,46 @@ if verbose or not options.program and not options.quiet:
         siteheader += " "+"charge".rjust(w4)
     print siteheader
     # Representative sites
-    for i in range(len(cd.ineqsites)):
+    for i in range(len(inputcell.ineqsites)):
         tmpstring = ""
         occstring = ""
         chargestring = ""
-        for k,v in cd.occupations[i].iteritems():
+        for k,v in inputcell.occupations[i].iteritems():
             tmpstring += k+"/"
             occstring += str(v)+"/"
             # charge output
-            for k2,v2 in cd.chargedict.iteritems():
+            for k2,v2 in inputcell.chargedict.iteritems():
                 if k2.strip(string.punctuation+string.digits) == k:
                     chargestring += str(v2)+"/"
         tmpstring = tmpstring.rstrip("/")
         occstring = occstring.rstrip("/")
         chargestring = chargestring.rstrip("/")
-        v = [t for t in cd.ineqsites[i]]
+        v = [t for t in inputcell.ineqsites[i]]
         tmpstring = tmpstring.ljust(w1) + threedecs % (v[0],v[1],v[2])
-        if cd.alloy:
+        if inputcell.alloy:
             tmpstring += " "+occstring.rjust(w3)
         if printcharges:
             tmpstring += " "+chargestring.rjust(w4)
         print tmpstring
+
+    # Output cell
+    print "\n OUTPUT CELL INFORMATION"
+    print "Symmetry information:"
+    if cd.HallSymbol != "":
+        print cd.crystal_system()[0].upper()+cd.crystal_system()[1:]+" crystal system."
+        print "Space group number     : ".rjust(2)+str(cd.spacegroupnr)
+        print "Hall symbol            : "+cd.HallSymbol
+        print "Hermann-Mauguin symbol : "+cd.HMSymbol
+    else:
+        print "No space group information found."
+    # only print these if verbose
+    if verbose:
+        print "Symmetry equivalent sites:"
+        for i in range(len(cd.symops)):
+            print "%4i  %8s, %8s, %8s" % (i+1, cd.symops[i].eqsite[0], cd.symops[i].eqsite[1], cd.symops[i].eqsite[2])
+
+    print ""
+    cd.printCell(printcart=options.printcart, printdigits=printdigits, printcharges=options.printcharges)
     # Print volume and density 
     weight = 0.0
     for a in cd.atomdata:
@@ -557,9 +582,6 @@ if verbose or not options.program and not options.quiet:
         print "\nUnit cell volume  : "+decform%volume+" A^3"
         print "Unit cell density : "+decform%density+" u/A^3 = "+decform%(density*uperatogpercm)+" g/cm^3"
     
-    # Output cell
-    print "\n OUTPUT CELL INFORMATION"
-    cd.printCell(printcart=options.printcart, printdigits=printdigits, printcharges=options.printcharges)
 
 ##############################################
 # Rotate cell
