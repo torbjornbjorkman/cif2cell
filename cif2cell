@@ -831,7 +831,7 @@ if outputprogram == 'cif':
     f = open(outputfile,'w')
     cf = CifFile.CifFile()
     cb = CifFile.CifBlock()
-    if makesupercell:
+    if makesupercell or (reducetoprim and cd.spacegroupsetting != 'P'):
         a = Vector(cd.latticevectors[0].scalmult(cd.lengthscale))
         b = Vector(cd.latticevectors[1].scalmult(cd.lengthscale))
         c = Vector(cd.latticevectors[2].scalmult(cd.lengthscale))
