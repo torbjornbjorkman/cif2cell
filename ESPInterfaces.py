@@ -1254,37 +1254,50 @@ class POSCARFile(GeometryOutputFile):
         return returnstring
     def __str__(self):
         # Assign some local variables
-        a = self.cell.lengthscale
         lattice = self.cell.latticevectors
         # VASP needs lattice vector matrix to have positive triple product
         if det3(lattice) < 0:
             if lattice[0].length() == lattice[1].length() == lattice[2].length():
                 # Shift the first and last for cubic lattices
-                lattice[0],lattice[2] = lattice[2],lattice[0]
+                transmtx = [[0, 0, 1],
+                            [0, 1, 0],
+                            [1, 0, 0]]
             else:
                 # Else shift the two shortest
                 if lattice[0].length() > lattice[1].length() and lattice[0].length() > lattice[2].length():
-                    lattice[1],lattice[2] = lattice[2],lattice[1]
+                    transmtx = [[1, 0, 0],
+                                [0, 0, 1],
+                                [0, 1, 0]]
                 elif lattice[1].length() > lattice[2].length() and lattice[1].length() > lattice[0].length():
-                    lattice[0],lattice[2] = lattice[2],lattice[0]
+                    transmtx = [[0, 0, 1],
+                                [0, 1, 0],
+                                [1, 0, 0]]
                 else:
-                    lattice[1],lattice[0] = lattice[0],lattice[1]
+                    transmtx = [[0, 1, 0],
+                                [1, 0, 0],
+                                [0, 0, 1]]
+        else:
+            transmtx = [[1, 0, 0],
+                        [0, 1, 0],
+                        [0, 0, 1]]
+        lattice = mmmult3(transmtx,lattice)
                 
         # For output of atomic positions
+        a = self.cell.lengthscale
         if self.selectivedyn:
             positionunits += "Selective dynamics\n"
         if self.printcartpos:
             positionunits = "Cartesian\n"
-            transmtx = []
+            coordmat = []
             for i in range(3):
-                transmtx.append([])
+                coordmat.append([])
                 for j in range(3):
-                    transmtx[i].append(lattice[i][j] * a)
+                    coordmat[i].append(lattice[i][j] * a)
         else:
-            positionunits = "Direct\n"
-            transmtx = [[1, 0, 0],
+            coordmat = [[1, 0, 0],
                         [0, 1, 0],
                         [0, 0, 1]]
+            positionunits = "Direct\n"
         # The first line with info from input docstring
         filestring = self.docstring
         if not self.vasp5format:
@@ -1316,7 +1329,7 @@ class POSCARFile(GeometryOutputFile):
                 for b in a:
                     if b.spcstring() == sp:
                         nsp += 1
-                        p = Vector(mvmult3(transmtx,b.position))
+                        p = Vector(mvmult3(coordmat,mvmult3(transmtx,b.position)))
                         positionstring += str(p)
                         if self.selectivedyn:
                             positionstring += "   T  T  T"

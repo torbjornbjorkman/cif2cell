@@ -425,8 +425,10 @@ if verbose or not options.program and not options.quiet:
     # only print these if verbose
     if verbose:
         print "Symmetry equivalent sites:"
-        for i in range(len(cd.symops)):
-            print "%4i  %8s, %8s, %8s" % (i+1, inputcell.symops[i].eqsite[0], inputcell.symops[i].eqsite[1], inputcell.symops[i].eqsite[2])
+        symops = list(inputcell.symops)
+        symops.sort()
+        for i in range(len(symops)):
+            print "%4i  %8s, %8s, %8s" % (i+1, symops[i].eqsite[0], symops[i].eqsite[1], symops[i].eqsite[2])
     print "\nLattice parameters:"
     tmpstring = ""
     for i in ["a", "b", "c"]:
@@ -560,8 +562,10 @@ if verbose or not options.program and not options.quiet:
     # only print these if verbose
     if verbose:
         print "Symmetry equivalent sites:"
-        for i in range(len(cd.symops)):
-            print "%4i  %8s, %8s, %8s" % (i+1, cd.symops[i].eqsite[0], cd.symops[i].eqsite[1], cd.symops[i].eqsite[2])
+        symops = list(cd.symops)
+        symops.sort()
+        for i in range(len(symops)):
+            print "%4i  %8s, %8s, %8s" % (i+1, symops[i].eqsite[0], symops[i].eqsite[1], symops[i].eqsite[2])
 
     print ""
     cd.printCell(printcart=options.printcart, printdigits=printdigits, printcharges=options.printcharges)
