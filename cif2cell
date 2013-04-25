@@ -41,7 +41,7 @@ from elementdata import *
 
 # Name and version
 programname = "cif2cell"
-version = "1.0.8"
+version = "1.0.9"
 
 # Turn of warnings about deprecated stuff
 warnings.simplefilter("ignore",DeprecationWarning)
@@ -831,7 +831,7 @@ if outputprogram == 'cif':
     f = open(outputfile,'w')
     cf = CifFile.CifFile()
     cb = CifFile.CifBlock()
-    if makesupercell or (reducetoprim and cd.spacegroupsetting != 'P'):
+    if makesupercell or (reducetoprim and cd.spacegroupsetting != 'P') or options.randomdisp:
         a = Vector(cd.latticevectors[0].scalmult(cd.lengthscale))
         b = Vector(cd.latticevectors[1].scalmult(cd.lengthscale))
         c = Vector(cd.latticevectors[2].scalmult(cd.lengthscale))
@@ -846,7 +846,7 @@ if outputprogram == 'cif':
         cb['_space_group_name_H-M_alt'] = "P1"
         cb['_space_group_name_Hall'] = "P 1"
     else:
-        # Cell parameters
+        # Else pass on original cell parameters and symmetry information
         cb['_cell_length_a'] = cd.a
         cb['_cell_length_b'] = cd.b
         cb['_cell_length_c'] = cd.c

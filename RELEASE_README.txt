@@ -1,6 +1,12 @@
 CIF2CELL RELEASE INFORMATION
 
 
+VERSION 1.0.9
+
+* Fixed serious bug in the CIF output when exporting the primitive
+  unit cell (with thanks to Jens Kunstmann).
+
+-------------------------------------------------------------- 
 VERSION 1.0.8
 
 * The code now correctly destroys the symmetry of the system when
