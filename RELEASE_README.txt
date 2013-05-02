@@ -1,12 +1,20 @@
 CIF2CELL RELEASE INFORMATION
 
 
+VERSION 1.0.10
+
+* Critical bugfix in non-diagonal supercell generation.
+
+--------------------------------------------------------------  
 VERSION 1.0.9
 
-* Fixed serious bug in the CIF output when exporting the primitive
-  unit cell (with thanks to Jens Kunstmann).
+* Fixed bug in the CIF output when exporting the primitive
+ unit cell.
+* Fixed bug in the VASP output when exporting unit cells with 
+ left-handed set of lattice vectors.
+(with thanks to Jens Kunstmann)
 
--------------------------------------------------------------- 
+--------------------------------------------------------------  
 VERSION 1.0.8
 
 * The code now correctly destroys the symmetry of the system when

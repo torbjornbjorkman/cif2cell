@@ -583,7 +583,7 @@ def crystal_system(spacegroupnr):
         return "monoclinic"
     elif 15 < spacegroupnr <= 74:
         return "orthorhombic"
-    elif 75 < spacegroupnr <= 142:
+    elif 74 < spacegroupnr <= 142:
         return "tetragonal"
     elif 142 < spacegroupnr <= 167:
         return "trigonal"

@@ -736,7 +736,7 @@ class CellData(GeometryObject):
 
         # Map matrix
         try:
-            mapmatrix = [[supercellmap[0],0,0],[0,supercellmap[1],0],[0,0,supercellmap[2]]]
+            mapmatrix = LatticeMatrix([[supercellmap[0],0,0],[0,supercellmap[1],0],[0,0,supercellmap[2]]])
         except:
             try:
                 mapmatrix = supercellmap
