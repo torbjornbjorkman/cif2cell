@@ -297,15 +297,15 @@ else:
 # Make supercell?
 if makesupercell:
     if options.supercellmap:
-        supercellmap = eval(options.supercellmap)
+        supercellmap = safe_matheval(options.supercellmap)
     else:
         supercellmap = [1,1,1]
     if options.supercellvacuum:
-        supercellvacuum = eval(options.supercellvacuum)
+        supercellvacuum = safe_matheval(options.supercellvacuum)
     else:
         supercellvacuum = [0,0,0]
     if options.supercelltransvec:
-        supercelltransvec = eval(options.supercelltransvec)
+        supercelltransvec = safe_matheval(options.supercelltransvec)
     else:
         supercelltransvec = [0,0,0]
     # 
@@ -616,7 +616,7 @@ if transformcell:
                 sys.exit(1)
     # explicitly giving the transformation overrides any other transformation
     if options.celltransformation:
-        celltransformation = eval(options.celltransformation)
+        celltransformation = safe_matheval(options.celltransformation)
     try:
         cd.transformCell(celltransformation)
     except CellError, e:
@@ -1081,7 +1081,7 @@ if outputprogram == 'spacegroup':
     spacegroupfile.beta  = cd.beta
     spacegroupfile.gamma = cd.gamma
     if options.spacegroupsupercell:
-        spacegroupfile.supercelldims = eval(options.spacegroupsupercell)
+        spacegroupfile.supercelldims = safe_matheval(options.spacegroupsupercell)
     # Print to file
     f = open(outputfile, outmode)
     f.write(str(spacegroupfile))
@@ -1107,7 +1107,7 @@ if outputprogram == 'rspt':
         symtfile = SymtFile(cd, docstring)
     # spin axis 
     if options.rsptspinaxis:
-        symtfile.spinaxis = eval(options.rsptspinaxis)
+        symtfile.spinaxis = safe_matheval(options.rsptspinaxis)
     f = open(outputfile, outmode)
     f.write(str(symtfile))
     f.close()
@@ -1121,9 +1121,9 @@ if outputprogram == 'cellgen':
     # Initialize file object
     cellgenfile = CellgenFile(cd, docstring)
     if options.cellgenrefvec:
-        cellgenfile.referencevector = eval(options.cellgenrefvec)
+        cellgenfile.referencevector = safe_matheval(options.cellgenrefvec)
     if options.cellgensupercelldims:
-        tmplist = eval(options.cellgensupercelldims)
+        tmplist = safe_matheval(options.cellgensupercelldims)
         tmpmat = []
         for i in range(3):
             tmpmat.append([])
@@ -1132,7 +1132,7 @@ if outputprogram == 'cellgen':
             tmpmat[i][i] = tmplist[i]
         cellgenfile.supercellmap = tmpmat
     if options.cellgenmap:
-        tmpmat = eval(options.cellgenmap)
+        tmpmat = safe_matheval(options.cellgenmap)
         cellgenfile.supercellmap = tmpmat
     # Print to file
     f = open(outputfile, outmode)

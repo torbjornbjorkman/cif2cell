@@ -208,13 +208,13 @@ class OldNCOLFile(GeometryOutputFile):
                 if species != prevspecies:
                     prevspecies = species
                     nsp += 1
-                tmpstring = species.ljust(2)+"  "+"%3i%3i"%(iq,it)
+                tmpstring = species.ljust(2)+"    "+str(iq).ljust(3)+str(it).ljust(3)
                 try:
-                    tmpstring += "%3i%3i"%(l[ed.elementblock[species]],1)
+                    tmpstring += str(l[ed.elementblock[species]]).ljust(3)+str(1).ljust(3)
                 except KeyError:
                     tmpstring += "  ?  1"
-                tmpstring += "%3i"%nsp
-                tmpstring += "    1.000 .000 0.00 0000 1111   .0   .0   .0   .0"
+                tmpstring += str(nsp).ljust(3)
+                tmpstring += "  1.000 .000 0.00 0000 1111   .0   .0   .0   .0"
                 if b.alloy():
                     # print alloy components at the end of the line
                     tmpstring += "       "+b.spcstring()

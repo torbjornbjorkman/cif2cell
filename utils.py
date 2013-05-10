@@ -60,6 +60,12 @@ codename = { 'abinit' : 'ABINIT',
              'vasp' : 'VASP',
              'xband' : 'XBAND',
              'xyz' : 'xyz' }
+# Make a list of safe functions for use in safe_matheval. Thanks Lybniz developers!
+safe_list = ['math','acos', 'asin', 'atan', 'atan2', 'ceil', 'cos', 'cosh', 'de grees', 'e', 'exp', 'fabs', 'floor', 'fmod', 'frexp', 'hypot', 'ldexp', 'log', 'log10', 'modf', 'pi', 'pow', 'radians', 'sin', 'sinh', 'sqrt', 'tan', 'tanh']
+safe_dict = dict([ (k, locals().get(k, None)) for k in safe_list ])
+# Add any needed builtins.
+safe_dict['abs'] = abs
+
 ################################################################################################
 # Exception classes
 class SymmetryError(Exception):
@@ -464,7 +470,7 @@ class SymmetryOperation(GeometryObject):
             xyz = self.eqsite[j].replace('+',' +').replace('-',' -').split()
             for i in xyz:
                 if i.strip("+-xyz") != "":
-                    vec[j] = eval(i)
+                    vec[j] = safe_matheval(i)
         return LatticeVector(vec)
     # True if the operation is diagonal
     def diagonal(self):
@@ -494,6 +500,10 @@ settingname = { 'P' : 'primitive',
         
 ################################################################################################
 # Functions
+# Evaluate expr safely, i.e. only allow execution of mathematical functions
+def safe_matheval(expr):
+    return eval(expr,{"__builtins__":None},safe_dict)
+
 def removeerror(string):
     # Remove error estimates at the end of a number (as in 3.28(5))
     splitstr=string.split('(')

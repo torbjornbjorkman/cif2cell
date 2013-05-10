@@ -659,7 +659,7 @@ class CellData(GeometryObject):
                     posexpr[k] = posexpr[k].replace('x',str(a[0].position[0]))
                     posexpr[k] = posexpr[k].replace('y',str(a[0].position[1]))
                     posexpr[k] = posexpr[k].replace('z',str(a[0].position[2]))
-                position = LatticeVector([eval(pos) for pos in posexpr])
+                position = LatticeVector([safe_matheval(pos) for pos in posexpr])
                 b = AtomSite(position=position,species=a[0].species,charges=a[0].charges)
                 self.atomset.add(b)
                 append = True
