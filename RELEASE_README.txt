@@ -1,11 +1,20 @@
 CIF2CELL RELEASE INFORMATION
 
 
+VERSION 1.0.12
+
+* Fixed security issues related to vectors/matrices input from the 
+  command line.
+* New interface: CP2K
+* New interface: .coo files
+* Minor fixes and tweaks
+
+--------------------------------------------------------------   
 VERSION 1.0.10
 
 * Critical bugfix in non-diagonal supercell generation.
 
---------------------------------------------------------------  
+--------------------------------------------------------------   
 VERSION 1.0.9
 
 * Fixed bug in the CIF output when exporting the primitive

@@ -31,6 +31,8 @@ from elementdata import *
 from uctools import *
 from re import search
 
+ed = ElementData()
+
 ################################################################################################
 class GeometryOutputFile:
     """
@@ -112,6 +114,32 @@ class ASEFile(GeometryOutputFile):
         filestring = filestring.rstrip(",[ ]\n")+"]],\n"
         filestring += "                scale_atoms = %s)\n"%str(not self.cartesian)
         
+        return filestring
+    
+################################################################################################
+# COO FILE
+class COOFile(GeometryOutputFile):
+    """
+    Class for storing the geometrical data needed for outputting a .coo file
+    and the method __str__ that outputs the contents of the .coo file as a string.
+    """
+    def __init__(self,crystalstructure,string):
+        GeometryOutputFile.__init__(self,crystalstructure,string)
+        # Document string on first line after '//'
+        self.programdoc = string.rstrip("\n")
+    def __str__(self):
+        filestring = "//"+self.programdoc+"\n"
+        a = self.cell.latticevectors[0].length()*self.cell.lengthscale
+        b = self.cell.latticevectors[1].length()*self.cell.lengthscale
+        c = self.cell.latticevectors[2].length()*self.cell.lengthscale
+        alpha = abs(self.cell.latticevectors[1].angle(self.cell.latticevectors[2]))*180/pi
+        beta = abs(self.cell.latticevectors[2].angle(self.cell.latticevectors[0]))*180/pi
+        gamma = abs(self.cell.latticevectors[0].angle(self.cell.latticevectors[1]))*180/pi
+        filestring += " %10.7f %10.7f %10.7f"%(a,b,c)
+        filestring += " %10.7f %10.7f %10.7f %i\n"%(alpha,beta,gamma,len(self.cell.atomset))
+        for a in self.cell.atomdata:
+            for b in a:
+                filestring += str(b.position)+" %3i  0.500 0.000 1.000\n"%(ed.elementnr[b.spcstring()])
         return filestring
     
 ################################################################################################
@@ -1021,6 +1049,41 @@ class CASTEPFile(GeometryOutputFile):
             k += 1
         filestring += "%ENDBLOCK SYMMETRY_OPS\n"        
         return filestring
+
+################################################################################################
+# CP2K
+class CP2KFile(GeometryOutputFile):
+    """
+    Class for storing the geometrical data for a CP2k run and the method
+    __str__ that outputs to a .inp file as a string.
+    """
+    def __init__(self, crystalstructure, string):
+        GeometryOutputFile.__init__(self,crystalstructure,string)
+        self.cell.newunit("angstrom")
+        # Make sure the docstring has comment form
+        self.docstring = self.docstring.rstrip("\n")
+        tmpstrings = self.docstring.split("\n")
+        self.docstring = ""
+        for string in tmpstrings:
+            string = string.lstrip("#")
+            string = "#"+string+"\n"
+            self.docstring += string
+        self.docstring += "\n"
+    def __str__(self):
+        filestring = self.docstring
+        filestring += "&CELL\n"
+        filestring += "  UNIT ANGSTROM\n"
+        filestring += "  PERIODIC XYZ\n"
+        filestring += "  A "+str(self.cell.latticevectors[0].scalmult(self.cell.lengthscale))+"\n"
+        filestring += "  B "+str(self.cell.latticevectors[1].scalmult(self.cell.lengthscale))+"\n"
+        filestring += "  C "+str(self.cell.latticevectors[2].scalmult(self.cell.lengthscale))+"\n"
+        filestring += "&END CELL\n\n"
+        filestring += "&COORD\n"
+        for a in self.cell.atomdata:
+            for b in a:
+                filestring += b.spcstring()+str(Vector(mvmult3(self.cell.latticevectors,b.position)).scalmult(self.cell.lengthscale))+"\n"
+        filestring += "&END COORD\n"
+        return filestring 
 
 ################################################################################################
 class CPMDFile(GeometryOutputFile):
