@@ -1051,6 +1051,61 @@ class CASTEPFile(GeometryOutputFile):
         return filestring
 
 ################################################################################################
+# PWSCF (Quantum Espresso)
+class PWSCFFile(GeometryOutputFile):
+    """
+    Class for storing the geometrical data for a PWSCF run and the method
+    __str__ that outputs to a .in file as a string.
+    """
+    def __init__(self, crystalstructure, string):
+        GeometryOutputFile.__init__(self,crystalstructure,string)
+        self.cell.newunit("angstrom")
+        # Make sure the docstring has comment form
+        self.docstring = self.docstring.rstrip("\n")
+        tmpstrings = self.docstring.split("\n")
+        self.docstring = ""
+        for string in tmpstrings:
+            string = string.lstrip("#")
+            string = "#"+string+"\n"
+            self.docstring += string
+        self.docstring += "\n"
+    def __str__(self):
+        filestring = self.docstring
+        a = self.cell.latticevectors[0].length()*self.cell.lengthscale
+        boa = self.cell.latticevectors[1].length()/self.cell.latticevectors[0].length()
+        coa = self.cell.latticevectors[2].length()/self.cell.latticevectors[0].length()
+        filestring += "&SYSTEM\n"
+        filestring += "  ibrav = %i\n"%self.ibrav()
+        filestring += "  celldm(1) = %10.5f, celldm(2) = %10.5f, celldm(3) = %10.5f\n"%(a,boa,coa)
+        filestring += "  nat = %i, ntyp = %i\n"
+        filestring += "/\n"
+        filestring += "ATOMIC_SPECIES"
+        
+        return filestring
+    # Return the PWscf internal bravais lattice number
+    def ibrav(self):
+        system = self.cell.crystal_system()
+        setting = self.cell.spacegroupsetting
+        if self.supercell:
+            return 14
+        if system == 'cubic':
+            if self.primcell:
+                if setting == 'P':
+                    return 1
+                elif setting == 'F':
+                    return 2
+                elif setting == 'I':
+                    return 3
+            else:
+                return 1
+        if system == 'hexagonal':
+            if self.primcell:
+                if setting == 'P':
+                    return 4
+                elif setting == 'R':
+                    return 5
+        
+################################################################################################
 # CP2K
 class CP2KFile(GeometryOutputFile):
     """
@@ -1280,6 +1335,40 @@ class ABINITFile(GeometryOutputFile):
         filestring += xredstring+"\n"
         return filestring
 
+################################################################################################
+class AIMSFile(GeometryOutputFile):
+    """
+    Class for storing the geometrical data needed in a FHI-AIMS run and the method
+    __str__ that outputs the contents of a abinit input file as a string.
+    """
+    def __init__(self, crystalstructure, string):
+        GeometryOutputFile.__init__(self,crystalstructure,string)
+        self.cell.newunit("angstrom")
+        self.cartesian = False
+        # Make sure the docstring has comment form
+        self.docstring = self.docstring.rstrip("\n")
+        tmpstrings = self.docstring.split("\n")
+        self.docstring = ""
+        for string in tmpstrings:
+            string = string.lstrip("#")
+            string = "#"+string+"\n"
+            self.docstring += string
+    def __str__(self):
+        filestring = self.docstring+"\n"
+        latvecs = self.cell.latticevectors
+        for i in range(3):
+            for j in range(3):
+                latvecs[i][j] = latvecs[i][j] * self.cell.lengthscale
+        for vec in latvecs:
+            filestring += "lattice_vector  "+str(vec)+"\n"
+        for a in self.cell.atomdata:
+            for b in a:
+                if self.cartesian:
+                    filestring += "atom  "+str(Vector(mvmult3(latvecs,b.position)))+" "+b.spcstring()+"\n"
+                else:
+                    filestring += "atom_frac  "+str(b.position)+" "+b.spcstring()+"\n"
+        return filestring
+        
 ################################################################################################
 class POSCARFile(GeometryOutputFile):
     """

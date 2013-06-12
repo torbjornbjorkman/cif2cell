@@ -131,6 +131,7 @@ class CellData(GeometryObject):
         self.primcell = False
         self.rhomb2hex = False
         self.rhombohedral = False
+        self.supercell = False
 
     def newunit(self,newunit="angstrom"):
         """ Set new unit for the length scale. Valid choices are:
@@ -806,7 +807,7 @@ class CellData(GeometryObject):
             for b in a:
                 for translation in newtranslations: 
                     position = LatticeVector(b.position + translation)
-                    t = copy.deepcopy(b)
+                    t = AtomSite(position=b.position,species=b.species,charges=b.charges)
                     t.position = position
                     newsites[i].append(t)
             i += 1
@@ -956,6 +957,7 @@ class CellData(GeometryObject):
                     # sort atoms by lattice coordinates
                     for i in sort:
                         self.atomdata.sort(key = lambda a: a[0].position[int(i)-1])
+        self.supercell = True
         return self
 
     # Get lattice information from CIF block

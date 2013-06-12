@@ -60,7 +60,10 @@ codename = { 'abinit' : 'ABINIT',
              'sprkkr' : 'SPR-KKR',
              'vasp' : 'VASP',
              'xband' : 'XBAND',
-             'xyz' : 'xyz' }
+             'xyz' : 'xyz',
+             'pwscf' : 'PWscf',
+             'quantum-espresso' : 'Quantum Espresso'}
+             
 # Make a list of safe functions for use in safe_matheval. Thanks Lybniz developers!
 safe_list = ['math','acos', 'asin', 'atan', 'atan2', 'ceil', 'cos', 'cosh', 'e', 'exp', 'fabs', 'floor', 'fmod', 'frexp', 'hypot', 'ldexp', 'log', 'log10', 'modf', 'pi', 'pow', 'radians', 'sin', 'sinh', 'sqrt', 'tan', 'tanh']
 safe_dict = dict([ (k, locals().get(k, None)) for k in safe_list ])
@@ -315,6 +318,7 @@ class AtomSite(GeometryObject):
     Functions:
         __eq__    : compare equality
         __str__   : one line with species and position info
+        copy      : return a new instance with the same data
         distance  : distance to some other atom
         spcstring : species string ('Mn', 'La/Sr' ...)
         alloy     : true if there are more than one species occupying the site

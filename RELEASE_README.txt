@@ -7,6 +7,7 @@ VERSION 1.0.12
   command line.
 * New interface: CP2K
 * New interface: .coo files
+* New interface: FHI-AIMS
 * Minor fixes and tweaks
 
 --------------------------------------------------------------   
