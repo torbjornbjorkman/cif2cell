@@ -18,15 +18,23 @@ from distutils.core import setup
 from glob import glob
 from subprocess import call
 from os import chdir
+import sys
+try:
+    import CifFile
+except:
+    print "CifFile module not found. Please install PyCIFRW (https://sourceforge.net/projects/pycifrw.berlios/)\n"+\
+          "or adjust your PYTHONPATH."
+    sys.exit(1)
 
 # Set up documentation
 docfiles = ['docs/cif2cell.pdf']
 
 # Get list of the cif example files
-ciffiles = glob('cifs/*.cif')+glob('cifs/periodic_table/*.cif')
+ciffiles = glob('cifs/*.cif')
+periodiccifs = glob('cifs/periodic_table/*.cif')+['cifs/periodic_table/README']
 
 setup(name='cif2cell',
-      version='1.0.12',
+      version='1.0.13',
       description='Construct a unit cell from CIF data',
       long_description='A command-line tool to generate the geometrical setup for various electronic structure codes from a CIF format file.',
       author='Torbjorn Bjorkman',
@@ -37,6 +45,7 @@ setup(name='cif2cell',
       requires=['CifFile'],
       data_files=[('./', ['LICENSE','HOWTOCITE']),
                   ('lib/cif2cell/sample_cifs', ciffiles),
+                  ('lib/cif2cell/sample_cifs/periodic_table', periodiccifs),
                   ('lib/cif2cell/docs',docfiles)],
       license='GNU General Public License version 3'
       )

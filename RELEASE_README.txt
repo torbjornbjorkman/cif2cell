@@ -1,6 +1,11 @@
 CIF2CELL RELEASE INFORMATION
 
+VERSION 1.0.13
 
+* Improvement in installation script (checks for PyCIFRW).
+* Improvements in space group detection (handles full H-M symbols).
+
+--------------------------------------------------------------   
 VERSION 1.0.12
 
 * Fixed security issues related to vectors/matrices input from the 
