@@ -771,15 +771,15 @@ class CellData(GeometryObject):
         for i in range(3):
             sumset = set([])
             for j in range(3):
-                sumset.add(M[i][j])
-            sumset.add(M[i][0]+M[i][1])
-            sumset.add(M[i][0]+M[i][2])
-            sumset.add(M[i][1]+M[i][2])
-            sumset.add(M[i][0]+M[i][1]+M[i][2])
-            sumset.add(M[i][0]-M[i][1])
-            sumset.add(M[i][0]-M[i][2])
-            sumset.add(M[i][1]-M[i][2])
-            sumset.add(M[i][0]-M[i][1]-M[i][2])
+                sumset.add(int(M[i][j]))
+            sumset.add(int(M[i][0])+int(M[i][1]))
+            sumset.add(int(M[i][0])+int(M[i][2]))
+            sumset.add(int(M[i][1])+int(M[i][2]))
+            sumset.add(int(M[i][0])+int(M[i][1])+int(M[i][2]))
+            sumset.add(int(M[i][0])-int(M[i][1]))
+            sumset.add(int(M[i][0])-int(M[i][2]))
+            sumset.add(int(M[i][1])-int(M[i][2]))
+            sumset.add(int(M[i][0])-int(M[i][1])-int(M[i][2]))
             lo.append(min(sumset)-1)  # Don't really understand why I need to add/subtract
             up.append(max(sumset)+1)  # 1 here... but things sometimes fail if I don't.
         # Translation vector search

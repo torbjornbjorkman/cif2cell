@@ -1,7 +1,8 @@
 CIF2CELL RELEASE INFORMATION
 
-VERSION 1.0.13
+VERSION 1.0.14
 
+* Fixed bug in supercell generation when using python 2.7.
 * Improvement in installation script (checks for PyCIFRW).
 * Improvements in space group detection (handles full H-M symbols).
 
