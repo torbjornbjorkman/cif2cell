@@ -49,7 +49,7 @@ warnings.simplefilter("ignore",DeprecationWarning)
 # All supported output formats
 outputprograms = set(['abinit','castep','coo','cpmd','cp2k','crystal09','elk','emto','exciting','fhi-aims',
                       ## 'fleur','ncol','rspt','siesta','sprkkr','vasp','pwscf','quantum-espresso', # pwscf/quantum-espresso not ready
-                      'fleur','ncol','rspt','siesta','sprkkr','vasp',
+                      'fleur','hutsepot','ncol','rspt','siesta','sprkkr','vasp',
                       'ase','bmdl','cellgen','cif','kfcd','kstr','shape','spacegroup',
                       'xband','xyz'])
 programlist = sorted(list(outputprograms))
@@ -770,6 +770,8 @@ else:
             outputfile = "geometry.in"
         elif outputprogram == "fleur":
             outputfile = "inp_"+outputfile
+        elif outputprogram == "hutsepot":
+            outputfile = outputfile+".str"
         elif outputprogram == "crystal09":
             # This is the naming convention from a large bunch of test cases, no idea why
             outputfile = outputfile+".d12"
@@ -957,6 +959,17 @@ if outputprogram == 'crystal09':
     f.write(str(crystal09file))
     f.close()
     sys.exit(0)
+
+################################################################################################
+# Output for Hutsepot
+if outputprogram == 'hutsepot':
+    # Get documentation string
+    docstring = StandardDocstring()
+    # Get output file object
+    hutsepotinput = HUTSEPOTFile(cd, docstring)
+    f = open(outputfile,outmode)
+    f.write(str(hutsepotinput))
+    f.close()
 
 ################################################################################################
 # Output for FHI-AIMS

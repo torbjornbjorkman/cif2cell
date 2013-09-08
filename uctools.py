@@ -153,6 +153,8 @@ class CellData(GeometryObject):
             fact = 0.052917721
         elif self.unit == "nm" and newunit == "bohr":
             fact = 18.897261
+        else:
+            raise CellError("newunit: "+newunit+" No such unit.")
         self.lengthscale *= fact
         self.a *= fact
         self.b *= fact
