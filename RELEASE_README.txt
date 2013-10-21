@@ -1,5 +1,15 @@
 CIF2CELL RELEASE INFORMATION
 
+VERSION 1.0.16
+
+* Minor tweaks of the RSPt interface
+
+--------------------------------------------------------------   
+VERSION 1.0.15
+
+* New interface: Hutsepot
+
+--------------------------------------------------------------   
 VERSION 1.0.14
 
 * Fixed bug in supercell generation when using python 2.7.

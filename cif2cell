@@ -41,7 +41,7 @@ from elementdata import *
 
 # Name and version
 programname = "cif2cell"
-version = "1.0.14"
+version = "1.0.16"
 
 # Turn of warnings about deprecated stuff
 warnings.simplefilter("ignore",DeprecationWarning)
@@ -126,6 +126,8 @@ progspec.add_option("--rspt-spinpol", dest="rsptspinpol", help="Generate new for
 progspec.add_option("--rspt-relativistic", dest="rsptrelativistic", help="Generate new format symt.inp file with relativistic effects.", action="store_true")
 progspec.add_option("--rspt-spinaxis", dest="rsptspinaxis", help="Spin axis for symt.inp (default is [0.0,0.0,0.0].", metavar="[x,y,z]")
 progspec.add_option("--rspt-mtradii", dest="rsptmtradii", help="Integer that gives the method for setting muffin tin radii.", metavar="N")
+progspec.add_option("--rspt-cartesian-latticevectors", dest="rsptcartlatvects", help="Put lattice vectors in atomic units and the lenght scale parameter to 1.", action="store_true")
+progspec.add_option("--rspt-pass-wyckoff", dest="rsptpasswyckoff", help="Pass wyckoff labels from CIF file to the symt/rspt.inp file.", action="store_true")
 # SPRKKR/xband
 progspec.add_option("--sprkkr-minangmom",dest="sprkkrminangmom",help="Enforce minimum onsite angular momentum (=l+1, so that 3 will be d-states).")
 # spacegroup
@@ -1178,6 +1180,10 @@ if outputprogram == 'rspt':
     # spin axis 
     if options.rsptspinaxis:
         symtfile.spinaxis = safe_matheval(options.rsptspinaxis)
+    if options.rsptpasswyckoff:
+        symtfile.passwyckoff = True
+    if options.rsptcartlatvects:
+        symtfile.rsptcartlatvects = True
     f = open(outputfile, outmode)
     f.write(str(symtfile))
     f.close()

@@ -521,6 +521,8 @@ class SymtFile(GeometryOutputFile):
             self.docstring += string
         # Default spin axis is [0,0,0]
         self.spinaxis = [0.0, 0.0, 0.0]
+        self.rsptcartlatvects = False
+        self.passwyckoff = False
     def __str__(self):
         # Initialize element data
         ed = ElementData()
@@ -530,10 +532,14 @@ class SymtFile(GeometryOutputFile):
         filestring += "# Lattice constant in a.u.: "+str(self.cell.lengthscale)+"\n"
         # RSPt reads the lattice vectors as columns...
         filestring +="# Lattice vectors (columns)\n"
+        if self.rsptcartlatvects:
+            fac = self.cell.lengthscale
+        else:
+            fac = 1.0
         tmpstring = ""
         for i in range(3):
             for j in range(3):
-                tmpstring += "%19.15f "%self.cell.latticevectors[j][i]
+                tmpstring += "%19.15f "%(self.cell.latticevectors[j][i]*fac)
             tmpstring += "\n"
         filestring += tmpstring
         filestring += "# Spin axis\n"
@@ -545,6 +551,7 @@ class SymtFile(GeometryOutputFile):
         filestring += "# Sites\n"
         filestring += str(nosites)+"\n"
         it = 1
+        label = "a"
         for a in self.cell.atomdata:
             for b in a:
                 tmpstring = ""
@@ -554,7 +561,9 @@ class SymtFile(GeometryOutputFile):
                     tmpstring += "???"
                 else:
                     tmpstring +=  "%3i"%ed.elementnr[b.spcstring()]
-                tmpstring += " l "+chr(it+96)+"   # "+b.spcstring()+"\n"
+                if self.passwyckoff:
+                    label = chr(it+96)
+                tmpstring += " l "+label+"   # "+b.spcstring()+"\n"
                 filestring += tmpstring
             it += 1
         return filestring
@@ -582,7 +591,9 @@ class SymtFile2(GeometryOutputFile):
         # parameters for spin polarization
         self.spinpol = False
         self.relativistic = False
+        self.rsptcartlatvects = False
         self.mtradii = 0
+        self.passwyckoff = False
     def __str__(self):
         # Initialize element data
         ed = ElementData()
@@ -591,12 +602,15 @@ class SymtFile2(GeometryOutputFile):
         # Add lattice constant
         filestring += "# Lattice constant in a.u.\n"
         filestring += "lengthscale\n"
-        filestring += str(self.cell.lengthscale)+"\n"
+        if self.rsptcartlatvects:
+            filestring += "1.000 \n"
+        else:
+            filestring += str(self.cell.lengthscale)+"\n"
         if self.spinpol:
             filestring += "# Spin polarized calculation\nspinpol\n"
             filestring += "# Spin polarize atomic densities\nspinpol_atomdens\n"
         if self.relativistic:
-            filestring += "# Relativistic symmetries\nrelativistic\n"
+            filestring += "# Relativistic symmetries\nfullrel\n"
         if self.mtradii != 0:
             filestring += "# Choice of MT radii\n"
             filestring += "mtradii\n"+str(self.mtradii)+"\n"
@@ -604,9 +618,13 @@ class SymtFile2(GeometryOutputFile):
         filestring += "# Lattice vectors (columns)\n"
         filestring += "latticevectors\n"
         tmpstring = ""
+        if self.rsptcartlatvects:
+            fac = self.cell.lengthscale
+        else:
+            fac = 1.0
         for i in range(3):
             for j in range(3):
-                tmpstring += "%19.15f "%self.cell.latticevectors[j][i]
+                tmpstring += "%19.15f "%(self.cell.latticevectors[j][i]*fac)
             tmpstring += "\n"
         filestring += tmpstring
         filestring += "# Spin axis\n"
@@ -620,6 +638,7 @@ class SymtFile2(GeometryOutputFile):
         filestring += "atoms\n"
         filestring += str(nosites)+"\n"
         it = 1
+        label = "a"
         for a in self.cell.atomdata:
             for b in a:
                 tmpstring = ""
@@ -629,7 +648,9 @@ class SymtFile2(GeometryOutputFile):
                     tmpstring += "???"
                 else:
                     tmpstring += "%3i"%ed.elementnr[b.spcstring()]
-                tmpstring += " l "+chr(it+96)+"   # "+b.spcstring()+"\n"
+                if self.passwyckoff:
+                    label = chr(it+96)
+                tmpstring += " l "+label+"   # "+b.spcstring()+"\n"
                 filestring += tmpstring
             it += 1
         return filestring
