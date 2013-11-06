@@ -33,6 +33,9 @@ docfiles = ['docs/cif2cell.pdf']
 ciffiles = glob('cifs/*.cif')
 periodiccifs = glob('cifs/periodic_table/*.cif')+['cifs/periodic_table/README']
 
+# python modules
+modulelist +=['utils','uctools','spacegroupdata','elementdata','ESPInterfaces']
+
 setup(name='cif2cell',
       version='1.0.16',
       description='Construct a unit cell from CIF data',
@@ -40,7 +43,7 @@ setup(name='cif2cell',
       author='Torbjorn Bjorkman',
       author_email='torbjornb@gmail.com',
       url='http://cif2cell.sourceforge.net/',
-      py_modules=['utils','uctools','spacegroupdata','elementdata','ESPInterfaces'],
+      py_modules=modulelist,
       scripts=['cif2cell'],
       requires=['CifFile'],
       data_files=[('./', ['LICENSE','HOWTOCITE']),

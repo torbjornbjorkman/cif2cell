@@ -1,5 +1,16 @@
 CIF2CELL RELEASE INFORMATION
 
+VERSION 1.0.17
+
+* Tweaks and bugfixes in the ABINIT interface (with thanks to Kevin
+  Jorissen).
+* The --supercell-translation-vector option is now also known under
+  the more informative name --supercell-prevacuum-translation and 
+  supplemented by a --supercell-postvacuum-translation option. This 
+  fixes the lack of functionality for deciding where in the unit cell
+  the vacuum should be in slab calculations etc.
+
+--------------------------------------------------------------   
 VERSION 1.0.16
 
 * Minor tweaks of the RSPt interface

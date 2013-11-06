@@ -359,7 +359,8 @@ class AtomSite(GeometryObject):
         return tmp
     # Is there more than one species on this site?
     def alloy(self):
-        return len(self.species) > 1
+        occsum = sum([v for k,v in self.species.iteritems()])
+        return len(self.species) > 1 or abs(occsum-1) > self.compeps
     # print site data in some informative way
     def __str__(self):
         # Element symbol

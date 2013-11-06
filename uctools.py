@@ -719,7 +719,7 @@ class CellData(GeometryObject):
             raise CellError("The transformation matrix skews the lattice. Only combinations of "+
                             "rotations and rescaling of the whole cell are allowed.")
 
-    def getSuperCell(self, supercellmap, vacuum, transvec, sort=""):
+    def getSuperCell(self, supercellmap, vacuum, prevactransvec, postvactransvec=[.0,.0,.0], sort=""):
         """
         Returns a supercell based on the input supercell map, vacuum layers and translation vector.
         The cell must have been initialized prior to calling getSuperCell.
@@ -727,8 +727,9 @@ class CellData(GeometryObject):
         The cell will be padded with some number of original unit cells of vacuum
         by simple rescaling of the lattice vectors and positions. This is controlled by 'vacuum'.
         
-        All coordinates will be translated by 'transvec', which is given in units
-        of the original lattice vectors.
+        Prior to addition of vacuum, all coordinates will be translated by 'prevactransvec',
+        which is given in units of the original lattice vectors. After the addition of vacuum,
+        all coordinates are translated by 'postvactransvec' (given in units of the final lattice).
         """
         
         # Sanity checks
@@ -820,12 +821,12 @@ class CellData(GeometryObject):
                 self.atomset.add(b)
             i += 1
 
-        # Move all atoms by transvec 
-        if reduce(lambda x,y: x+y, transvec) != 0:
+        # Move all atoms by prevactransvec 
+        if reduce(lambda x,y: x+y, prevactransvec) != 0:
             for i in range(len(self.atomdata)):
                 for j in range(len(self.atomdata[i])):
                     for k in range(3):
-                        self.atomdata[i][j].position[k] = self.atomdata[i][j].position[k] + transvec[k]
+                        self.atomdata[i][j].position[k] = self.atomdata[i][j].position[k] + prevactransvec[k]
                         
         # Put stuff back in cell
         for a in self.atomdata:
@@ -850,6 +851,13 @@ class CellData(GeometryObject):
             for b in a:
                 b.position = LatticeVector(mvmult3(invlatvect, b.position))
 
+        # Move all atoms by postvactransvec 
+        if reduce(lambda x,y: x+y, postvactransvec) != 0:
+            for i in range(len(self.atomdata)):
+                for j in range(len(self.atomdata[i])):
+                    for k in range(3):
+                        self.atomdata[i][j].position[k] = self.atomdata[i][j].position[k] + postvactransvec[k]
+                        
         ############ New space group operations ############
         # Only sort out space group information for diagonal map matrix. !SHOULD BE FIXED GENERALLY!
         eps = self.compeps

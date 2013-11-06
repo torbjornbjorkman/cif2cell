@@ -1395,6 +1395,7 @@ class ABINITFile(GeometryOutputFile):
             string = string.lstrip("#")
             string = "#"+string+"\n"
             self.docstring += string
+        self.printbraces = False
     def __str__(self):
         # Assign some local variables
         a = self.cell.lengthscale
@@ -1402,22 +1403,56 @@ class ABINITFile(GeometryOutputFile):
         ed = ElementData()
         # docstring
         filestring = self.docstring
+        # VASP needs lattice vector matrix to have positive triple product
+        if det3(lattice) < 0:
+            if lattice[0].length() == lattice[1].length() == lattice[2].length():
+                # Shift the first and last for cubic lattices
+                transmtx = [[0, 0, 1],
+                            [0, 1, 0],
+                            [1, 0, 0]]
+            else:
+                # Else shift the two shortest
+                if lattice[0].length() > lattice[1].length() and lattice[0].length() > lattice[2].length():
+                    transmtx = [[1, 0, 0],
+                                [0, 0, 1],
+                                [0, 1, 0]]
+                elif lattice[1].length() > lattice[2].length() and lattice[1].length() > lattice[0].length():
+                    transmtx = [[0, 0, 1],
+                                [0, 1, 0],
+                                [1, 0, 0]]
+                else:
+                    transmtx = [[0, 1, 0],
+                                [1, 0, 0],
+                                [0, 0, 1]]
+        else:
+            transmtx = [[1, 0, 0],
+                        [0, 1, 0],
+                        [0, 0, 1]]
+        lattice = mmmult3(transmtx,lattice)
+        # Print braces around values (or not)
+        if self.printbraces:
+            lbrace = "{"
+            rbrace = "}"
+        else:
+            lbrace = " "
+            rbrace = ""
         # length scale and lattice
         filestring += "# Structural parameters\n"
-        filestring += "acell   3*"+str(a)+"\n\n"
-        filestring += "rprim   "
+        filestring += "acell "+lbrace+"  3*"+str(a)+" "+rbrace+" \n\n"
+        filestring += "rprim "+lbrace
         for vec in lattice:
-            filestring += str(vec)+"\n        "
-        filestring += "\n"
+            filestring += str(Vector(vec))+"\n       "
+        filestring = filestring[:-1]
+        filestring += rbrace+" \n"
         # The atom position info
         alloy = False
         spcs = ""
-        typatstring = "typat    "
+        typatstring = "typat  "+lbrace+" "
         natom = 0
         ntypat = 0
-        znuclstring = "znucl    "
+        znuclstring = "znucl  "+lbrace+" "
         alloystring = ""
-        xredstring = "xred   "
+        xredstring = "xred "+lbrace+" "
         for a in self.cell.atomdata:
             for b in a:
                 natom += 1
@@ -1430,18 +1465,19 @@ class ABINITFile(GeometryOutputFile):
                     else:
                         znuclstring += str(ed.elementnr[b.spcstring()])+" "
                 typatstring += str(ntypat)+" "
-                xredstring += str(b.position)+"\n       "
+                xredstring += str(Vector(mvmult3(transmtx,b.position)))+"\n       "
                 spcs = b.spcstring()
-        filestring += "natom    "+str(natom)+"\n"
-        filestring += "ntypat   "+str(ntypat)+"\n"
-        filestring += typatstring+"\n"
-        filestring += znuclstring
+        filestring += "natom  "+lbrace+" "+str(natom)+" "+rbrace+" \n"
+        filestring += "ntypat "+lbrace+" "+str(ntypat)+" "+rbrace+" \n"
+        filestring += typatstring+rbrace+" \n"
+        filestring += znuclstring+rbrace+" "
         if alloy:
             filestring += "    # "+alloystring
         filestring += "\n"
-        filestring += xredstring+"\n"
+        filestring += xredstring
+        filestring = filestring[:-2]+rbrace+" \n"
         return filestring
-
+    
 ################################################################################################
 class AIMSFile(GeometryOutputFile):
     """
@@ -1474,6 +1510,36 @@ class AIMSFile(GeometryOutputFile):
                     filestring += "atom  "+str(Vector(mvmult3(latvecs,b.position)))+" "+b.spcstring()+"\n"
                 else:
                     filestring += "atom_frac  "+str(b.position)+" "+b.spcstring()+"\n"
+        return filestring
+        
+################################################################################################
+#UNFINISHED!
+class MCSQSFile(GeometryOutputFile):
+    """
+    Class for storing the geometrical data needed by the mcsqs SQS generator and the method
+    __str__ that outputs the contents of a mcsqs input file as a string.
+    """
+    def __init__(self, crystalstructure, string):
+        GeometryOutputFile.__init__(self,crystalstructure,string)
+        self.cell.newunit("angstrom")
+        self.cartesian = False
+        # Make sure the docstring has comment form
+        self.docstring = self.docstring.rstrip("\n")
+        tmpstrings = self.docstring.split("\n")
+        self.docstring = ""
+        for string in tmpstrings:
+            string = string.lstrip("#")
+            string = "#"+string+"\n"
+            self.docstring += string
+    def __str__(self):
+        l = self.cell.lengthscale
+        filestring = "%12.8f %12.8f %12.8f 90.0 90.0 90.0"
+        filestring += str(self.cell.latticevectors)
+        for a in self.cell.atomdata:
+            for b in a:
+                filestring += +str(b.position)+" "
+                for k,v in b.species.iteritems():
+                    filestring += k+"="+str(v)
         return filestring
         
 ################################################################################################
@@ -1543,10 +1609,11 @@ class POSCARFile(GeometryOutputFile):
                 
         # For output of atomic positions
         a = self.cell.lengthscale
+        positionunits = ""
         if self.selectivedyn:
             positionunits += "Selective dynamics\n"
         if self.printcartpos:
-            positionunits = "Cartesian\n"
+            positionunits += "Cartesian\n"
             coordmat = []
             for i in range(3):
                 coordmat.append([])
@@ -1556,7 +1623,7 @@ class POSCARFile(GeometryOutputFile):
             coordmat = [[1, 0, 0],
                         [0, 1, 0],
                         [0, 0, 1]]
-            positionunits = "Direct\n"
+            positionunits += "Direct\n"
         # The first line with info from input docstring
         filestring = self.docstring
         if not self.vasp5format:

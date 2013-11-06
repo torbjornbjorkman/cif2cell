@@ -41,14 +41,14 @@ from elementdata import *
 
 # Name and version
 programname = "cif2cell"
-version = "1.0.16"
+version = "1.0.17"
 
 # Turn of warnings about deprecated stuff
 warnings.simplefilter("ignore",DeprecationWarning)
 
 # All supported output formats
 outputprograms = set(['abinit','castep','coo','cpmd','cp2k','crystal09','elk','emto','exciting','fhi-aims',
-                      ## 'fleur','ncol','rspt','siesta','sprkkr','vasp','pwscf','quantum-espresso', # pwscf/quantum-espresso not ready
+                      ## 'fleur','ncol','mcsqs','rspt','siesta','sprkkr','vasp','pwscf','quantum-espresso', # pwscf/quantum-espresso and mcsqs not ready
                       'fleur','hutsepot','ncol','rspt','siesta','sprkkr','vasp',
                       'ase','bmdl','cellgen','cif','kfcd','kstr','shape','spacegroup',
                       'xband','xyz'])
@@ -94,7 +94,8 @@ cellgenopts.add_option("--random-displacements-distribution",dest="randomdistr",
 # Supercell options
 cellgenopts.add_option("--supercell",dest="supercellmap",help="Three integers separated with commas and enclosed in square brackets that specify the dimensions of a supercell OR three vectors of integers that gives the map to the supercell to be constructed from the primitive cell. If combined with the --no-reduce option the supercell will instead be generated based on the conventional cell.",metavar="[k,l,m]/[[],[],[]]")
 cellgenopts.add_option("--supercell-vacuum",dest="supercellvacuum",help="Three numbers >=0 separated with commas and enclosed in square brackets that specify a number of unit cell units of vacuum to be added along the first, second or third of the generated lattice vectors.",metavar="[k,l,m]")
-cellgenopts.add_option("--supercell-translation-vector",dest="supercelltransvec",help="Three numbers separated with commas and enclosed in square brackets that specify a final shift of all atomic positions in the final cell (in units of the lattice vectors of the new cell).",metavar="[k,l,m]")
+cellgenopts.add_option("--supercell-translation-vector","--supercell-prevacuum-translation",dest="supercellprevactransvec",help="Three numbers separated with commas and enclosed in square brackets that specify a shift of all atomic positions in the cell prior to vacuum generation (in units of the lattice vectors of the supercell).",metavar="[k,l,m]")
+cellgenopts.add_option("--supercell-postvacuum-translation",dest="supercellpostvactransvec",help="Three numbers separated with commas and enclosed in square brackets that specify a final shift of all atomic positions in the final cell (in units of the lattice vectors of the new cell).",metavar="[k,l,m]")
 cellgenopts.add_option("--supercell-sort",dest="supercellsort",help="Sort the atom positions by some scheme. Currently available are:     1) By cartesian coordinate - example: xzy will sort first on x then on z then on y.     2) by lattice vector - example: 132 will sort first by lattice vector 1 then by lattice vector 3 and last by lattice vector 2.")
 # PRINTING OPTIONS
 printopts = OptionGroup(parser, "Printing options")
@@ -107,6 +108,8 @@ printopts.add_option("--print-charge-state","--print-oxidation-numbers",dest="pr
 printopts.add_option("--print-reference-bibtex",dest="bibtexref",help="Print citation in BibTeX format and exit.",action="store_true")
 # PROGRAM SPECIFIC OPTIONS
 progspec = OptionGroup(parser, "Program specific options")
+# abinit
+progspec.add_option("--abinit-braces",dest="abinitbraces",help="Put curly braces around input values for ABINIT.",action="store_true")
 # cellgen
 progspec.add_option("--cellgen-map",dest="cellgenmap",help="Nine integers separated with commas and enclosed three and three in square brackets (this is a matrix in Python) that specify the map to a supercell to be output for the RSPt supercell generator 'cellgen'. Overrides --cellgen-supercell-dims.",metavar="[[k,l,m],[n,o,p],[q,r,s]]")
 progspec.add_option("--cellgen-supercell-dimensions",dest="cellgensupercelldims",help="Three integers separated with commas and enclosed in square brackets that specify the dimensions of a supercell to be output to the RSPt supercell generator 'cellgen' (the diagonal elements of the 'map').",metavar="[k,l,m]")
@@ -226,7 +229,8 @@ else:
     forcealloy = False
 
 # Make supercell?
-if options.supercellmap or options.supercellvacuum or options.supercelltransvec:
+if options.supercellmap or options.supercellvacuum or options.supercellprevactransvec or \
+       options.supercellpostsvactransvec:
     makesupercell = True
 else:
     makesupercell = False
@@ -324,10 +328,14 @@ if makesupercell:
         supercellvacuum = safe_matheval(options.supercellvacuum)
     else:
         supercellvacuum = [0,0,0]
-    if options.supercelltransvec:
-        supercelltransvec = safe_matheval(options.supercelltransvec)
+    if options.supercellprevactransvec:
+        supercellprevactransvec = safe_matheval(options.supercellprevactransvec)
     else:
-        supercelltransvec = [0,0,0]
+        supercellprevactransvec = [0,0,0]
+    if options.supercellpostvactransvec:
+        supercellpostvactransvec = safe_matheval(options.supercellpostvactransvec)
+    else:
+        supercellpostvactransvec = [0,0,0]
     # 
     if options.supercellsort:
         supercellsort = options.supercellsort.lower()
@@ -650,7 +658,7 @@ if transformcell:
 # Generate supercell
 if makesupercell:
     try:
-        cd.getSuperCell(supercellmap,supercellvacuum,supercelltransvec,sort=supercellsort)
+        cd.getSuperCell(supercellmap,supercellvacuum,supercellprevactransvec,postvactransvec=supercellpostvactransvec,sort=supercellsort)
     except CellError, e:
         sys.stderr.write("***Error: Supercell setup: "+e.value+"\n")
         sys.exit(2)
@@ -974,6 +982,17 @@ if outputprogram == 'hutsepot':
     f.close()
 
 ################################################################################################
+# Output for mcsqs
+if outputprogram == 'mcsqs':
+    # Get documentation string
+    docstring = StandardDocstring()
+    # Get output file object
+    mcsqsinput = MCSQSFile(cd, docstring)
+    f = open(outputfile,outmode)
+    f.write(str(mcsqsinput))
+    f.close()
+
+################################################################################################
 # Output for FHI-AIMS
 if outputprogram == 'fhi-aims':
     # Get documentation string
@@ -1043,6 +1062,8 @@ if outputprogram == 'siesta':
 if outputprogram == 'abinit':
     docstring = StandardDocstring()
     abinitinput = ABINITFile(cd, docstring)
+    if options.abinitbraces:
+        abinitinput.printbraces = True
     f = open(outputfile, outmode)
     f.write(str(abinitinput))
     f.close()

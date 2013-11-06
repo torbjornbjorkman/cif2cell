@@ -443,12 +443,14 @@ Note that the backslashes just indicate a newline that you should not have when 
 \section{Technicalities}\label{techappendix}
 
 \subsection{Order in which things are done in the supercell generation}
+Note the order, and in particular the units in which the operations are done. The 
 \begin{enumerate}
 \item Generation of primitive cell (or the conventional cell, if the flag \texttt{--no-reduce} is used).
 \item Rotation/rescaling transformation of the lattice vectors with \texttt{--transform-cell}.
-\item Applying supercell map (\texttt{--supercell=\ldots}).
-\item Moving atoms in the supercell by \texttt{--supercell-translation-vector} (in units of the supercell!).
+\item Applying supercell map with \texttt{--supercell=\ldots}. The units are the previously generated primitive or conventional cell.
+\item Moving atoms in the supercell by \texttt{--supercell-translation-vector} \emph{or} \\ \texttt{--supercell-prevacuum-translation} (in units of the supercell!).
 \item Adding vacuum along the direction of one of the lattice vectors with \texttt{--supercell-vacuum} (in units of the supercell!).
+\item Moving atoms in the supercell by \texttt{--supercell-postvacuum-translation} (in units of the supercell including vacuum!).
 \end{enumerate}
 
 %\newpage
