@@ -41,7 +41,7 @@ from elementdata import *
 
 # Name and version
 programname = "cif2cell"
-version = "1.0.17"
+version = "1.1.0"
 
 # Turn of warnings about deprecated stuff
 warnings.simplefilter("ignore",DeprecationWarning)
@@ -230,7 +230,7 @@ else:
 
 # Make supercell?
 if options.supercellmap or options.supercellvacuum or options.supercellprevactransvec or \
-       options.supercellpostsvactransvec:
+       options.supercellpostvactransvec:
     makesupercell = True
 else:
     makesupercell = False

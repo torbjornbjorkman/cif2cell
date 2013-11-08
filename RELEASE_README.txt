@@ -1,5 +1,11 @@
 CIF2CELL RELEASE INFORMATION
 
+VERSION 1.1.0
+
+* The package now bundles the prerequisite PyCifRW package and will
+   install it automatically in case it is missing.
+
+--------------------------------------------------------------   
 VERSION 1.0.17
 
 * Tweaks and bugfixes in the ABINIT interface (with thanks to Kevin
