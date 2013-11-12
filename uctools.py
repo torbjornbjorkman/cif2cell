@@ -255,6 +255,13 @@ class CellData(GeometryObject):
         """ Return the volume of the cell. """
         return abs(det3(self.latticevectors))
     
+    def natoms(self):
+        """ Return the number of atoms in the cell. """
+        i = 0
+        for a in self.atomdata:
+            i += len(a)
+        return i
+    
     def primitive(self):
         """ Return a CrystalStructure object for the primitive cell."""
         self.getCrystalStructure(reduce=True)
@@ -690,8 +697,8 @@ class CellData(GeometryObject):
 
     def transformCell(self, transformation):
         """
-        Applies transformation to bravais lattice vectors. Only transformations involving
-        rotations and an overall rescaling of the cell are allowed.
+        Applies transformation to bravais lattice vectors (and symmetry operations).
+        Only transformations involving rotations and an overall rescaling of the cell are allowed.
         """
         r = LatticeMatrix(transformation)
         fac = pow(abs(det3(r)),float(1)/3)
@@ -712,6 +719,14 @@ class CellData(GeometryObject):
         if oldanglen==newanglen or self.force:
             self.latticevectors = t
             self.lengthscale /= fac
+            # Transform symmetry operations
+            newsymops = set([])
+            for op in self.symops:
+                o = copy.copy(op)
+                o.rotation = LatticeMatrix(mmmult3(mmmult3(minv3(r),o.rotation),r))
+                o.improveprecision()
+                newsymops.add(o)
+            self.symops = newsymops
             if oldanglen!=newanglen and self.force:
                 sys.stderr.write("***Error: The transformation matrix skews the lattice. Only combinations of \n"+
                                  "          rotations and rescaling of the whole cell are allowed.")

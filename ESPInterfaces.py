@@ -2182,16 +2182,12 @@ class KSTRFile(GeometryOutputFile):
                         maxl = max(maxl,4)
         tmpstring = "NL.....= %1i NLH...=11 NLW...= 9 NDER..= 6 ITRANS= 3 NPRN..= 0\n" % maxl
         filestring += tmpstring
-        # Get number of sites
-        nosites = 0
-        for a in self.cell.atomdata:
-            nosites += len(a)
         # Setting the real space summation cutoff to 4.5*(wigner-seitz radius)
         volume = abs(det3(lv))
-        wsr = (3*volume/(nosites * 4 * pi))**third
+        wsr = (3*volume/(self.cell.natoms() * 4 * pi))**third
         tmpstring = "(K*W)^2..=  0.000000 DMAX....=%10f RWATS...=      0.10\n" % (wsr*4.5)
         filestring += tmpstring
-        tmpstring = "NQ3...=%3i LAT...=%2i IPRIM.=%2i NGHBP.=13 NQR2..= 0\n" % (nosites,self.latticenr,self.iprim)
+        tmpstring = "NQ3...=%3i LAT...=%2i IPRIM.=%2i NGHBP.=13 NQR2..= 0\n" % (self.cell.natoms(),self.latticenr,self.iprim)
         filestring += tmpstring
         boa = self.b/self.a
         coa = self.c/self.a
@@ -2208,7 +2204,7 @@ class KSTRFile(GeometryOutputFile):
                 v = mvmult3(lv,b.position)
                 filestring += "QX(IQ)...=%10f QY......=%10f QZ......=%10f" % (v[0],v[1],v[2])
                 filestring += "      "+b.spcstring()+"\n"
-        for i in range(nosites):
+        for i in range(self.cell.natoms()):
             filestring += "a/w(IQ)..="
             for i in range(4):
                 filestring += "%5.2f"%self.hardsphere
@@ -2380,3 +2376,69 @@ class XBandSysFile(GeometryOutputFile):
                 corr = 1
                 filestring += "\n"
         return filestring
+
+class SPCFile(GeometryOutputFile):
+    """
+    Class for storing the geometrical data needed in a [filename].dat file for the SPC program
+    and the method __str__ that outputs the contents of the .dat file as a string.
+    """
+    def __init__(self,crystalstructure,string):
+        GeometryOutputFile.__init__(self,crystalstructure,string)
+        self.jobnam = "default"
+        self.latticenr = 1
+        self.compoundname = ""
+        self.a = 1
+        self.b = 1
+        self.c = 1
+        self.alpha = 90
+        self.beta = 90
+        self.gamma = 90
+        self.iprim = 0
+        self.hardsphere = 0.67
+        # To be put on the first line
+        self.programdoc = ""
+    def __str__(self):
+        import datetime
+        now = datetime.datetime.now()
+        datestring = now.strftime("%d %b %y")
+        lv = self.cell.latticevectors
+        filestring = "SPC       HP......=N                                         "+datestring+"\n"
+        filestring += self.docstring
+        filestring += "JOBNAM...="+self.jobnam.ljust(10)+" MSGL.=  1 \n"
+        if os.path.isdir('spc'):
+            dirname = 'spc/'
+        else:
+            dirname = './'
+        filestring += "FOR001="+dirname+"\n"
+        filestring += "FOR002="+dirname+"\n"
+        filestring += "FOR004="+dirname+"\n"
+        filestring += "FOR006=\n"
+        filestring += "FOR008="+dirname+"\n"
+        filestring += "FOR009="+dirname+"\n"
+        filestring += "Supercell, "+self.compoundname+"\n"
+        filestring += "NPRN..=  0 TEST.=  0 NCOL.=  0 STAT.=  1 TCLIM=  0 nsho.= 10\n"
+        filestring += "NQ3...=%3i LAT..=%3i IPRIM=%3i HIGH.=  0 NSHC.= 10 NL...=  4 NLH..=  7\n"%(self.cell.natoms(),self.latticenr,self.iprim)
+        a = self.cell.latticevectors[0].length()*self.cell.lengthscale
+        b = self.cell.latticevectors[1].length()*self.cell.lengthscale
+        c = self.cell.latticevectors[2].length()*self.cell.lengthscale
+        filestring += "A........=%10f B.......=%10f C.......=%10f\n"%(a,b,c)
+        tmpstring = ""
+        if self.iprim == 0:
+            for i in range(3):
+                tmpstring += "BSX......=%10f BSY.....=%10f BSZ.....=%10f\n" % (lv[i][0],lv[i][1],lv[i][2])
+        else:
+            tmpstring +=  "ALPHA....=%10f BETA....=%10f GAMMA...=%10f\n" % (self.alpha, self.beta, self.gamma)
+        filestring += tmpstring
+        for a in self.cell.atomdata:
+            for b in a:
+                v = mvmult3(lv,b.position)
+                filestring += "QX(IQ)...=%10f QY......=%10f QZ......=%10f" % (v[0],v[1],v[2])
+                filestring += "      "+b.spcstring()+"\n"
+        for i in range(self.cell.natoms()):
+            filestring += "a/w(IQ)..="
+            for i in range(4):
+                filestring += "%5.2f"%self.hardsphere
+            filestring += "\n"
+        filestring += "LAMDA....=    2.5000 AMAX....=    4.5000 BMAX....=    4.5000\n"
+        return filestring
+

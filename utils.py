@@ -37,7 +37,7 @@ half = one/two
 fourth = one/four
 sixth = one/six
 occepsilon = 0.000001
-floatlist = [third, 2*third, half, fourth, one, zero, sqrt(2.0),sixth,5*sixth]
+floatlist = [third, 2*third, half, fourth, one, zero, sqrt(2.0),sixth,5*sixth,sqrt(3.0),sqrt(3.0)/2]
 angtobohr = 1.8897261
 uperatogpercm = 1.6605388
 uperautogpercm = 11.205871
@@ -303,7 +303,15 @@ class LatticeMatrix(GeometryObject, list):
              [self[0][1], self[1][1], self[2][1]],
              [self[0][2], self[1][2], self[2][2]]]
         return LatticeMatrix(t)
-
+    # Round floats to recognized numbers
+    def improveprecision(self):
+        t = []
+        for i in range(3):
+            t.append([])
+            for j in range(3):
+                t[i].append(improveprecision(self[i][j],self.compeps))
+        return LatticeMatrix(t)
+                            
 class AtomSite(GeometryObject):
     """
     Class for describing an atomic site.
@@ -455,6 +463,7 @@ class SymmetryOperation(GeometryObject):
             return False
         return self.translation < other.translation
     # Return a rotation matrix from "x,y,z" representation of a symmetry operation
+    # !!!With respect to cartesian axes!!!
     def rotmat(self):
         mat = [[0.,0.,0.],[0.,0.,0.],[0.,0.,0.]]
         for j in range(len(self.eqsite)):
@@ -493,6 +502,9 @@ class SymmetryOperation(GeometryObject):
     def operate(self,vector):
         t = Vector(mvmult3(self.rotation, vector)) + self.translation
         return t
+    def improveprecision(self):
+        self.rotation = self.rotation.improveprecision()
+        self.translation = self.translation.improveprecision()
 
 ################################################################################################
 # Dictionaries

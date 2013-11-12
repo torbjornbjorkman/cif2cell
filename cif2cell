@@ -41,7 +41,7 @@ from elementdata import *
 
 # Name and version
 programname = "cif2cell"
-version = "1.1.0"
+version = "1.1.1"
 
 # Turn of warnings about deprecated stuff
 warnings.simplefilter("ignore",DeprecationWarning)
@@ -51,6 +51,7 @@ outputprograms = set(['abinit','castep','coo','cpmd','cp2k','crystal09','elk','e
                       ## 'fleur','ncol','mcsqs','rspt','siesta','sprkkr','vasp','pwscf','quantum-espresso', # pwscf/quantum-espresso and mcsqs not ready
                       'fleur','hutsepot','ncol','rspt','siesta','sprkkr','vasp',
                       'ase','bmdl','cellgen','cif','kfcd','kstr','shape','spacegroup',
+#                      'spc','xband','xyz'])
                       'xband','xyz'])
 programlist = sorted(list(outputprograms))
 outputprogramstring = ""
@@ -93,6 +94,7 @@ cellgenopts.add_option("--random-displacements",dest="randomdisp",help="Randomly
 cellgenopts.add_option("--random-displacements-distribution",dest="randomdistr",help="The distribution used for displacing the atoms.",metavar="uniform/gaussian")
 # Supercell options
 cellgenopts.add_option("--supercell",dest="supercellmap",help="Three integers separated with commas and enclosed in square brackets that specify the dimensions of a supercell OR three vectors of integers that gives the map to the supercell to be constructed from the primitive cell. If combined with the --no-reduce option the supercell will instead be generated based on the conventional cell.",metavar="[k,l,m]/[[],[],[]]")
+cellgenopts.add_option("--supercell-dimensions",dest="supercelldims",help="Three numbers separated with commas and enclosed in square brackets that specify the desired ABSOLUTE dimensions of a supercell (in angstrom) OR three vectors of numbers that gives the desired lattice vectors. The program will automatically generate a supercell, attempting to get as close as possible to the desired dimensions.",metavar="[x,y,z]/[[],[],[]]")
 cellgenopts.add_option("--supercell-vacuum",dest="supercellvacuum",help="Three numbers >=0 separated with commas and enclosed in square brackets that specify a number of unit cell units of vacuum to be added along the first, second or third of the generated lattice vectors.",metavar="[k,l,m]")
 cellgenopts.add_option("--supercell-translation-vector","--supercell-prevacuum-translation",dest="supercellprevactransvec",help="Three numbers separated with commas and enclosed in square brackets that specify a shift of all atomic positions in the cell prior to vacuum generation (in units of the lattice vectors of the supercell).",metavar="[k,l,m]")
 cellgenopts.add_option("--supercell-postvacuum-translation",dest="supercellpostvactransvec",help="Three numbers separated with commas and enclosed in square brackets that specify a final shift of all atomic positions in the final cell (in units of the lattice vectors of the new cell).",metavar="[k,l,m]")
@@ -171,6 +173,9 @@ if options.setupall and options.program != 'vasp':
 if options.filenamequery and not options.program:
     sys.stderr.write("***Error: option --which-filename requires that --program is given.\n")
     sys.exit(1)
+if options.supercellmap and options.supercelldims:
+    sys.stderr.write("***Error: cannot use both --supercell and --supercell-dimensions.")
+    sys.exit(1)
 #############################################################
 # INITIAL PARSING OF VARIOUS INPUT DATA
 # Electronic structure program
@@ -215,7 +220,7 @@ if options.bibtexref:
 else:
     bibtexref = False
 # Programs that can deal with alloys
-alloyprograms = set(["emto","kstr","bmdl","shape","kgrn","kfcd","cif","sprkkr","xband"])
+alloyprograms = set(["emto","kstr","bmdl","shape","kgrn","kfcd","cif","spc","sprkkr","xband"])
 vcaprograms = set(["castep"])
 # Force generation despite problems?
 if options.force:
@@ -229,8 +234,8 @@ else:
     forcealloy = False
 
 # Make supercell?
-if options.supercellmap or options.supercellvacuum or options.supercellprevactransvec or \
-       options.supercellpostvactransvec:
+if options.supercellmap or options.supercelldims or options.supercellvacuum or \
+       options.supercellprevactransvec or options.supercellpostvactransvec:
     makesupercell = True
 else:
     makesupercell = False
@@ -324,6 +329,16 @@ if makesupercell:
         supercellmap = safe_matheval(options.supercellmap)
     else:
         supercellmap = [1,1,1]
+    if options.supercelldims:
+        t = safe_matheval(options.supercelldims)
+        try:
+            supercelldims = [[float(t[0]), 0.0, 0.0],
+                             [0.0, float(t[1]), 0.0],
+                             [0.0, 0.0, float(t[2])]]
+        except:
+            supercelldims = t
+    else:
+        supercelldims = None
     if options.supercellvacuum:
         supercellvacuum = safe_matheval(options.supercellvacuum)
     else:
@@ -657,6 +672,20 @@ if transformcell:
 ##############################################
 # Generate supercell
 if makesupercell:
+    if supercelldims != None:
+        # Determine a suitable map to get the desired supercell dimensions.
+        t1 = []
+        for i in range(3):
+            t1.append([])
+            for j in range(3):
+                t1[i].append(cd.latticevectors[i][j]*cd.lengthscale)
+        t2 = minv3(t1)
+        t2 = mmmult3(supercelldims,t2)
+        supercellmap = []
+        for i in range(3):
+            supercellmap.append([])
+            for j in range(3):
+                supercellmap[i].append(int(round(t2[i][j])))
     try:
         cd.getSuperCell(supercellmap,supercellvacuum,supercellprevactransvec,postvactransvec=supercellpostvactransvec,sort=supercellsort)
     except CellError, e:
@@ -787,6 +816,8 @@ else:
             outputfile = outputfile+".d12"
         elif outputprogram == "sprkkr" or outputprogram == "xband":
             outputfile = outputfile+".sys"
+        elif outputprogram == "spc":
+            outputfile = outputfile+".dat"
         elif outputprogram == "xyz":
             outputfile = outputfile+".xyz"
         elif outputprogram == "pwscf":
@@ -846,14 +877,18 @@ if options.vca:
         
 # Function for printing a standard docstring
 def StandardDocstring():
-    stringlen = max(len(ref.referencestring()),len(ref.cpd+"   ("+ref.compound+")"))
+    cif2cellstring = ' T. Bjorkman, Comp. Phys. Commun. 182, 1183-1186 (2011). Please cite generously.'
+    stringlen = max(len(ref.referencestring()),len(ref.cpd+"   ("+ref.compound+")"),len(cif2cellstring))
     docstring = ""
     tmpstring = ""
     tmpstring = tmpstring.ljust(stringlen+4,'*')+'\n'
     docstring += tmpstring
     tmpstring2 = 'Generated by '+programname+' '+version+' '+datestring
     tmpstring2 = '* '+tmpstring2.center(stringlen)+' *\n'
-    docstring += tmpstring2
+    tmpstring3 = '* '+cif2cellstring.center(stringlen)+' *\n'
+    tmpstring4 = ''
+    tmpstring4 = '* '+tmpstring4.center(stringlen)+' *\n'
+    docstring += tmpstring2+tmpstring3+tmpstring4
     if ref.database != "":
         tmpstring2 = 'Data obtained from '+ref.databaseabbr[ref.database]
         if ref.databasecode != "":
@@ -1539,6 +1574,18 @@ if outputprogram == 'coo':
     docstring = "Generated by cif2cell "+version
     # Initialize the COOFile structure
     sysfile = COOFile(cd, docstring)
+    f = open(outputfile, outmode)
+    f.write(str(sysfile))
+    f.close()
+    sys.exit(0)
+
+################################################################################################
+# Output for SPC file
+if outputprogram == 'spc':
+    # The second comment line with info from the CIF file 
+    docstring = StandardDocstring()
+    # Initialize the SPCFile structure
+    sysfile = SPCFile(cd, docstring)
     f = open(outputfile, outmode)
     f.write(str(sysfile))
     f.close()

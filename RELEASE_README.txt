@@ -1,9 +1,21 @@
 CIF2CELL RELEASE INFORMATION
 
+VERSION 1.1.1
+
+* Fixed bug with symmetry operations not being transformed
+  when applying the --transform-cell, --rhombohedral-diagonal
+  and --cubic-diagonal-z options.
+
+--------------------------------------------------------------   
 VERSION 1.1.0
 
 * The package now bundles the prerequisite PyCifRW package and will
    install it automatically in case it is missing.
+* The standard docstring now comes with a citation of the CIF2Cell
+   publication and a request to cite. Why do I bother you with this? 
+   Well, mainly because CIF2Cell now becomes bundled in other 
+   software packages and users may lose track of the source of the 
+   tools they are using.
 
 --------------------------------------------------------------   
 VERSION 1.0.17

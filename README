@@ -12,14 +12,17 @@ CURRENTLY SUPPORTS
                |  alloy  |
 code           | support |   output files
 ---------------|---------|-----------------------------------
+ASE                no      positions.py
 VASP               no      POSCAR
 ABINIT             no      [compoundname].in
 Siesta             no      [compoundname].fdf
 CPMD               no      [compoundname].inp
-CASTEP             no      [compoundname].cell
+CASTEP            VCA      [compoundname].cell
 Crystal09          no      [compoundname].d12
+FHI-aims           no      geometry.in
 RSPt               no      symt.inp
 Fleur              no      inp_[compoundname]
+hutsepot           no      [compoundname].sys
 cellgen            no      cellgen.inp
 elk                no      GEOMETRY.OUT
 exciting           no      input.xml
@@ -29,6 +32,8 @@ ncol               no      [spacegroupname/compoundname].dat
 emto               yes     [spacegroupname/compoundname].dat 
                            for kstr, bmdl, shape, kgrn and kfcd
                            in separate directories.
+spr-kkr            yes     [compoundname].sys
+xyz                no      [compoundname].xyz
 
 CONTENTS
 The distribution includes:
@@ -36,15 +41,22 @@ The distribution includes:
 * The file LICENSE with the GPLv3 license.
 * The python files cif2cell, uctools.py and spacegroupdata.py
 * Installation files, setup.py and MANIFEST.
+* A manual.
 * The directory cifs/ containing a set of example CIF files 
-  from COD, the Crystallography Open Database <http://www.crystallography.net>.
+  as well as the crystal structures of the full periodic table 
+  from COD, the Crystallography Open Database <http://www.crystallography.net>
+  and also a few from ICSD (with permission).
+* The file PyCifRW-3.3.tar.gz, containing the PyCifRW package needed for
+  parsing CIF files.
 
 
 INSTALLATION INSTRUCTIONS
 
 Prerequisites: The program requires Python 2.4 or higher and the
-               PyCIFRW python package. Note however that the output
-               may be slightly different (but physically equivalent) 
+               PyCIFRW python package (which will be installed 
+               automatically if not present, see below for manual 
+   	       installation instructions). Note however that the output
+               may be slightly different (but formally equivalent) 
 	       with Python 2.4 than with later versions.
 
 To install the program in your systems standard location, simply type:
@@ -53,6 +65,15 @@ To choose a different location, add
 --prefix=where/you/want/it 
 to the above line. For help and more options type
 python setup.py --help
+
+The installation will also create a directory $PREFIX/lib/cif2cell
+that contains the manual and sample cif files.
+
+
+DOCUMENTATION
+
+The setup will install the manual, cif2cell.pdf, into the 
+$PREFIX/lib/cif2cell/docs directory. 
 
 
 RUNNING
@@ -92,9 +113,10 @@ torbjorn@cc.hut.fi
 
 
 ############### PyCIFRW instructions #################
-The program uses the library PyCIFRW, which must be installed in 
+The program uses the library PyCIFRW, which must be installed somewhere in 
 your PYTHONPATH. It can be found in this directory or downloaded from
-<http://pycifrw.berlios.de>. To install the library in the 
+<http://sourceforge.net/projects/pycifrw.berlios/>. 
+The relevant components should be automatically installed. To install the library manually in the 
 'whereyouwantit/lib/python[version]/site-packages' directory, first unpack the file PyCifRW-X.Y.tar.gz. 
 Then go into the directory
 PyCifRW-X.Y and type 
