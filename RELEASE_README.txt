@@ -1,10 +1,15 @@
 CIF2CELL RELEASE INFORMATION
 
+VERSION 1.1.2
+
+* Fixed bug introduced by last bugfix.
+
+--------------------------------------------------------------   
 VERSION 1.1.1
 
 * Fixed bug with symmetry operations not being transformed
-  when applying the --transform-cell, --rhombohedral-diagonal
-  and --cubic-diagonal-z options.
+ when applying the --transform-cell, --rhombohedral-diagonal
+ and --cubic-diagonal-z options.
 
 --------------------------------------------------------------   
 VERSION 1.1.0

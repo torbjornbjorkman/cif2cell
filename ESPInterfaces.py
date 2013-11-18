@@ -26,6 +26,7 @@
 import copy
 import os
 import math
+import string
 from utils import *
 from elementdata import *
 from uctools import *
@@ -1808,13 +1809,11 @@ class INCARFile:
         for s in self.species:
             if s in suspiciouslist:
                 self.magnetic = True
-                for i in range(self.species[s]):
-                    self.magmomlist.append(str(initialmoments[s]))
+                self.magmomlist.append(str(self.species[s])+"*"+str(initialmoments[s]))
             else:
-                for i in range(self.species[s]):
-                    self.magmomlist.append("0")
+                self.magmomlist.append(str(self.species[s])+"*0")
         # Determine NBANDS
-        nmag = sum([int(i) for i in self.magmomlist])
+        nmag = sum([eval(i) for i in self.magmomlist])
         nelect = 0.0
         for sp,z in zvals.iteritems():
             for a in self.cell.atomdata:
@@ -2394,16 +2393,18 @@ class SPCFile(GeometryOutputFile):
         self.beta = 90
         self.gamma = 90
         self.iprim = 0
-        self.hardsphere = 0.67
+        #
+        self.supercell=[1,1,1]
+        self.pairs = 6
+        self.triplets = 4
+        self.quartets = 2
         # To be put on the first line
         self.programdoc = ""
     def __str__(self):
         import datetime
         now = datetime.datetime.now()
         datestring = now.strftime("%d %b %y")
-        lv = self.cell.latticevectors
         filestring = "SPC       HP......=N                                         "+datestring+"\n"
-        filestring += self.docstring
         filestring += "JOBNAM...="+self.jobnam.ljust(10)+" MSGL.=  1 \n"
         if os.path.isdir('spc'):
             dirname = 'spc/'
@@ -2415,13 +2416,20 @@ class SPCFile(GeometryOutputFile):
         filestring += "FOR006=\n"
         filestring += "FOR008="+dirname+"\n"
         filestring += "FOR009="+dirname+"\n"
+        filestring += self.docstring
         filestring += "Supercell, "+self.compoundname+"\n"
         filestring += "NPRN..=  0 TEST.=  0 NCOL.=  0 STAT.=  1 TCLIM=  0 nsho.= 10\n"
         filestring += "NQ3...=%3i LAT..=%3i IPRIM=%3i HIGH.=  0 NSHC.= 10 NL...=  4 NLH..=  7\n"%(self.cell.natoms(),self.latticenr,self.iprim)
-        a = self.cell.latticevectors[0].length()*self.cell.lengthscale
-        b = self.cell.latticevectors[1].length()*self.cell.lengthscale
-        c = self.cell.latticevectors[2].length()*self.cell.lengthscale
-        filestring += "A........=%10f B.......=%10f C.......=%10f\n"%(a,b,c)
+        self.a = self.cell.latticevectors[0].length()*self.cell.lengthscale
+        self.b = self.cell.latticevectors[1].length()*self.cell.lengthscale
+        self.c = self.cell.latticevectors[2].length()*self.cell.lengthscale
+        # Renormalized lattice vectors
+        lv = []
+        for i in range(3):
+            lv.append([])
+            for j in range(3):
+                lv[i].append(self.cell.latticevectors[i][j]*self.cell.lengthscale/self.a)
+        filestring += "A........=%10f B.......=%10f C.......=%10f\n"%(self.a,self.b,self.c)
         tmpstring = ""
         if self.iprim == 0:
             for i in range(3):
@@ -2432,13 +2440,109 @@ class SPCFile(GeometryOutputFile):
         for a in self.cell.atomdata:
             for b in a:
                 v = mvmult3(lv,b.position)
-                filestring += "QX(IQ)...=%10f QY......=%10f QZ......=%10f" % (v[0],v[1],v[2])
+                filestring += "QX.......=%10f QY......=%10f QZ......=%10f" % (v[0],v[1],v[2])
                 filestring += "      "+b.spcstring()+"\n"
-        for i in range(self.cell.natoms()):
-            filestring += "a/w(IQ)..="
-            for i in range(4):
-                filestring += "%5.2f"%self.hardsphere
-            filestring += "\n"
         filestring += "LAMDA....=    2.5000 AMAX....=    4.5000 BMAX....=    4.5000\n"
+        filestring += "Size of the super cell\n"
+        filestring += "NA.......=%4i NB.......=%4i NC.......=%4i  Dmax     4.5\n"%(self.supercell[0],self.supercell[1],self.supercell[2])
+        filestring += "NSDC.....=  20 NSDS.....=   1 NSDM.....=   1\n"
+        filestring += "NMAXMX...=   3 TMLIM....= 1.0\n"
+        filestring += "NT.......=%4i\n"%(len(self.cell.atomdata))
+        filestring += "NTA(IQ)..="
+        i = 0
+        nat = 0
+        for a in self.cell.atomdata:
+            i += 1
+            for b in a:
+                nat += 1
+                filestring += "%4i"%i
+                if nat%15 == 0:
+                    filestring += "\n          "
+        filestring = filestring.rstrip(" ")
+        if self.cell.natoms()%15 != 0:
+            filestring += "\n"
+        #
+        filestring += "NTO......=%4i\n"%(len(self.cell.atomdata))
+        filestring += "NTAO(IQ).="
+        i = 0
+        nat = 0
+        for a in self.cell.atomdata:
+            i += 1
+            for b in a:
+                nat += 1
+                filestring += "%4i"%i
+                if nat%15 == 0:
+                    filestring += "\n          "
+        filestring = filestring.rstrip(" ")
+        if self.cell.natoms()%15 != 0:
+            filestring += "\n"
+        #
+        filestring += "NQ3O.....=%4i\n"%(len(self.cell.atomdata))
+        filestring += "IQO(IQ)..="
+        i = 0
+        nat = 0
+        for a in self.cell.atomdata:
+            i += 1
+            for b in a:
+                nat += 1
+                filestring += "%4i"%i
+                if nat%15 == 0:
+                    filestring += "\n          "
+        filestring = filestring.rstrip(" ")
+        if self.cell.natoms()%15 != 0:
+            filestring += "\n"
+        conc = []
+        ascii = string.ascii_uppercase+string.ascii_lowercase
+        i = 0
+        for b in self.cell.atomdata:
+            natom = 0
+            conc.append([])
+            for a in self.cell.atomdata:
+                for k,v in a[0].species.iteritems():
+                    if a == b:
+                        conc[i].append((ascii[natom],v))
+                    else:
+                        conc[i].append((ascii[natom],0.0))
+                    natom += 1
+            i += 1
+        filestring += "NATOM....=%4i\n"%natom
+        filestring += "SMB(IAT).="
+        for a in conc[0]:
+            filestring += "%4s"%a[0]
+        filestring += "\n"
+        filestring += "Concentrations on sublattices:\n"
+        for a in conc:
+            for c in a:
+                filestring += "%f "%c[1]
+            filestring += "\n"
+        filestring += "Correlation functions and weights for each pairs of elem. (A-B, A-C, ... )\n"
+        i = 0
+        for a in self.cell.atomdata:
+            i += 1
+            filestring += "Sublattice\n"
+            filestring += "%i\n"%i
+            if len(a[0].species) == 1:
+                continue
+            filestring += "nc2  r_max\n"
+            if len(a[0].species) == 1:
+                filestring += "0     3.0\n"
+                filestring += "i    alpha           weight\n"
+            else:
+                filestring += "%i     3.0\n"%self.pairs
+                filestring += "i    alpha           weight\n"
+                for p in range(self.pairs):
+                    if p < 3:
+                        filestring += "%i     0.0               1.0\n"%(p+1)
+                    else:
+                        filestring += "%i     0.0               0.0\n"%(p+1)
+            filestring += "nc3\n"
+            filestring += "0\n"
+            filestring += "i   i1  i2  i3           <sss>          weight\n"
+            filestring += "nc4\n"
+            filestring += "0\n"
+            filestring += "i   i1 i2 i3 i4 i5 i6    <ssss>         weight\n"
+            filestring += "T_i,   T_f,  delt_T\n"
+            filestring += "10.0   0.0   1.0\n"
+            filestring += "100                   nsteps\n"
         return filestring
 

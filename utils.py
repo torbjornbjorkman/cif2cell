@@ -226,6 +226,7 @@ class Vector(list,GeometryObject):
                     # 0
                     self[i] = f
                     break
+        return self
     # Angle between this vector and another vector
     def angle(self, other):
         return acos(self.dot(other)/(self.length() * other.length()))

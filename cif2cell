@@ -41,7 +41,7 @@ from elementdata import *
 
 # Name and version
 programname = "cif2cell"
-version = "1.1.1"
+version = "1.1.2"
 
 # Turn of warnings about deprecated stuff
 warnings.simplefilter("ignore",DeprecationWarning)
@@ -51,8 +51,7 @@ outputprograms = set(['abinit','castep','coo','cpmd','cp2k','crystal09','elk','e
                       ## 'fleur','ncol','mcsqs','rspt','siesta','sprkkr','vasp','pwscf','quantum-espresso', # pwscf/quantum-espresso and mcsqs not ready
                       'fleur','hutsepot','ncol','rspt','siesta','sprkkr','vasp',
                       'ase','bmdl','cellgen','cif','kfcd','kstr','shape','spacegroup',
-#                      'spc','xband','xyz'])
-                      'xband','xyz'])
+                       'spc','xband','xyz'])
 programlist = sorted(list(outputprograms))
 outputprogramstring = ""
 for p in programlist:
