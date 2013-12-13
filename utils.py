@@ -556,6 +556,7 @@ def putincell(coords,coordepsilon):
         # then put it in the primitive cell
         while coords[i] > 1-coordepsilon:
             coords[i] = coords[i] - 1
+    return coords
 
 # Determinant of 3x3 dimensional matrix
 def det3(m):

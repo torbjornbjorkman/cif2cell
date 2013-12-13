@@ -313,11 +313,34 @@ if cif_file:
     try:
         cf = CifFile.ReadCif(cif_file,grammar=cif_grammar)
     except Exception, e:
-        sys.stderr.write("***Error: could not read "+cif_file+".\n")
-        sys.stderr.write("Something may be wrong with the CIF file, you can check it with ")
-        sys.stderr.write("the free IUCr CIF valitation tool at http://http://checkcif.iucr.org/\n")
-        sys.stderr.write(e.value+"\n")
-        sys.exit(2)
+        # test if data_ statement in the beginning is missing
+        try:
+            f = open(cif_file,'r')
+            lines = f.readlines()
+            f.close()
+            tmpname = cif_file.replace('.cif','_tmp.cif') 
+            f = open(tmpname,'w')
+            f.write("data_default\n")
+            for line in lines:
+                f.write(line)
+            f.close()
+            cf = CifFile.ReadCif(tmpname,grammar=cif_grammar)
+            wrongfile = cif_file.replace('.cif','_wrong.cif')
+            sys.stderr.write("***Warning: The cif file is missing a data statement.")
+            sys.stderr.write(" The file has been renamed '"+wrongfile+"' and replaced by a")
+            sys.stderr.write(" corrected file.\n")
+            os.rename(cif_file,wrongfile)
+            os.rename(tmpname,cif_file)
+        except:
+            try:
+                os.remove(tmpname)
+            except:
+                pass
+            sys.stderr.write("***Error: could not read "+cif_file+".\n")
+            sys.stderr.write("Something may be wrong with the CIF file, you can check it with ")
+            sys.stderr.write("the free IUCr CIF valitation tool at http://http://checkcif.iucr.org/\n")
+            sys.stderr.write(e.value+"\n")
+            sys.exit(2)
 else:
     sys.stderr.write("***Error: No input CIF file given\n")
     sys.exit(2)

@@ -630,34 +630,34 @@ class CellData(GeometryObject):
                 if abs(1-v) > occepsilon:
                     self.alloy = True
 
-        # Make sites unique with array of occupation info in case of an alloy
-        if self.alloy:
-            removeindices = []
-            # set up atomdata
-            for i in range(len(self.atomdata)):
-                for j in range(len(self.atomdata)-1,i,-1):
-                    if self.atomdata[i][0].position == self.atomdata[j][0].position:
-                        # Add the dictionary of site j to that of site i and schedule index j for
-                        # removal. If there is already an instance of the species on this site,
-                        # then add the occupancies (this happens when different valencies has been
-                        # recorded).
-                        # Now that the charge is stored, maybe this should be redone.
+        # Make sites unique with array of occupation info 
+        removeindices = []
+        # set up atomdata
+        for i in range(len(self.atomdata)):
+            for j in range(len(self.atomdata)-1,i,-1):
+                if self.atomdata[i][0].position == self.atomdata[j][0].position:
+                    # Add the dictionary of site j to that of site i and schedule index j for
+                    # removal. If there is already an instance of the species on this site and
+                    # the occupancy is different from 1, then add the occupancies (this happens
+                    # when different valencies has been recorded).
+                    # Now that the charge is stored, maybe this should be redone.
+                    if self.atomdata[j][0].alloy:
                         for k in self.atomdata[j][0].species:
                             if k in self.atomdata[i][0].species:
                                 v = self.atomdata[j][0].species[k] + self.atomdata[i][0].species[k]
                                 self.atomdata[i][0].species[k] = v
                             else:
                                 self.atomdata[i][0].species[k] = self.atomdata[j][0].species[k]
-                                removeindices.append(j)
-                        # ...also fix self.occupations
-                        self.occupations[i][self.occupations[j].keys()[0]] = self.occupations[j].values()[0]
-            # Remove duplicate elements
-            removeindices = list(set(removeindices))
-            removeindices.sort(reverse=True)
-            for i in removeindices:
-                self.atomdata.pop(i)
-                self.ineqsites.pop(i)
-                self.occupations.pop(i)
+                    removeindices.append(j)
+                    # ...also fix self.occupations
+                    self.occupations[i][self.occupations[j].keys()[0]] = self.occupations[j].values()[0]
+        # Remove duplicate elements
+        removeindices = list(set(removeindices))
+        removeindices.sort(reverse=True)
+        for i in removeindices:
+            self.atomdata.pop(i)
+            self.ineqsites.pop(i)
+            self.occupations.pop(i)
 
         # Work out all sites in the cell for atomdata/atomset
         for a in self.atomdata:
@@ -688,6 +688,23 @@ class CellData(GeometryObject):
         for a in self.atomdata:
             for b in a:
                 b.position = LatticeVector(mvmult3(invlattrans,b.position))
+
+        # Weed out remaining duplicates. A weird special case that arises when
+        # different symmetry equivalent sites where listed in the input file.
+        # Attempts to handle this on the fly from the beginning made a complete
+        # mess of the alloy handling...
+        removeindices = set([])
+        for i in range(len(self.atomdata)):
+            for j in range(len(self.atomdata[i])):
+                for k in range(i+1,len(self.atomdata)):
+                    for l in range(len(self.atomdata[k])):
+                        if self.atomdata[i][j].position == self.atomdata[k][l].position:
+                            removeindices.add((k,l))
+        removeindices = list(removeindices)
+        removeindices.sort(reverse=True)
+        for i,j in removeindices:
+            self.atomdata[i].pop(j)
+        
         ######################
         #    MISCELLANEOUS   #
         ######################
