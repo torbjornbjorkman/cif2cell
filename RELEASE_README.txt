@@ -1,5 +1,14 @@
 CIF2CELL RELEASE INFORMATION
 
+VERSION 1.1.3
+
+* Fixed issue when the cif file contains all the coordinates of the
+  reducible cell, but still has symmetry operations.
+* Fixed issue when the initial data_ statement is missing.
+* Added number of valence electrons for all elements to elementdata.
+* A number of minor fixes.
+
+--------------------------------------------------------------   
 VERSION 1.1.2
 
 * Fixed bug introduced by last bugfix.
