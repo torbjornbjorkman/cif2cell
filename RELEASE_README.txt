@@ -1,5 +1,10 @@
 CIF2CELL RELEASE INFORMATION
 
+VERSION 1.1.4
+
+* Support for setting up VCA calculations in VASP.
+
+--------------------------------------------------------------   
 VERSION 1.1.3
 
 * Fixed issue when the cif file contains all the coordinates of the
