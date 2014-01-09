@@ -1555,18 +1555,23 @@ class POSCARFile(GeometryOutputFile):
     for the length scale, then set
     POSCARFile.printcartvecs = True
     """
-    def __init__(self, crystalstructure, string):
+    def __init__(self, crystalstructure, string, vca=False):
         GeometryOutputFile.__init__(self,crystalstructure,string)
         self.cell.newunit("angstrom")
         self.printcartvecs = False
         self.printcartpos = False
         self.vasp5format = False
         self.selectivedyn = False
+        self.vca = vca
         # set up species list
         tmp = set([])
         for a in self.cell.atomdata:
             for b in a:
-                tmp.add(b.spcstring())
+                if self.vca:
+                    for k,v in b.species.iteritems():
+                        tmp.add(k)
+                else:
+                    tmp.add(b.spcstring())
         self.species = list(tmp)
         # make sure the docstring goes on one line
         self.docstring = self.docstring.replace("\n"," ")
@@ -1654,13 +1659,23 @@ class POSCARFile(GeometryOutputFile):
             nsp = 0
             for a in self.cell.atomdata:
                 for b in a:
-                    if b.spcstring() == sp:
-                        nsp += 1
-                        p = Vector(mvmult3(coordmat,mvmult3(transmtx,b.position)))
-                        positionstring += str(p)
-                        if self.selectivedyn:
-                            positionstring += "   T  T  T"
-                        positionstring += "\n"
+                    if self.vca:
+                        for k,v in b.species.iteritems():
+                            if k == sp:
+                                nsp += 1
+                                p = Vector(mvmult3(coordmat,mvmult3(transmtx,b.position)))
+                                positionstring += str(p)
+                                if self.selectivedyn:
+                                    positionstring += "   T  T  T"
+                                positionstring += "\n"
+                    else:
+                        if b.spcstring() == sp:
+                            nsp += 1
+                            p = Vector(mvmult3(coordmat,mvmult3(transmtx,b.position)))
+                            positionstring += str(p)
+                            if self.selectivedyn:
+                                positionstring += "   T  T  T"
+                            positionstring += "\n"
             nspstring += (" "+str(nsp)).rjust(4)
         filestring += nspstring+"\n"
         filestring += positionunits
@@ -1671,7 +1686,8 @@ class POTCARFile:
     """
     Class for representing and outputting a POTCAR file for VASP.
     """
-    def __init__(self, crystalstructure, directory=""):
+    def __init__(self, crystalstructure, directory="",vca=False):
+        self.vca = vca
         self.cell = crystalstructure
         if directory != "":
             self.dir = directory
@@ -1689,11 +1705,8 @@ class POTCARFile:
         if not os.path.exists(self.dir):
             raise SetupError("The specified path to the VASP pseudopotential library does not exist.\n"+self.dir)
         # set up species list
-        tmp = set([])
-        for a in self.cell.atomdata:
-            for b in a:
-                tmp.add(b.spcstring())
-        self.species = list(tmp)
+        poscarfile = POSCARFile(self.cell, "", vca=self.vca)
+        self.species = poscarfile.species
     def __str__(self):
         # Make good selection of potcars
         prioritylist = ["_d", "_pv", "_sv", "", "_h", "_s"]
@@ -1741,9 +1754,12 @@ class INCARFile:
     """
     Class for representing and outputting a INCAR file for VASP.
     """
-    def __init__(self, crystalstructure, docstring="",potcardir=""):
+    def __init__(self, crystalstructure, docstring="",potcardir="",vca=False):
         self.cell = crystalstructure
         self.docstring = "# "+docstring.lstrip("#").rstrip("\n")+"\n"
+        self.vca = vca
+        self.vcaspecies = None
+        poscarfile = POSCARFile(self.cell, "", vca=self.vca)
         # we need the potcar directory
         if potcardir != "":
             self.potcardir = potcardir
@@ -1760,21 +1776,50 @@ class INCARFile:
             raise SetupError("No path to the VASP pseudopotential library specified.\n")
         if not os.path.exists(self.potcardir):
             raise SetupError("The specified path to the VASP pseudopotential library does not exist.\n"+self.dir)
-        # set up species list
-        self.species = dict([])
+
+        if self.vca:
+            # set up species list
+            tmp = set([])
+            for a in self.cell.atomdata:
+                for b in a:
+                    for k,v in b.species.iteritems():
+                        tmp.add((k,v))
+            tmp = list(tmp)
+            self.vcaspecies = []
+            for s in poscarfile.species:
+                for t in tmp:
+                    if t[0] == s:
+                        self.vcaspecies.append(t)
+        # set up species dict
+        speciesdict = dict([])
         for a in self.cell.atomdata:
             for b in a:
-                spcstr = b.spcstring()
-                if spcstr in self.species:
-                    t = self.species[spcstr] + 1
-                    self.species[spcstr] = t
+                if self.vca:
+                    for k,v in b.species.iteritems():
+                        spcstr = k
+                        if spcstr in speciesdict:
+                            t = speciesdict[spcstr] + 1
+                            speciesdict[spcstr] = t
+                        else:
+                            speciesdict[spcstr] = 1
                 else:
-                    self.species[spcstr] = 1
+                    spcstr = b.spcstring()
+                    if spcstr in speciesdict:
+                        t = speciesdict[spcstr] + 1
+                        speciesdict[spcstr] = t
+                    else:
+                        speciesdict[spcstr] = 1
+        # species list in the same order as poscar
+        self.species = []
+        for s in poscarfile.species:
+            for k,v in speciesdict.iteritems():
+                if k == s:
+                    self.species.append((k,v))
         # get potcar list
         prioritylist = ["_d", "_pv", "_sv", "", "_h", "_s"]
         potcars = dict([])
         specieslist = []
-        for a in self.species:
+        for a in speciesdict:
             for version in prioritylist:
                 potcarfile = self.potcardir+"/"+a+version+"/POTCAR"
                 if os.path.exists(potcarfile):
@@ -1807,11 +1852,11 @@ class INCARFile:
                           "Ce" : 1, "Pr" : 2, "Nd" : 3, "Pm" : 4, "Sm" : 5, "Eu" : 6,
                           "Gd" : 7, "Tb" : 8, "Dy" : 9, "Ho" : 10, "Er" : 11, "Tm" : 12}
         for s in self.species:
-            if s in suspiciouslist:
+            if s[0] in suspiciouslist:
                 self.magnetic = True
-                self.magmomlist.append(str(self.species[s])+"*"+str(initialmoments[s]))
+                self.magmomlist.append(str(s[1])+"*"+str(initialmoments[s[0]]))
             else:
-                self.magmomlist.append(str(self.species[s])+"*0")
+                self.magmomlist.append(str(s[1])+"*0")
         # Determine NBANDS
         nmag = sum([eval(i) for i in self.magmomlist])
         nelect = 0.0
@@ -1831,7 +1876,7 @@ class INCARFile:
     def __str__(self):
         tmp = self.docstring
         tmp += "ENCUT = "+str(self.maxencut*self.encutfac)+"\n"
-        tmp += "NBANDS = "+str(self.nbands)+"\n"
+        tmp += "#NBANDS = "+str(self.nbands)+"\n"
         ## tmp += "IBRION = 1\n"
         ## tmp += "POTIM = 0.4\n"
         ## tmp += "ISIF = 2\n"
@@ -1847,6 +1892,12 @@ class INCARFile:
             for species in self.magmomlist:
                 tmp += species+" "
             tmp += "\n"
+        if self.vca:
+            tmp += "VCA = "
+            for s in self.vcaspecies:
+                tmp += str(s[1])+" "
+            tmp += "\n"
+            tmp += "LVCADER = .True.\n"
         return tmp
         
 

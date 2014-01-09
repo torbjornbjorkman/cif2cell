@@ -220,7 +220,7 @@ else:
     bibtexref = False
 # Programs that can deal with alloys
 alloyprograms = set(["emto","kstr","bmdl","shape","kgrn","kfcd","cif","spc","sprkkr","xband"])
-vcaprograms = set(["castep"])
+vcaprograms = set(["castep","vasp"])
 # Force generation despite problems?
 if options.force:
     force = True
@@ -1148,7 +1148,7 @@ if outputprogram == 'vasp':
         docstring += ref.cpd
     docstring += " :  "+ref.referencestring()+"."
     # Initialize the POSCARFile structure
-    poscar = POSCARFile(cd, docstring)
+    poscar = POSCARFile(cd, docstring, vca=options.vca)
     # Convert to cartesian coordinates if requested
     if options.vaspcartpos:
         poscar.printcartpos = True
@@ -1174,7 +1174,7 @@ if outputprogram == 'vasp':
             lib = options.vasppseudolib
         else:
             lib = ""
-        potcarfile = POTCARFile(cd,directory=lib)
+        potcarfile = POTCARFile(cd,directory=lib,vca=options.vca)
         f = open("POTCAR", "w")
         f.write(str(potcarfile))
         f.close()
@@ -1185,7 +1185,7 @@ if outputprogram == 'vasp':
         f.write(str(kpointsfile))
         f.close()
         # INCAR
-        incarfile = INCARFile(cd,docstring=docstring)
+        incarfile = INCARFile(cd,docstring=docstring,vca=options.vca)
         f = open("INCAR", "w")
         f.write(str(incarfile))
         f.close()
