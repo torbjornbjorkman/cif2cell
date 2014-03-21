@@ -1,5 +1,13 @@
 CIF2CELL RELEASE INFORMATION
 
+VERSION 1.1.5
+
+* Improved behaviour when not being able to verify the space group
+  data. It should now run properly if space group operations are
+  present, even if the H-M symbol is not recognized.
+* Added a lot of previously unsupported H-M symbols.
+
+--------------------------------------------------------------   
 VERSION 1.1.4
 
 * Support for setting up VCA calculations in VASP.
