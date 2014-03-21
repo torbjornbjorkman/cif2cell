@@ -1097,7 +1097,7 @@ class CellData(GeometryObject):
             try:
                 self.HallSymbol = HM2Hall[self.HMSymbol]
             except:
-                pass
+                self.HallSymbol = "Unknown"
                     
         # Set space group number and H-M symbol, if not in file.
         if self.spacegroupnr < 1 or self.spacegroupnr > 230:
@@ -1109,15 +1109,17 @@ class CellData(GeometryObject):
         if type(eqsites) == type(None):
             eqsites = SymOpsHall[self.HallSymbol]
         else:
-            # Check if symmetry operations are consistent with current space group
-            if len(eqsites) != len(SymOpsHall[self.HallSymbol]):
-                if self.force:
-                    sys.stderr.write("***Warning: Number of space group operations (%3i) is inconsistent "%len(eqsites)\
-                                     +"with the given space group (%s).\n"%self.HMSymbol)
-                else:
-                    raise SymmetryError("Number of space group operations (%3i) is inconsistent "%len(eqsites)\
-                                        +"with the given space group (%s)."%self.HallSymbol)
-
+            try:
+                # Check if symmetry operations are consistent with current space group
+                if len(eqsites) != len(SymOpsHall[self.HallSymbol]):
+                    if self.force:
+                        sys.stderr.write("***Warning: Number of space group operations (%3i) is inconsistent "%len(eqsites)\
+                                         +"with the given space group (%s).\n"%self.HMSymbol)
+                    else:
+                        raise SymmetryError("Number of space group operations (%3i) is inconsistent "%len(eqsites)\
+                                            +"with the given space group (%s)."%self.HallSymbol)
+            except:
+                sys.stderr.write("***Warning: Space group operation check failed for Hall symbol %s (H-M symbol %s).\n"%(self.HallSymbol,self.HMSymbol))
         # Define the set of space group operations.
         self.symops = set([])
         for site in eqsites:

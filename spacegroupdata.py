@@ -1322,12 +1322,13 @@ HM2Hall = {
     'Fddd2' : '-F 2uv 2vw',
     'FdddZ' : '-F 2uv 2vw',
     # 139
-    'F4/m2/m2/m' : '-F 4 2'
+    'F4/m2/m2/m' : '-F 4 2',
     'F4/mmm' : '-F 4 2'
 }
 
 # Space group number for each Hall symbol
 Hall2Number = {
+    'Unknown' : 0,
     #   1
     'P 1' : 1,
     #   2
@@ -2271,6 +2272,7 @@ Number2Hall = { 1 : 'P 1',
                 }
 
 Hall2HM = {
+    'Unknown' : 'Unknown',
     #   1
     'P 1' : 'P1',
     #   2
