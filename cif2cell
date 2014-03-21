@@ -52,6 +52,11 @@ outputprograms = set(['abinit','castep','coo','cpmd','cp2k','crystal09','elk','e
                       'fleur','hutsepot','ncol','rspt','siesta','sprkkr','vasp',
                       'ase','bmdl','cellgen','cif','kfcd','kstr','shape','spacegroup',
                        'spc','xband','xyz'])
+
+# Programs that can deal with alloys
+alloyprograms = set(["emto","kstr","bmdl","shape","kgrn","kfcd","cif","spc","sprkkr","xband"])
+vcaprograms = set(["castep","vasp"])
+#
 programlist = sorted(list(outputprograms))
 outputprogramstring = ""
 for p in programlist:
@@ -218,9 +223,6 @@ if options.bibtexref:
     bibtexref = True
 else:
     bibtexref = False
-# Programs that can deal with alloys
-alloyprograms = set(["emto","kstr","bmdl","shape","kgrn","kfcd","cif","spc","sprkkr","xband"])
-vcaprograms = set(["castep","vasp"])
 # Force generation despite problems?
 if options.force:
     force = True

@@ -80,9 +80,11 @@ HM2Hall = {
     'C2:b2' : 'A 2y',
     'C2b2' : 'A 2y',
     'A121' : 'A 2y',
+    'A2' : 'A 2y',
     'C2:b3' : 'I 2y',
     'C2b3' : 'I 2y',
     'I121' : 'I 2y',
+    'I2' : 'I 2y',
     'C2:c1' : 'A 2',
     'C2c1' : 'A 2',
     'A112' : 'A 2',
@@ -121,9 +123,11 @@ HM2Hall = {
     'Pc:b2' : 'P -2yac',
     'Pcb2' : 'P -2yac',
     'P1n1' : 'P -2yac',
+    'Pn' : 'P -2yac',
     'Pc:b3' : 'P -2ya',
     'Pcb3' : 'P -2ya',
     'P1a1' : 'P -2ya',
+    'Pa' : 'P -2ya',
     'Pc:c1' : 'P -2a',
     'Pcc1' : 'P -2a',
     'P11a' : 'P -2a',
@@ -154,6 +158,7 @@ HM2Hall = {
     'Cm:b3' : 'I -2y',
     'Cmb3' : 'I -2y',
     'I1m1' : 'I -2y',
+    'Im' : 'I -2y',
     'Cm:c1' : 'A -2',
     'Cmc1' : 'A -2',
     'A11m' : 'A -2',
@@ -184,9 +189,11 @@ HM2Hall = {
     'Cc:b3' : 'I -2ya',
     'Ccb3' : 'I -2ya',
     'I1a1' : 'I -2ya',
+    'Ia' : 'I -2ya',
     'Cc:-b1' : 'A -2ya',
     'Cc-b1' : 'A -2ya',
     'A1a1' : 'A -2ya',
+    'Aa' : 'A -2ya',
     'Cc:-b2' : 'C -2ybc',
     'Cc-b2' : 'C -2ybc',
     'C1n1' : 'C -2ybc',
@@ -197,11 +204,11 @@ HM2Hall = {
     'Ccc1' : 'A -2a',
     'A11a' : 'A -2a',
     'Cc:c2' : 'B -2bc',
-    'Ccc2' : 'B -2bc',
     'B11n' : 'B -2bc',
     'Cc:c3' : 'I -2b',
     'Ccc3' : 'I -2b',
     'I11b' : 'I -2b',
+    'Ib' : 'I -2b',
     'Cc:-c1' : 'B -2b',
     'Cc-c1' : 'B -2b',
     'B11b' : 'B -2b',
@@ -260,9 +267,11 @@ HM2Hall = {
     'C2/m:b2' : '-A 2y',
     'C2/mb2' : '-A 2y',
     'A12/m1' : '-A 2y',
+    'A2/m' : '-A 2y',
     'C2/m:b3' : '-I 2y',
     'C2/mb3' : '-I 2y',
     'I12/m1' : '-I 2y',
+    'I2/m' : '-I 2y',
     'C2/m:c1' : '-A 2',
     'C2/mc1' : '-A 2',
     'A112/m' : '-A 2',
@@ -290,9 +299,11 @@ HM2Hall = {
     'P2/c:b2' : '-P 2yac',
     'P2/cb2' : '-P 2yac',
     'P12/n1' : '-P 2yac',
+    'P2/n' : '-P 2yac',
     'P2/c:b3' : '-P 2ya',
     'P2/cb3' : '-P 2ya',
     'P12/a1' : '-P 2ya',
+    'P2/a' : '-P 2ya',
     'P2/c:c1' : '-P 2a',
     'P2/cc1' : '-P 2a',
     'P112/a' : '-P 2a',
@@ -320,9 +331,11 @@ HM2Hall = {
     'P21/c:b2' : '-P 2yn',
     'P21/cb2' : '-P 2yn',
     'P121/n1' : '-P 2yn',
+    'P21/n' : '-P 2yn',
     'P21/c:b3' : '-P 2yab',
     'P21/cb3' : '-P 2yab',
     'P121/a1' : '-P 2yab',
+    'P21/a' : '-P 2yab',
     'P21/c:c1' : '-P 2ac',
     'P21/cc1' : '-P 2ac',
     'P1121/a' : '-P 2ac',
@@ -350,27 +363,33 @@ HM2Hall = {
     'C2/c:b2' : '-A 2yac',
     'C2/cb2' : '-A 2yac',
     'A12/n1' : '-A 2yac',
+    'A2/n' : '-A 2yac',
     'C2/c:b3' : '-I 2ya',
     'C2/cb3' : '-I 2ya',
     'I12/a1' : '-I 2ya',
+    'I2/a' : '-I 2ya',
     'C2/c:-b1' : '-A 2ya',
     'C2/c-b1' : '-A 2ya',
     'A12/a1' : '-A 2ya',
+    'A2/a' : '-A 2ya',    
     'C2/c:-b2' : '-C 2ybc',
     'C2/c-b2' : '-C 2ybc',
     'C12/n1' : '-C 2ybc',
     'C2/c:-b3' : '-I 2yc',
     'C2/c-b3' : '-I 2yc',
     'I12/c1' : '-I 2yc',
+    'I2/c' : '-I 2yc',
     'C2/c:c1' : '-A 2a',
     'C2/cc1' : '-A 2a',
     'A112/a' : '-A 2a',
     'C2/c:c2' : '-B 2bc',
     'C2/cc2' : '-B 2bc',
     'B112/n' : '-B 2bc',
+    'B2/n' : '-B 2bc',
     'C2/c:c3' : '-I 2b',
     'C2/cc3' : '-I 2b',
     'I112/b' : '-I 2b',
+    'I2/b' : '-I 2b',
     'C2/c:-c1' : '-B 2b',
     'C2/c-c1' : '-B 2b',
     'B112/b' : '-B 2b',
@@ -1143,6 +1162,7 @@ HM2Hall = {
     # 200
     'Pm-3' : '-P 2 2 3',
     'P2/m-3' : '-P 2 2 3',
+    'Pm3' : '-P 2 2 3',
     # 201
     'Pn-3' : 'P 2 2 3 -1n',
     'Pn-3:1' : 'P 2 2 3 -1n',
@@ -1151,9 +1171,11 @@ HM2Hall = {
     'Pn-3:2' : '-P 2ab 2bc 3',
     'Pn-32' : '-P 2ab 2bc 3',
     'Pn-3Z' : '-P 2ab 2bc 3',
+    'Pn3' : 'P 2 2 3 -1n',
     # 202
     'Fm-3' : '-F 2 2 3',
     'F2/m-3' : '-F 2 2 3',
+    'Fm3' : '-F 2 2 3',
     # 203
     'Fd-3' : 'F 2 2 3 -1d',
     'Fd-3:1' : 'F 2 2 3 -1d',
@@ -1162,13 +1184,17 @@ HM2Hall = {
     'Fd-3:2' : '-F 2uv 2vw 3',
     'Fd-32' : '-F 2uv 2vw 3',
     'Fd-3Z' : '-F 2uv 2vw 3',
+    'Fd3' : 'F 2 2 3 -1d',
     # 204
     'Im-3' : '-I 2 2 3',
     'I2/m-3' : '-I 2 2 3',
+    'Im3' : '-I 2 2 3',
     # 205
     'Pa-3' : '-P 2ac 2ab 3',
+    'Pa3' : '-P 2ac 2ab 3',
     # 206
     'Ia-3' : '-I 2b 2c 3',
+    'Ia3' : '-I 2b 2c 3',
     # 207
     'P432' : 'P 4 2 3',
     # 208
@@ -1200,6 +1226,7 @@ HM2Hall = {
     # 221
     'Pm-3m' : '-P 4 2 3',
     'P4/m-32/m' : '-P 4 2 3',
+    'Pm3m' : '-P 4 2 3',
     # 222
     'Pn-3n' : 'P 4 2 3 -1n',
     'Pn-3n:1' : 'P 4 2 3 -1n',
@@ -1211,6 +1238,7 @@ HM2Hall = {
     # 223
     'Pm-3n' : '-P 4n 2 3',
     'P2/m-3n' : '-P 4n 2 3',
+    'Pm3n' : '-P 4n 2 3',
     # 224
     'Pn-3m' : 'P 4n 2 3 -1n',
     'Pn-3m:1' : 'P 4n 2 3 -1n',
@@ -1219,12 +1247,15 @@ HM2Hall = {
     'Pn-3m:2' : '-P 4bc 2bc 3',
     'Pn-3m2' : '-P 4bc 2bc 3',
     'Pn-3mZ' : '-P 4bc 2bc 3',
+    'Pn3m' : 'P 4n 2 3 -1n',
     # 225
     'Fm-3m' : '-F 4 2 3',
     'F4/m-32/m' : '-F 4 2 3',
+    'Fm3m' : '-F 4 2 3',
     # 226
     'Fm-3c' : '-F 4c 2 3',
     'F2/m-3c' : '-F 4c 2 3',
+    'Fm3c' : '-F 4c 2 3',
     # 227
     'Fd-3m' : 'F 4d 2 3 -1d',
     'Fd-3m:1' : 'F 4d 2 3 -1d',
@@ -1233,6 +1264,7 @@ HM2Hall = {
     'Fd-3m:2' : '-F 4vw 2vw 3',
     'Fd-3m2' : '-F 4vw 2vw 3',
     'Fd-3mZ' : '-F 4vw 2vw 3',
+    'Fd3m' : 'F 4d 2 3 -1d',
     # 228
     'Fd-3c' : 'F 4d 2 3 -1cd',
     'Fd-3c:1' : 'F 4d 2 3 -1cd',
@@ -1241,11 +1273,14 @@ HM2Hall = {
     'Fd-3c:2' : '-F 4cvw 2vw 3',
     'Fd-3c2' : '-F 4cvw 2vw 3',
     'Fd-3cZ' : '-F 4cvw 2vw 3',
+    'Fd3c' : 'F 4d 2 3 -1cd',
     # 229
     'Im-3m' : '-I 4 2 3',
     'I4/m-32/m' : '-I 4 2 3',
+    'Im3m' : '-I 4 2 3',
     # 230
     'Ia-3d' : '-I 4bd 2c 3',
+    'Ia3d' : '-I 4bd 2c 3',
     #######################
     # Non-standard settings
     # 1
@@ -1288,6 +1323,7 @@ HM2Hall = {
     'FdddZ' : '-F 2uv 2vw',
     # 139
     'F4/m2/m2/m' : '-F 4 2'
+    'F4/mmm' : '-F 4 2'
 }
 
 # Space group number for each Hall symbol
