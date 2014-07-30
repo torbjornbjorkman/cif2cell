@@ -221,11 +221,7 @@ class Vector(list,GeometryObject):
         return t
     def improveprecision(self):
         for i in range(3):
-            for f in floatlist:
-                if abs(self[i]-f) <= self.compeps:
-                    # 0
-                    self[i] = f
-                    break
+            self[i] = improveprecision(self[i],self.compeps)
         return self
     # Angle between this vector and another vector
     def angle(self, other):
@@ -532,9 +528,9 @@ def removeerror(string):
 # Guess the "true" values of some conspicuous numbers
 def improveprecision(x,eps):
     for f in floatlist:
-        if abs(x-f) <= eps:                
+        if abs(abs(x)-f) <= eps:                
             # 0
-            return f
+            return copysign(f,x)
     # if no match found, return x
     return x
 
