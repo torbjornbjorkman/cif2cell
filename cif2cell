@@ -41,21 +41,23 @@ from elementdata import *
 
 # Name and version
 programname = "cif2cell"
-version = "1.1.5"
+version = "1.1.7"
 
 # Turn of warnings about deprecated stuff
 warnings.simplefilter("ignore",DeprecationWarning)
 
 # All supported output formats
 outputprograms = set(['abinit','castep','coo','cpmd','cp2k','crystal09','elk','emto','exciting','fhi-aims',
-                      ## 'fleur','ncol','mcsqs','rspt','siesta','sprkkr','vasp','pwscf','quantum-espresso', # pwscf/quantum-espresso and mcsqs not ready
-                      'fleur','hutsepot','ncol','rspt','siesta','sprkkr','vasp',
+                      ## 'fleur','ncol','mcsqs','rspt','siesta','sprkkr','vasp', # mcsqs not ready
+                      'fleur','hutsepot','ncol', 'pwscf', 'quantum-espresso', 'rspt','siesta','sprkkr','vasp',
                       'ase','bmdl','cellgen','cif','kfcd','kstr','shape','spacegroup',
                        'spc','xband','xyz'])
 
 # Programs that can deal with alloys
 alloyprograms = set(["emto","kstr","bmdl","shape","kgrn","kfcd","cif","spc","sprkkr","xband"])
 vcaprograms = set(["castep","vasp"])
+#
+setupallprogs = set(["vasp","pwscf","quantum-espresso"])
 #
 programlist = sorted(list(outputprograms))
 outputprogramstring = ""
@@ -129,6 +131,13 @@ progspec.add_option("--cpmd-cutoff",dest="cpmdcutoff",help="Set the cutoff writt
 progspec.add_option("--emto-hard-sphere-radii",dest="hardsphereradii",help="Set hard spheres in KSTR to something other than the default (=0.67).")
 # FHI-AIMS
 progspec.add_option("--fhi-aims-cartesian", dest="aimscartesian", help="Store the coordinates for FHI-AIMS in cartesian format.", action="store_true")
+# PWSCF
+progspec.add_option("--pwscf-pseudostring",dest="pwscfpseudostring",help='String to attach to the element name to identify the pseudopotential file (e.g. something like "_HSCV_PBE-1.0.UPF").',metavar="_PSEUDO")
+progspec.add_option("--pwscf-atomic-units",dest="pwscfatomicunits",help="Write PWSCF .in file in atomic units (bohr) rather than angstrom.",action="store_true")
+progspec.add_option("--pwscf-alat-units",dest="pwscfalatunits",help="Use 'alat' units for the positions in the PWSCF .in file.",action="store_true")
+progspec.add_option("--pwscf-cartesian",dest="pwscfcart",help="Write lattice vectors and positions to PWSCF .in file in cartesian coordinates and set the lengths scale to 1.",action="store_true")
+progspec.add_option("--pwscf-cartesian-latticevectors",dest="pwscfcartvects",help="Write lattice vectors to PWSCF .in file in cartesian coordinates and set the lengths scale to 1.",action="store_true")
+progspec.add_option("--pwscf-cartesian-positions",dest="pwscfcartpos",help="Write lattice positions to PWSCF .in file in cartesian coordinates.",action="store_true")
 # RSPt
 progspec.add_option("--rspt-new", dest="newsymt", help="Generate a symt.inp file in the new format.", action="store_true")
 progspec.add_option("--rspt-spinpol", dest="rsptspinpol", help="Generate new format symt.inp file with spin polarization.", action="store_true")
@@ -171,7 +180,7 @@ if options.append and not options.outputfile:
 if options.append and (options.program == 'emto' or options.program == 'ncol'):
     sys.stderr.write("***Error: option --append can not be used with "+options.program+".\n")
     sys.exit(1)
-if options.setupall and options.program != 'vasp':
+if options.setupall and options.program not in setupallprogs:
     sys.stderr.write("***Error: option --setup-all not supported for "+options.program+".\n")
     sys.exit(1)
 if options.filenamequery and not options.program:
@@ -1131,7 +1140,22 @@ if outputprogram == 'abinit':
 # Output for PWSCF (Quantum Espresso)
 if outputprogram == 'pwscf':
     docstring = StandardDocstring()
-    pwscfinput = PWSCFFile(cd, docstring)
+    pwscfinput = PWSCFFile(cd, docstring,kresolution=kresolution)
+    if options.setupall:
+        pwscfinput.setupall = True
+        pwscfinput.kresolution = kresolution
+    if options.pwscfpseudostring:
+        pwscfinput.pseudostring = options.pwscfpseudostring
+    if options.pwscfcart:
+        pwscfinput.cartesian = True
+    if options.pwscfcartvects:
+        pwscfinput.cartesianlatvects = True
+    if options.pwscfcartpos:
+        pwscfinput.cartesianpositions = True
+    if options.pwscfalatunits:
+        pwscfinput.scaledcartesianpositions = True
+    if options.pwscfatomicunits:
+        pwscfinput.unit = "bohr"
     f = open(outputfile, outmode)
     f.write(str(pwscfinput))
     f.close()

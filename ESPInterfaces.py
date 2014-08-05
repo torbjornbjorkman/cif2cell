@@ -1159,15 +1159,40 @@ class CASTEPFile(GeometryOutputFile):
         return filestring
 
 ################################################################################################
-# PWSCF (Quantum Espresso) !!!!!!! UNFINISHED !!!!!!!!
+# PWSCF (Quantum Espresso)
 class PWSCFFile(GeometryOutputFile):
     """
     Class for storing the geometrical data for a PWSCF run and the method
     __str__ that outputs to a .in file as a string.
     """
-    def __init__(self, crystalstructure, string):
+    def __init__(self, crystalstructure, string, kresolution=0.2):
         GeometryOutputFile.__init__(self,crystalstructure,string)
+        #
+        self.setupall = False
+        # Cartesian units?
+        self.cartesian = False
+        self.cartesianpositions = False
+        self.cartesianlatvects = False
+        self.scaledcartesianpositions = False
+        # What units?
+        self.unit = "angstrom"
         self.cell.newunit("angstrom")
+        # Pseudopotential string
+        self.pseudostring = "_PSEUDO"
+        # set up species list
+        tmp = set([])
+        for a in self.cell.atomdata:
+            for b in a:
+                tmp.add(b.spcstring())
+        self.species = list(tmp)
+        # k-space information
+        reclatvect = self.cell.reciprocal_latticevectors()
+        for j in range(3):
+            for i in range(3):
+                reclatvect[j][i] = reclatvect[j][i] / self.cell.lengthscale
+        # Lengths of reciprocal lattice vectors
+        reclatvectlen = [elem.length() for elem in reclatvect]
+        self.kgrid = [max(1,int(round(elem/kresolution))) for elem in reclatvectlen]
         # Make sure the docstring has comment form
         self.docstring = self.docstring.rstrip("\n")
         tmpstrings = self.docstring.split("\n")
@@ -1179,16 +1204,85 @@ class PWSCFFile(GeometryOutputFile):
         self.docstring += "\n"
     def __str__(self):
         filestring = self.docstring
-        a = self.cell.latticevectors[0].length()*self.cell.lengthscale
-        boa = self.cell.latticevectors[1].length()/self.cell.latticevectors[0].length()
-        coa = self.cell.latticevectors[2].length()/self.cell.latticevectors[0].length()
+        # Set current units and stuff
+        if self.cartesian:
+            self.cartesianpositions = True
+            self.cartesianlatvects = True
+        self.cell.newunit(self.unit)
+        # Determine max width of spcstring
+        width = 0
+        for a in self.cell.atomdata:
+            for b in a:
+                width = max(width, len(b.spcstring()))
+        #
         filestring += "&SYSTEM\n"
-        filestring += "  ibrav = %i\n"%self.ibrav()
-        filestring += "  celldm(1) = %10.5f, celldm(2) = %10.5f, celldm(3) = %10.5f\n"%(a,boa,coa)
-        filestring += "  nat = %i, ntyp = %i\n"
+        filestring += "  ibrav = %i\n"%(0)
+        if self.unit == "bohr":
+            filestring += "  celldm(1) = %10.5f\n"%(self.cell.lengthscale)
+        elif self.unit == "angstrom":
+            filestring += "  A = %10.5f\n"%(self.cell.lengthscale)
+        filestring += "  nat = %i\n"%(self.cell.natoms())
+        filestring += "  ntyp = %i\n"%(len(self.species))
         filestring += "/\n"
-        filestring += "ATOMIC_SPECIES"
-        
+        if self.cartesianlatvects:
+            if self.unit == "bohr":
+                filestring += "CELL_PARAMETERS {bohr}\n"
+            elif self.unit == "angstrom":
+                filestring += "CELL_PARAMETERS {angstrom}\n"
+            t = LatticeMatrix(self.cell.latticevectors)
+            for i in range(3):
+                for j in range(3):
+                    t[i][j] = self.cell.latticevectors[i][j]*self.cell.lengthscale
+            filestring += str(t)
+        else:
+            filestring += "CELL_PARAMETERS {alat}\n"
+            filestring += str(self.cell.latticevectors)
+        filestring += "ATOMIC_SPECIES\n"
+        for sp in self.species:
+                filestring += "  %2s"%(sp.rjust(width))
+                try:
+                    filestring += ("  %8.5f"%(ed.elementweight[sp])).rjust(11)
+                except:
+                    filestring += "   ???".rjust(11)
+                filestring += "  %2s%s\n"%(sp.rjust(width),self.pseudostring)
+        if self.cartesianpositions:
+            if self.scaledcartesianpositions:
+                filestring += "ATOMIC_POSITIONS {alat}\n"
+            else:
+                if self.unit == "bohr":
+                    filestring += "ATOMIC_POSITIONS {bohr}\n"
+                elif self.unit == "angstrom":
+                    filestring += "ATOMIC_POSITIONS {angstrom}\n"
+        else:
+            if self.scaledcartesianpositions:
+                filestring += "ATOMIC_POSITIONS {alat}\n"
+            else:
+                filestring += "ATOMIC_POSITIONS {lattice}\n"
+        for a in self.cell.atomdata:
+            for b in a:
+                if self.cartesianpositions:
+                    t = Vector(mvmult3(self.cell.latticevectors,b.position))
+                    if self.scaledcartesianpositions:
+                        filestring += b.spcstring().rjust(width)+" "+str(t)+"\n"
+                    else:
+                        for i in range(3):
+                            t[i] = self.cell.lengthscale*t[i]
+                        filestring += b.spcstring().rjust(width)+" "+str(t)+"\n"
+                else:
+                    if self.scaledcartesianpositions:
+                        t = Vector(mvmult3(self.cell.latticevectors,b.position))
+                        filestring += b.spcstring().rjust(width)+" "+str(t)+"\n"
+                    else:
+                        filestring += b.spcstring().rjust(width)+" "+str(b.position)+"\n"
+        # Add k-space mesh
+        if self.setupall:
+            filestring += "\n# k-space resolution ~"+str(self.kresolution)+"/A.\n"
+            # Opt for gamma-point run if possible
+            if self.kgrid[0]*self.kgrid[1]*self.kgrid[2] == 1:                
+                filestring += "K_POINTS gamma\n"
+            else:
+                filestring += "K_POINTS automatic\n"
+                filestring += str(self.kgrid[0])+" "+str(self.kgrid[1])+" "+str(self.kgrid[2])+"  0 0 0\n"
         return filestring
     # Return the PWscf internal bravais lattice number
     def ibrav(self):
@@ -1737,7 +1831,7 @@ class KPOINTSFile:
         reclatvect = crystalstructure.reciprocal_latticevectors()
         for j in range(3):
             for i in range(3):
-                reclatvect[j][i] = reclatvect[j][i] / crystalstructure.a
+                reclatvect[j][i] = reclatvect[j][i] / crystalstructure.lengthscale
         # Lengths of reciprocal lattice vectors
         reclatvectlen = [elem.length() for elem in reclatvect]
         self.kgrid = [max(1,int(round(elem/self.kresolution))) for elem in reclatvectlen]
