@@ -1257,7 +1257,7 @@ class PWSCFFile(GeometryOutputFile):
             if self.scaledcartesianpositions:
                 filestring += "ATOMIC_POSITIONS {alat}\n"
             else:
-                filestring += "ATOMIC_POSITIONS {lattice}\n"
+                filestring += "ATOMIC_POSITIONS {crystal}\n"
         for a in self.cell.atomdata:
             for b in a:
                 if self.cartesianpositions:

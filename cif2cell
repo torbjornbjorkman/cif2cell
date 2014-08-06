@@ -41,7 +41,7 @@ from elementdata import *
 
 # Name and version
 programname = "cif2cell"
-version = "1.1.7"
+version = "1.2.0"
 
 # Turn of warnings about deprecated stuff
 warnings.simplefilter("ignore",DeprecationWarning)
@@ -58,6 +58,10 @@ alloyprograms = set(["emto","kstr","bmdl","shape","kgrn","kfcd","cif","spc","spr
 vcaprograms = set(["castep","vasp"])
 #
 setupallprogs = set(["vasp","pwscf","quantum-espresso"])
+setupallstring = ""
+for p in setupallprogs:
+    setupallstring += p+", "
+setupallstring = setupallstring.rstrip(", ")
 #
 programlist = sorted(list(outputprograms))
 outputprogramstring = ""
@@ -91,7 +95,7 @@ cellgenopts.add_option("--force-alloy",dest="forcealloy",help="Force generation 
 cellgenopts.add_option("--vca",dest="vca",help="Set up an alloy using the virtual crystal approximation (VCA). Currently only supported by the CASTEP interface.",action="store_true")
 cellgenopts.add_option("--cartesian",dest="cartesian",help="Make the program generate any output in cartesian coordinates.",action="store_true")
 cellgenopts.add_option("--coordinate-tolerance",dest="coordtol",help="Parameter for determining when two coordinates are the same (default=0.0002).")
-cellgenopts.add_option("--setup-all",dest="setupall",help="Make a complete setup, not just the geometrical part. This is currently only available for VASP.",action="store_true")
+cellgenopts.add_option("--setup-all",dest="setupall",help="Make a more complete setup, not just the geometrical part. This is currently only available for "+setupallstring+".",action="store_true")
 cellgenopts.add_option("--k-resolution",dest="kresolution",help="The desired resolution in k-space (default=0.2). Used for generating k-space grid options if --setup-all is specified.")
 cellgenopts.add_option("--transform-cell",dest="celltransformation",help="Transformation matrix applied to the lattice vectors and the symmetry operations if you, for example, want to realign the cell.",metavar="[[],[],[]]")
 cellgenopts.add_option("--cubic-diagonal-z",dest="cubediagz",help="Set up cubic cell with [111] direction along the z-axis.",action="store_true")

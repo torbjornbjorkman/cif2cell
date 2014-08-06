@@ -1,17 +1,10 @@
 CIF2CELL RELEASE INFORMATION
 
-VERSION 1.1.7
+VERSION 1.2.0
 
-* Fixed length scale issues with PWSCF interface.
-* New input options for the PWSCF interface.
-* PWSCF interface suppors the --setup-all flag (only sets up a k-point
-   mesh so far).
-
---------------------------------------------------------------   
-VERSION 1.1.6
-
-* Implemented Quantum Espresso (pwscf) interface. 
-* Fixed bug with improveprecision function.
+* Finally, the Quantum Espresso (pwscf) interface is here! With thanks to Karim
+  Elgammal, Mutlu Colakogullari and A. Suresh. 
+* Minor bugfixes.
 
 --------------------------------------------------------------   
 VERSION 1.1.5
