@@ -41,7 +41,7 @@ from elementdata import *
 
 # Name and version
 programname = "cif2cell"
-version = "1.2.0"
+version = "1.2.1"
 
 # Turn of warnings about deprecated stuff
 warnings.simplefilter("ignore",DeprecationWarning)
@@ -161,7 +161,8 @@ progspec.add_option("--vasp-cartesian",dest="vaspcart",help="Write lattice vecto
 progspec.add_option("--vasp-cartesian-lattice-vectors",dest="vaspcartvecs",help="Write lattice vectors to POSCAR file in cartesian coordinates and set the length scale to 1.",action="store_true")
 progspec.add_option("--vasp-cartesian-positions",dest="vaspcartpos",help="Write atomic positions to POSCAR file in Cartesian rather than Direct coordinates.",action="store_true")
 progspec.add_option("--vasp-selective-dynamics",dest="vaspselectivedyn",help="Output POSCAR in selective dynamics format (without any constrained atoms).",action="store_true")
-progspec.add_option("--vasp-pseudo-libdr",dest="vasppseudolib",help="Path to the VASP pseudopotential library.")
+progspec.add_option("--vasp-pseudo-libdr",dest="vasppseudolib",help="Path to the VASP pseudopotential library. Also settable by the VASP_PAWLIB environment variable.")
+progspec.add_option("--vasp-pseudo-priority",dest="vasppppriority",help="Set the priority of different pseudopotentials by a list of suffixes. Also available via the VASP_PP_PRIORITY environment variable.", metavar='"_d,_pv,_sv,_h,_s"')
 # xyz
 progspec.add_option("--xyz-atomic-units",dest="xyzatomicunits",help="Output xyz file in atomic units (bohr radii) rather than angstrom.",action="store_true")
 #
@@ -1204,7 +1205,19 @@ if outputprogram == 'vasp':
             lib = options.vasppseudolib
         else:
             lib = ""
-        potcarfile = POTCARFile(cd,directory=lib,vca=options.vca)
+        # Make selection of potcars
+        if options.vasppppriority:
+            prioritylist = options.vasppppriority.split(",")
+            prioritylist.append("")
+            print prioritylist
+        else:
+            try:
+                pl = os.environ['VASP_PP_PRIORITY']
+                prioritylist = pl.split(",")
+                prioritylist.append("")
+            except:
+                prioritylist=["_d","_pv","_sv","","_h","_s"]
+        potcarfile = POTCARFile(cd,directory=lib,vca=options.vca,prioritylist=prioritylist)
         f = open("POTCAR", "w")
         f.write(str(potcarfile))
         f.close()
@@ -1215,7 +1228,7 @@ if outputprogram == 'vasp':
         f.write(str(kpointsfile))
         f.close()
         # INCAR
-        incarfile = INCARFile(cd,docstring=docstring,vca=options.vca)
+        incarfile = INCARFile(cd,docstring=docstring,vca=options.vca,prioritylist=prioritylist)
         f = open("INCAR", "w")
         f.write(str(incarfile))
         f.close()

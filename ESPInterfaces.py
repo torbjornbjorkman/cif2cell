@@ -17,7 +17,8 @@
 #******************************************************************************************
 #  Description: Interfaces for a number of electronic structure programs. Currently only
 #               reads CIF and outputs to the ESP's. Supported programs are: ABINIT, CASTEP,
-#               CPMD, Crystal09, Elk, EMTO, Exciting, Fleur, NCOL, RSPt, Siesta, VASP
+#               CPMD, Crystal09, Elk, EMTO, Exciting, Fleur, Hutsepot, NCOL, Quantum Espresso,
+#               RSPt, Siesta, VASP, xyz
 #               
 #  Author:      Torbjorn Bjorkman, torbjorn.bjorkman(at)aalto.fi
 #  Affiliation: COMP, Aaalto University School of Science,
@@ -1329,7 +1330,6 @@ class CP2KFile(GeometryOutputFile):
     def __str__(self):
         filestring = self.docstring
         filestring += "&CELL\n"
-        filestring += "  UNIT ANGSTROM\n"
         filestring += "  PERIODIC XYZ\n"
         filestring += "  A "+str(self.cell.latticevectors[0].scalmult(self.cell.lengthscale))+"\n"
         filestring += "  B "+str(self.cell.latticevectors[1].scalmult(self.cell.lengthscale))+"\n"
@@ -1780,9 +1780,12 @@ class POTCARFile:
     """
     Class for representing and outputting a POTCAR file for VASP.
     """
-    def __init__(self, crystalstructure, directory="",vca=False):
-        self.vca = vca
+    def __init__(self, crystalstructure, directory="",vca=False,
+                 prioritylist=["_d","_pv","_sv","","_h","_s"]):
         self.cell = crystalstructure
+        self.vca = vca
+        self.prioritylist = prioritylist
+        # POTCAR library
         if directory != "":
             self.dir = directory
         else:
@@ -1802,12 +1805,10 @@ class POTCARFile:
         poscarfile = POSCARFile(self.cell, "", vca=self.vca)
         self.species = poscarfile.species
     def __str__(self):
-        # Make good selection of potcars
-        prioritylist = ["_d", "_pv", "_sv", "", "_h", "_s"]
         # get all files
         potcarlist = []
         for a in self.species:
-            for version in prioritylist:
+            for version in self.prioritylist:
                 potcarfile = self.dir+"/"+a+version+"/POTCAR"
                 if os.path.exists(potcarfile):
                     potcarlist.append(potcarfile)
@@ -1848,9 +1849,11 @@ class INCARFile:
     """
     Class for representing and outputting a INCAR file for VASP.
     """
-    def __init__(self, crystalstructure, docstring="",potcardir="",vca=False):
+    def __init__(self, crystalstructure, docstring="",potcardir="",vca=False,
+                 prioritylist=["_d","_pv","_sv","","_h","_s"]):
         self.cell = crystalstructure
         self.docstring = "# "+docstring.lstrip("#").rstrip("\n")+"\n"
+        self.prioritylist = prioritylist
         self.vca = vca
         self.vcaspecies = None
         poscarfile = POSCARFile(self.cell, "", vca=self.vca)
@@ -1910,11 +1913,10 @@ class INCARFile:
                 if k == s:
                     self.species.append((k,v))
         # get potcar list
-        prioritylist = ["_d", "_pv", "_sv", "", "_h", "_s"]
         potcars = dict([])
         specieslist = []
         for a in speciesdict:
-            for version in prioritylist:
+            for version in self.prioritylist:
                 potcarfile = self.potcardir+"/"+a+version+"/POTCAR"
                 if os.path.exists(potcarfile):
                     potcars[a] = potcarfile

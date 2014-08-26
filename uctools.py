@@ -1009,30 +1009,21 @@ class CellData(GeometryObject):
         ################################
         # _space_group is the primary choice, so if both _symmetry and _space_group
         # are present, _symmetry will be overwritten
-        try:
-            self.spacegroupnr = int(cifblock['_symmetry_Int_Tables_number'])
-        except:
-            pass
-        try:
-            self.spacegroupnr = int(cifblock['_space_group_IT_number'])
-        except:
-            pass
-        try:
-            self.HallSymbol=cifblock['_symmetry_space_group_name_Hall']
-        except:
-            pass
-        try:
-            self.HallSymbol=cifblock['_space_group_name_Hall']
-        except:
-            pass
-        try:
-            self.HMSymbol=cifblock['_symmetry_space_group_name_H-M'].translate(string.maketrans("", ""),string.whitespace)
-        except:
-            pass
-        try:
-            self.HMSymbol=cifblock['_space_group_name_H-M_alt'].translate(string.maketrans("",""),string.whitespace)
-        except:
-            pass
+        for spgrnrid in ['_symmetry_Int_Tables_number','_space_group_IT_number']:
+            try:
+                self.spacegroupnr = int(cifblock[spgrnrid])
+            except:
+                pass
+        for hallid in ['_symmetry_space_group_name_Hall','_space_group_name_Hall']:
+            try:
+                self.HallSymbol=cifblock[hallid]
+            except:
+                pass
+        for HMid in ['_symmetry_space_group_name_H-M','_space_group_name_H-M_alt']:
+            try:
+                self.HMSymbol=cifblock[HMid].translate(string.maketrans("", ""),string.whitespace)
+            except:
+                pass
 
         # Force correct case for space group symbols
         if self.HMSymbol != "":
@@ -1061,23 +1052,24 @@ class CellData(GeometryObject):
 
         # Get symmetry equivalent positions (space group operations).
         eqsites = None
-        try:
-            eqsitedata = cifblock.GetLoop('_symmetry_equiv_pos_as_xyz')
+        for symopid in ['_symmetry_equiv_pos_as_xyz','_space_group_symop_operation_xyz']:
             try:
-                eqsitestrs = eqsitedata.get('_symmetry_equiv_pos_as_xyz')
-                # This if fixes a funny exception that can occur for the P1 space group.
-                if type(eqsitestrs) == StringType:
-                    eqsitestrs = [eqsitestrs]
-                eqsites = []
-                for i in range(len(eqsitestrs)):
-                    tmp = eqsitestrs[i].split(',')
-                    eqsites.append([])
-                    for j in range(len(tmp)):
-                        eqsites[i].append(tmp[j].strip().lower())
+                eqsitedata = cifblock.GetLoop(symopid)
+                try:
+                    eqsitestrs = eqsitedata.get(symopid)
+                    # This if fixes a funny exception that can occur for the P1 space group.
+                    if type(eqsitestrs) == StringType:
+                        eqsitestrs = [eqsitestrs]
+                    eqsites = []
+                    for i in range(len(eqsitestrs)):
+                        tmp = eqsitestrs[i].split(',')
+                        eqsites.append([])
+                        for j in range(len(tmp)):
+                            eqsites[i].append(tmp[j].strip().lower())
+                except KeyError:
+                    self.symops = None
             except KeyError:
                 self.symops = None
-        except KeyError:
-            self.symops = None
 
         # Only Hall symbols are used internally.
         if self.HallSymbol == "" or self.HallSymbol == "?" or self.HallSymbol == "." or not self.HallSymbol in Hall2HM:

@@ -1,5 +1,15 @@
 CIF2CELL RELEASE INFORMATION
 
+VERSION 1.2.1
+
+* New feature for VASP: Possibility to specify your own
+  pseudo-potential order of priority in the VASP_PP_PRIORITY
+  environment variable.
+* Bugfix in the CP2k interface.
+
+With thanks to Kirill Okhotnikov.
+
+--------------------------------------------------------------   
 VERSION 1.2.0
 
 * Finally, the Quantum Espresso (pwscf) interface is here! With thanks to Karim
