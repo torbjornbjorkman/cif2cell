@@ -1,5 +1,11 @@
 CIF2CELL RELEASE INFORMATION
 
+VERSION 1.2.2
+
+* Added support fort the _space_group_symop_operation_xyz label. This
+  fixes problems with FINDSYM output cifs.
+
+--------------------------------------------------------------   
 VERSION 1.2.1
 
 * New feature for VASP: Possibility to specify your own
