@@ -576,7 +576,7 @@ class SymtFile2(GeometryOutputFile):
     Class for storing the geometrical data needed in a new format symt.inp file and the method
     __str__ that outputs the contents of an symt.inp file as a string.
     """
-    def __init__(self,crystalstructure,string):
+    def __init__(self,crystalstructure,string,kresolution=0.1):
         GeometryOutputFile.__init__(self,crystalstructure,string)
         # Set atomic units for length scale
         self.cell.newunit("bohr")
@@ -589,13 +589,16 @@ class SymtFile2(GeometryOutputFile):
             string = "#"+string+"\n"
             self.docstring += string
         # Default spin axis is [0,0,0]
-        self.spinaxis = [0.0, 0.0, 0.0]
+        self.spinaxis = Vector([0.0, 0.0, 0.0])
         # parameters for spin polarization
         self.spinpol = False
         self.relativistic = False
         self.rsptcartlatvects = False
         self.mtradii = 0
         self.passwyckoff = False
+        # k-mesh generation etc.
+        self.setupall = False
+        self.kresolution = kresolution
     def __str__(self):
         # Initialize element data
         ed = ElementData()
@@ -613,6 +616,10 @@ class SymtFile2(GeometryOutputFile):
             filestring += "# Spin polarize atomic densities\nspinpol_atomdens\n"
         if self.relativistic:
             filestring += "# Relativistic symmetries\nfullrel\n"
+            # Default to z-direction for relativistic calculations
+            t = self.spinaxis - Vector([0.,0.,0.,])
+            if t.length() < 1e-7:
+                self.spinaxis = Vector([0.,0.,1.])
         if self.mtradii != 0:
             filestring += "# Choice of MT radii\n"
             filestring += "mtradii\n"+str(self.mtradii)+"\n"
@@ -628,7 +635,7 @@ class SymtFile2(GeometryOutputFile):
             for j in range(3):
                 tmpstring += "%19.15f "%(self.cell.latticevectors[j][i]*fac)
             tmpstring += "\n"
-        filestring += tmpstring
+        filestring += tmpstring            
         filestring += "# Spin axis\n"
         filestring += "spinaxis\n"
         filestring += "%19.15f %19.15f %19.15f  l\n"%(self.spinaxis[0],self.spinaxis[1],self.spinaxis[2])
@@ -655,6 +662,36 @@ class SymtFile2(GeometryOutputFile):
                 tmpstring += " l "+label+"   # "+b.spcstring()+"\n"
                 filestring += tmpstring
             it += 1
+        # k-mesh setup for new input
+        if self.setupall:
+            filestring += "\n"
+            filestring += "# k space resolution\n"
+            filestring += "kresolution\n"
+            filestring += "  %f\n"%(self.kresolution)
+            # Guess a suitable Froyen map !!! Column vectors for RSPt !!!
+            mapmatrix = LatticeMatrix([1,0,0],[0,1,0],[0,0,1])
+            if self.cell.primcell:
+                if self.cell.spacegroupsetting == 'F':
+                    mapmatrix = LatticeMatrix([1,1,-1],[1,-1,1],[-1,1,1])
+                elif self.cell.spacegroupsetting == 'I':
+                    if self.cell.crystalsystem() == 'cubic':
+                        mapmatrix = LatticeMatrix([0,1,1],[1,0,1],[1,1,0])
+                    else:
+                        mapmatrix = LatticeMatrix([1,0,-1],[0,1,-1],[0,0,2])
+                elif self.cell.spacegroupsetting == 'A':
+                    mapmatrix = LatticeMatrix([1,0,0],[0,1,-1],[0,1,1])
+                elif self.cell.spacegroupsetting == 'B':
+                    mapmatrix = LatticeMatrix([1,0,-1],[0,1,0],[1,0,1])
+                elif self.cell.spacegroupsetting == 'C':
+                    mapmatrix = LatticeMatrix([1,-1,0],[1,1,0],[0,0,1])
+                elif self.cell.spacegroupsetting == 'R' and abs(self.cell.alpha-90) > 10:
+                    # Generate in hexagonal supercell unless the rhombohedral angle is close to 90 degrees.
+                    mapmatrix = LatticeMatrix([1,0,1],[-1,1,1],[0,-1,1])
+            filestring += "# Froyen map\n"
+            filestring += "kmapmatrix\n"
+            for v in mapmatrix:
+                filestring += " %4i %4i %4i\n"(v[0],v[1],v[2])
+        # Return
         return filestring
 
 ################################################################################################
@@ -1850,12 +1887,14 @@ class INCARFile:
     Class for representing and outputting a INCAR file for VASP.
     """
     def __init__(self, crystalstructure, docstring="",potcardir="",vca=False,
-                 prioritylist=["_d","_pv","_sv","","_h","_s"]):
+                 prioritylist=["_d","_pv","_sv","","_h","_s"], encutfac=1.5):
         self.cell = crystalstructure
         self.docstring = "# "+docstring.lstrip("#").rstrip("\n")+"\n"
         self.prioritylist = prioritylist
         self.vca = vca
         self.vcaspecies = None
+        # ecut = max(encuts found in potcars)*encutfac
+        self.encutfac = encutfac
         poscarfile = POSCARFile(self.cell, "", vca=self.vca)
         # we need the potcar directory
         if potcardir != "":
@@ -1936,8 +1975,6 @@ class INCARFile:
                     break
             potcar.close()
         self.maxencut = max([k for v,k in enmaxs.iteritems()])
-        # ecut = max(encuts found in potcars)*encutfac
-        self.encutfac = 1.5
         # do we suspect that this might be magnetic?
         self.magnetic = False
         self.magmomlist = []

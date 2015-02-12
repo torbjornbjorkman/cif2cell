@@ -625,6 +625,7 @@ class ElementData:
 
         self.elementweight = {
             'H' : 1.0075,
+            'D' : 2.01410178,
             'He' : 4.002,
             'Li' : 6.9675,
             'Be' : 9.012,

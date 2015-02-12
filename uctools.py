@@ -104,6 +104,7 @@ class CellData(GeometryObject):
         self.occupations = []
         self.atomdata = []
         self.atomset = set([])
+        self.numberOfAtoms = None
         # initial lattice parameters
         self.ainit = 0
         self.binit = 0
@@ -708,6 +709,7 @@ class CellData(GeometryObject):
         ######################
         #    MISCELLANEOUS   #
         ######################
+        self.numberOfAtoms = self.natoms()
         # Set flag and return the CrystalStructure in the conventional setting
         self.initialized = True
         return self
@@ -1000,6 +1002,7 @@ class CellData(GeometryObject):
                     for i in sort:
                         self.atomdata.sort(key = lambda a: a[0].position[int(i)-1])
         self.supercell = True
+        self.numberOfAtoms = self.natoms()
         return self
 
     # Get lattice information from CIF block
@@ -1090,7 +1093,13 @@ class CellData(GeometryObject):
                 self.HallSymbol = HM2Hall[self.HMSymbol]
             except:
                 self.HallSymbol = "Unknown"
-                    
+
+        # space group setting
+        if self.HallSymbol[0] == "-":
+            self.spacegroupsetting = self.HallSymbol[1]
+        else:
+            self.spacegroupsetting = self.HallSymbol[0]
+        
         # Set space group number and H-M symbol, if not in file.
         if self.spacegroupnr < 1 or self.spacegroupnr > 230:
             self.spacegroupnr = Hall2Number[self.HallSymbol]
@@ -1259,7 +1268,16 @@ class CellData(GeometryObject):
                 self.charges = [Charge(0) for element in elementsymbs]
                 for element in elementsymbs:
                     self.chargedict[element] = Charge(0)
-        
+
+        # Try to get number of atoms from symmetry multiplicities (if present)
+        try:
+            tmpdata = cifblock.GetLoop('_atom_site_symmetry_multiplicity')
+            i = 0
+            for t in tmpdata:
+                i += int(t[0])
+            self.numberOfAtoms = i
+        except:
+            pass
         # Remove stuff (usually charge state specification) from element symbol strings
         elements = []
         i = 0
@@ -1308,6 +1326,8 @@ class CellData(GeometryObject):
                 v = float(removeerror(siteoccer[i]))
             except ValueError:
                 v = 1.0
+            if abs(v-1.0) > 1e-6:
+                self.alloy = True
             self.occupations.append({ k : v })
             
         # If there is a set of defective sites, remove them if forced.

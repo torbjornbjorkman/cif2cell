@@ -41,7 +41,7 @@ from elementdata import *
 
 # Name and version
 programname = "cif2cell"
-version = "1.2.2"
+version = "1.2.3"
 
 # Turn of warnings about deprecated stuff
 warnings.simplefilter("ignore",DeprecationWarning)
@@ -50,14 +50,14 @@ warnings.simplefilter("ignore",DeprecationWarning)
 outputprograms = set(['abinit','castep','coo','cpmd','cp2k','crystal09','elk','emto','exciting','fhi-aims',
                       ## 'fleur','ncol','mcsqs','rspt','siesta','sprkkr','vasp', # mcsqs not ready
                       'fleur','hutsepot','ncol', 'pwscf', 'quantum-espresso', 'rspt','siesta','sprkkr','vasp',
-                      'ase','bmdl','cellgen','cif','kfcd','kstr','shape','spacegroup',
+                      'ase','bmdl','cellgen','cif','kgrn','kfcd','kstr','shape','spacegroup',
                        'spc','xband','xyz'])
 
 # Programs that can deal with alloys
 alloyprograms = set(["emto","kstr","bmdl","shape","kgrn","kfcd","cif","spc","sprkkr","xband"])
 vcaprograms = set(["castep","vasp"])
 #
-setupallprogs = set(["vasp","pwscf","quantum-espresso"])
+setupallprogs = set(["vasp","pwscf","quantum-espresso","rspt"])
 setupallstring = ""
 for p in setupallprogs:
     setupallstring += p+", "
@@ -163,6 +163,7 @@ progspec.add_option("--vasp-cartesian-positions",dest="vaspcartpos",help="Write 
 progspec.add_option("--vasp-selective-dynamics",dest="vaspselectivedyn",help="Output POSCAR in selective dynamics format (without any constrained atoms).",action="store_true")
 progspec.add_option("--vasp-pseudo-libdr",dest="vasppseudolib",help="Path to the VASP pseudopotential library. Also settable by the VASP_PAWLIB environment variable.")
 progspec.add_option("--vasp-pseudo-priority",dest="vasppppriority",help="Set the priority of different pseudopotentials by a list of suffixes. Also available via the VASP_PP_PRIORITY environment variable.", metavar='"_d,_pv,_sv,_h,_s"')
+progspec.add_option("--vasp-encutfac",dest="vaspencutfac",help="Factor that multiplies the maximal ENCUT found in the POTCAR file.", metavar="1.5")
 # xyz
 progspec.add_option("--xyz-atomic-units",dest="xyzatomicunits",help="Output xyz file in atomic units (bohr radii) rather than angstrom.",action="store_true")
 #
@@ -804,7 +805,10 @@ else:
     if outputprogram == "vasp":
         outputfile = "POSCAR"
     elif outputprogram == "rspt":
-        outputfile = "symt.inp"
+        if setupall:
+            outputfile = "rspt.inp"
+        else:
+            outputfile = "symt.inp"
     elif outputprogram == "cellgen":
         outputfile = "cellgen.inp"
     elif outputprogram == "elk":
@@ -1217,6 +1221,10 @@ if outputprogram == 'vasp':
                 prioritylist.append("")
             except:
                 prioritylist=["_d","_pv","_sv","","_h","_s"]
+        if options.vaspencutfac:
+            encutfac=float(options.vaspencutfac)
+        else:
+            encutfac=1.5
         potcarfile = POTCARFile(cd,directory=lib,vca=options.vca,prioritylist=prioritylist)
         f = open("POTCAR", "w")
         f.write(str(potcarfile))
@@ -1228,7 +1236,7 @@ if outputprogram == 'vasp':
         f.write(str(kpointsfile))
         f.close()
         # INCAR
-        incarfile = INCARFile(cd,docstring=docstring,vca=options.vca,prioritylist=prioritylist)
+        incarfile = INCARFile(cd,docstring=docstring,vca=options.vca,prioritylist=prioritylist,encutfac=encutfac)
         f = open("INCAR", "w")
         f.write(str(incarfile))
         f.close()
@@ -1286,9 +1294,12 @@ if outputprogram == 'spacegroup':
 if outputprogram == 'rspt':
     # Construct documentation string
     docstring = StandardDocstring()
-    # Get file string and print to symt.inp
-    if options.newsymt:
+    # Get file string and print to symt.inp/rspt.inp
+    if options.newsymt or setupall:
         symtfile = SymtFile2(cd, docstring)
+        # k-mesh generation etc
+        if setupall:
+            symtfile.setupall = True
         # spin polarization and relativity
         if options.rsptspinpol:
             symtfile.spinpol = True
@@ -1396,10 +1407,10 @@ if outputprogram == "emto" or outputprogram == "kgrn" or outputprogram == "kfcd"
     else:
         kstrjobnam = cd.HMSymbol.replace("/","")
     kgrnjobnam = ref.cpd.replace(" ", "").replace("(","").replace(")","")
-    # If the jobnames are long, replace by the name of the cif file
-    if len(kstrjobnam) > 30 and len(cif_file_name) < len(kstrjobnam)+4:
+    # If the jobnames are long or blank, replace by the name of the cif file
+    if len(kstrjobnam) > 30 and len(cif_file_name) < len(kstrjobnam)+4 or kstrjobnam == "":
         kstrjobnam = cif_file_name.replace(".cif","")
-    if len(kgrnjobnam) > 30 and len(cif_file_name) < len(kgrnjobnam)+4:
+    if len(kgrnjobnam) > 30 and len(cif_file_name) < len(kgrnjobnam)+4 or kgrnjobnam == "":
         kgrnjobnam = cif_file_name.replace(".cif","")
     # Build docstring
     docstring = ref.compound+", "+ref.referencestring()

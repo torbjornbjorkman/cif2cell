@@ -147,6 +147,7 @@ HM2Hall = {
     'Pc:a3' : 'P -2xc',
     'Pca3' : 'P -2xc',
     'Pc11' : 'P -2xc',
+    'B1a1' : 'B -2yc',
     #   8
     'Cm' : 'C -2y',
     'Cm:b1' : 'C -2y',
@@ -355,6 +356,7 @@ HM2Hall = {
     'P21/c:a3' : '-P 2xac',
     'P21/ca3' : '-P 2xac',
     'P21/c11' : '-P 2xac',
+    'B121/c1' : '-B 2ybc',
     #  15
     'C2/c' : '-C 2yc',
     'C2/c:b1' : '-C 2yc',
@@ -432,6 +434,7 @@ HM2Hall = {
     'P212121' : 'P 2ac 2ab',
     #  20
     'C2221' : 'C 2c 2',
+    'C2221S' : 'C 2c 2',
     'A2122' : 'A 2a 2a',
     'B2212' : 'B 2 2b',
     #  21
@@ -683,7 +686,8 @@ HM2Hall = {
     'Pcnb' : '-P 2b 2ac',
     #  61
     'Pbca' : '-P 2ac 2ab',
-    'Pcab' : '-P 2bc 2ac',
+    'P21/b21/c21/a' : '-P 2ac 2ab',
+    'Pcab' : '-P 2bc 2ac',    
     #  62
     'Pnma' : '-P 2ac 2n',
     'Pmnb' : '-P 2bc 2a',
@@ -700,6 +704,7 @@ HM2Hall = {
     'Bmmb' : '-B 2b 2',
     #  64
     'Cmca' : '-C 2bc 2',
+    'Cmce' : '-C 2bc 2',
     'Ccmb' : '-C 2bc 2bc',
     'Abma' : '-A 2ac 2ac',
     'Acam' : '-A 2 2ac',
@@ -938,6 +943,7 @@ HM2Hall = {
     'P4/nmm:1' : 'P 4ab 2ab -1ab',
     'P4/nmm1' : 'P 4ab 2ab -1ab',
     'P4/nmmS' : 'P 4ab 2ab -1ab',
+    'P4/n21/m2/m(originchoice2)' : 'P 4ab 2ab -1ab',   # ? FINDSYM choice
     'P4/nmm:2' : '-P 4a 2a',
     'P4/nmm2' : '-P 4a 2a',
     'P4/nmmZ' : '-P 4a 2a',
@@ -1062,6 +1068,7 @@ HM2Hall = {
     'R3mH' : 'R 3 -2"',
     'R3m:R' : 'P 3* -2',
     'R3mR' : 'P 3* -2',
+    'R3mHR' : 'T 3 -2"',
     # 161
     'R3c' : 'R 3 -2"c',
     'R3c:H' : 'R 3 -2"c',
@@ -1088,6 +1095,7 @@ HM2Hall = {
     'R-3mR' : '-P 3* 2',
     'R-32/m:R' : '-P 3* 2',
     'R-32/mR' : '-P 3* 2',
+    'R-3mHR' : '-T 3 2"',
     # 167
     'R-3c' : '-R 3 2"c',
     'R-3c:H' : '-R 3 2"c',
@@ -1149,6 +1157,7 @@ HM2Hall = {
     'P63/mcm' : '-P 6c 2',
     # 194
     'P63/mmc' : '-P 6c 2c',
+    'P63/m2/m2/c' : '-P 6c 2c',
     # 195
     'P23' : 'P 2 2 3',
     # 196
@@ -1243,7 +1252,7 @@ HM2Hall = {
     'Pn-3m' : 'P 4n 2 3 -1n',
     'Pn-3m:1' : 'P 4n 2 3 -1n',
     'Pn-3m1' : 'P 4n 2 3 -1n',
-    'Pn-3mZ' : 'P 4n 2 3 -1n',
+    'Pn-3mS' : 'P 4n 2 3 -1n',
     'Pn-3m:2' : '-P 4bc 2bc 3',
     'Pn-3m2' : '-P 4bc 2bc 3',
     'Pn-3mZ' : '-P 4bc 2bc 3',
@@ -11283,6 +11292,11 @@ SymOpsHall = {
              ['-x+1/2', 'y', '-z+1/2'],
              ['x+1/2', 'y+1/2', 'z'],
              ['-x+1/2', 'y+1/2', '-z']],
+    # 7
+    'B -2yc' : [['x', 'y', 'z'],
+                ['x', '-y', 'z+1/2'],
+                ['x+1/2', 'y', 'z+1/2'],
+                ['x+1/2', '-y', 'z']],
     # 8
     'F -2' : [['x', 'y', 'z'],
                ['x', 'y', '-z'],

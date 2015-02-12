@@ -13,12 +13,13 @@ CURRENTLY SUPPORTS
 code           | support |   output files
 ---------------|---------|-----------------------------------
 ASE                no      positions.py
-VASP               no      POSCAR
+VASP              VCA      POSCAR
 ABINIT             no      [compoundname].in
 Siesta             no      [compoundname].fdf
 CPMD               no      [compoundname].inp
 CASTEP            VCA      [compoundname].cell
 Crystal09          no      [compoundname].d12
+quantum espresso   no      [compoundname].in
 FHI-aims           no      geometry.in
 RSPt               no      symt.inp
 Fleur              no      inp_[compoundname]
