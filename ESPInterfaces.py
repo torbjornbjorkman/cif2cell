@@ -33,7 +33,17 @@ from elementdata import *
 from uctools import *
 from re import search
 
+
+################################################################################################
 ed = ElementData()
+suspiciouslist = set(["Cr", "Mn", "Fe", "Co", "Ni",
+        "Ce","Pr","Nd","Pm","Sm","Eu",
+        "Gd","Tb","Dy","Ho","Er","Tm",
+        "Th","Pa","U","Np","Pu"])
+initialmoments = {"Cr" : 3, "Mn" : 3, "Fe" : 3, "Co" : 3, "Ni" : 1,
+        "Ce" : 1, "Pr" : 2, "Nd" : 3, "Pm" : 4, "Sm" : 5, "Eu" : 6,
+        "Gd" : 7, "Tb" : 8, "Dy" : 9, "Ho" : 10, "Er" : 11, "Tm" : 12,
+        "Th" : 1, "Pa" : 2, "U" : 3, "Np" : 4, "Pu" : 5 }
 
 ################################################################################################
 class GeometryOutputFile:
@@ -615,11 +625,19 @@ class SymtFile2(GeometryOutputFile):
             filestring += "# Spin polarized calculation\nspinpol\n"
             filestring += "# Spin polarize atomic densities\nspinpol_atomdens\n"
         if self.relativistic:
-            filestring += "# Relativistic symmetries\nfullrel\n"
-            # Default to z-direction for relativistic calculations
+            if self.setupall:
+                filestring += "# Relativistic symmetries\nspinorbit\n"
+            else:
+                filestring += "# Relativistic symmetries\nfullrel\n"
+            # Default to z-direction for relativistic calculations...
             t = self.spinaxis - Vector([0.,0.,0.,])
             if t.length() < 1e-7:
-                self.spinaxis = Vector([0.,0.,1.])
+                self.spinaxis = mvmult3(minv3(self.cell.latticevectors),Vector([0.,0.,1.]))
+                # ... unless these space group settings, when we pick a more likely high-symmetry axis
+                if self.cell.spacegroupsetting == "A":
+                    self.spinaxis = mvmult3(minv3(self.cell.latticevectors),Vector([1.,0.,0.]))
+                elif self.cell.spacegroupsetting == "B":
+                    self.spinaxis = mvmult3(minv3(self.cell.latticevectors),Vector([0.,1.,0.]))
         if self.mtradii != 0:
             filestring += "# Choice of MT radii\n"
             filestring += "mtradii\n"+str(self.mtradii)+"\n"
@@ -650,6 +668,7 @@ class SymtFile2(GeometryOutputFile):
         label = "a"
         for a in self.cell.atomdata:
             for b in a:
+                label = "a"
                 tmpstring = ""
                 tmpstring += str(b.position)+" "
                 if b.alloy():
@@ -659,6 +678,8 @@ class SymtFile2(GeometryOutputFile):
                     tmpstring += "%3i"%ed.elementnr[b.spcstring()]
                 if self.passwyckoff:
                     label = chr(it+96)
+                if self.setupall and b.spcstring() in suspiciouslist:
+                    label = "up"
                 tmpstring += " l "+label+"   # "+b.spcstring()+"\n"
                 filestring += tmpstring
             it += 1
@@ -669,28 +690,28 @@ class SymtFile2(GeometryOutputFile):
             filestring += "kresolution\n"
             filestring += "  %f\n"%(self.kresolution)
             # Guess a suitable Froyen map !!! Column vectors for RSPt !!!
-            mapmatrix = LatticeMatrix([1,0,0],[0,1,0],[0,0,1])
+            mapmatrix = LatticeMatrix([[1,0,0],[0,1,0],[0,0,1]])
             if self.cell.primcell:
                 if self.cell.spacegroupsetting == 'F':
-                    mapmatrix = LatticeMatrix([1,1,-1],[1,-1,1],[-1,1,1])
+                    mapmatrix = LatticeMatrix([[1,1,0],[1,0,1],[0,1,1]])
                 elif self.cell.spacegroupsetting == 'I':
-                    if self.cell.crystalsystem() == 'cubic':
-                        mapmatrix = LatticeMatrix([0,1,1],[1,0,1],[1,1,0])
+                    if self.cell.crystal_system() == 'cubic':
+                        mapmatrix = LatticeMatrix([[-1,1,1],[1,-1,1],[1,1,-1]])
                     else:
-                        mapmatrix = LatticeMatrix([1,0,-1],[0,1,-1],[0,0,2])
+                        mapmatrix = LatticeMatrix([[2,0,1],[0,2,1],[0,0,2]])
                 elif self.cell.spacegroupsetting == 'A':
-                    mapmatrix = LatticeMatrix([1,0,0],[0,1,-1],[0,1,1])
+                    mapmatrix = LatticeMatrix([[1,0,0],[0,1,-1],[0,1,1]])
                 elif self.cell.spacegroupsetting == 'B':
-                    mapmatrix = LatticeMatrix([1,0,-1],[0,1,0],[1,0,1])
+                    mapmatrix = LatticeMatrix([[1,0,-1],[0,1,0],[1,0,1]])
                 elif self.cell.spacegroupsetting == 'C':
-                    mapmatrix = LatticeMatrix([1,-1,0],[1,1,0],[0,0,1])
-                elif self.cell.spacegroupsetting == 'R' and abs(self.cell.alpha-90) > 10:
+                    mapmatrix = LatticeMatrix([[1,-1,0],[1,1,0],[0,0,1]])
+                elif self.cell.spacegroupsetting == 'R' and abs(self.cell.latticevectors[0].angle(self.cell.latticevectors[1])*180/pi) > 10:
                     # Generate in hexagonal supercell unless the rhombohedral angle is close to 90 degrees.
-                    mapmatrix = LatticeMatrix([1,0,1],[-1,1,1],[0,-1,1])
+                    mapmatrix = LatticeMatrix([[1,0,1],[-1,1,1],[0,-1,1]])
             filestring += "# Froyen map\n"
             filestring += "kmapmatrix\n"
             for v in mapmatrix:
-                filestring += " %4i %4i %4i\n"(v[0],v[1],v[2])
+                filestring += " %4i %4i %4i\n"%(v[0],v[1],v[2])
         # Return
         return filestring
 
@@ -1978,12 +1999,6 @@ class INCARFile:
         # do we suspect that this might be magnetic?
         self.magnetic = False
         self.magmomlist = []
-        suspiciouslist = set(["Cr", "Mn", "Fe", "Co", "Ni",
-                              "Ce","Pr","Nd","Pm","Sm","Eu",
-                              "Gd","Tb","Dy","Ho","Er","Tm"])
-        initialmoments = {"Cr" : 3, "Mn" : 3, "Fe" : 3, "Co" : 3, "Ni" : 1,
-                          "Ce" : 1, "Pr" : 2, "Nd" : 3, "Pm" : 4, "Sm" : 5, "Eu" : 6,
-                          "Gd" : 7, "Tb" : 8, "Dy" : 9, "Ho" : 10, "Er" : 11, "Tm" : 12}
         for s in self.species:
             if s[0] in suspiciouslist:
                 self.magnetic = True

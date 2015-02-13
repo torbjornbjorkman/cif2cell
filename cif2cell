@@ -1296,7 +1296,7 @@ if outputprogram == 'rspt':
     docstring = StandardDocstring()
     # Get file string and print to symt.inp/rspt.inp
     if options.newsymt or setupall:
-        symtfile = SymtFile2(cd, docstring)
+        symtfile = SymtFile2(cd, docstring, kresolution=kresolution/angtobohr)
         # k-mesh generation etc
         if setupall:
             symtfile.setupall = True
