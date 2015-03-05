@@ -1,5 +1,10 @@
 CIF2CELL RELEASE INFORMATION
 
+VERSION 1.2.4
+
+* Adjustments in the RSPt interface.
+
+--------------------------------------------------------------   
 VERSION 1.2.3
 
 * Update of the RSPt interface.

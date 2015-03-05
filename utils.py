@@ -355,10 +355,14 @@ class AtomSite(GeometryObject):
         return hash(hash(self.position)+hash(''.join(sorted(self.species.keys())))+hash(sum(self.species.values())))
     def __eq__(self,other):
         return self.position == other.position and self.species == other.species
-    # Species string
+    # Species string, sorted by atomic weight.
     def spcstring(self):
-        tmp = ""
+        t = []
         for k in self.species:
+            t.append(k)
+        t.sort(key = lambda x: ElementData().elementweight[x], reverse=True)
+        tmp = ""
+        for k in t:
             tmp += k+"/"
         tmp = tmp.rstrip("/")
         return tmp

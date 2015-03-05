@@ -609,6 +609,8 @@ class SymtFile2(GeometryOutputFile):
         # k-mesh generation etc.
         self.setupall = False
         self.kresolution = kresolution
+        self.nokshifts = False
+        self.kshifts = [[0,0,0],[1,1,1]] 
     def __str__(self):
         # Initialize element data
         ed = ElementData()
@@ -685,15 +687,18 @@ class SymtFile2(GeometryOutputFile):
             it += 1
         # k-mesh setup for new input
         if self.setupall:
-            filestring += "\n"
-            filestring += "# k space resolution\n"
-            filestring += "kresolution\n"
-            filestring += "  %f\n"%(self.kresolution)
+            # Using k-resolution together with Froyen map needs supervised choice of mesh,
+            # or they easily become unnecessarily dense, so don't use this feature.
+            ## filestring += "\n"
+            ## filestring += "# k space resolution\n"
+            ## filestring += "kresolution\n"
+            ## filestring += "  %f\n"%(self.kresolution)
             # Guess a suitable Froyen map !!! Column vectors for RSPt !!!
             mapmatrix = LatticeMatrix([[1,0,0],[0,1,0],[0,0,1]])
             if self.cell.primcell:
                 if self.cell.spacegroupsetting == 'F':
                     mapmatrix = LatticeMatrix([[1,1,0],[1,0,1],[0,1,1]])
+                    t = mmmult3(mapmatrix.reclatvect)
                 elif self.cell.spacegroupsetting == 'I':
                     if self.cell.crystal_system() == 'cubic':
                         mapmatrix = LatticeMatrix([[-1,1,1],[1,-1,1],[1,1,-1]])
@@ -708,6 +713,40 @@ class SymtFile2(GeometryOutputFile):
                 elif self.cell.spacegroupsetting == 'R' and abs(self.cell.latticevectors[0].angle(self.cell.latticevectors[1])*180/pi) > 10:
                     # Generate in hexagonal supercell unless the rhombohedral angle is close to 90 degrees.
                     mapmatrix = LatticeMatrix([[1,0,1],[-1,1,1],[0,-1,1]])
+            # Determine mesh
+            reclatvect = LatticeMatrix(mmmult3(self.cell.reciprocal_latticevectors().transpose(),mapmatrix)).transpose()
+            for j in range(3):
+                for i in range(3):
+                    reclatvect[j][i] = reclatvect[j][i] / self.cell.lengthscale
+            # Lengths of reciprocal lattice vectors
+            reclatvectlen = [elem.length() for elem in reclatvect]
+            kgrid = [max(1,int(round(elem/self.kresolution))) for elem in reclatvectlen]
+            # Manual adjustments to make the choice work well with the Froyen mesh.
+            # Some centerings should have even meshes, for rhombohedral it should be dividable by 3
+            # along c.
+            if self.cell.primcell:
+                if self.cell.spacegroupsetting == 'F' or self.cell.spacegroupsetting == "I":
+                    for i in range(3):
+                        kgrid[i] += kgrid[i]%2
+                elif self.cell.spacegroupsetting == 'A':
+                    kgrid[1] += kgrid[1]%2
+                    kgrid[2] += kgrid[2]%2
+                elif self.cell.spacegroupsetting == 'B':
+                    kgrid[0] += kgrid[0]%2
+                    kgrid[2] += kgrid[2]%2
+                elif self.cell.spacegroupsetting == 'C':
+                    kgrid[0] += kgrid[0]%2
+                    kgrid[1] += kgrid[1]%2
+                elif self.cell.spacegroupsetting == 'R' and abs(self.cell.latticevectors[0].angle(self.cell.latticevectors[1])*180/pi) > 10:
+                    # This rounds to nearest multiple of 3
+                    if kgrid[2]%3 == 1:
+                        kgrid[2] -= 1
+                    elif kgrid[2]%3 == 2:
+                        kgrid[2] += 1
+            filestring += "\n# k-points\n"
+            filestring += "kpoints\n"
+            filestring += " %i %i %i\n\n"%(kgrid[0], kgrid[1], kgrid[2])
+            # Write Froyen map.
             filestring += "# Froyen map\n"
             filestring += "kmapmatrix\n"
             for v in mapmatrix:
