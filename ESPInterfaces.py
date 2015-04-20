@@ -215,6 +215,64 @@ class ASEFile(GeometryOutputFile):
         return filestring
     
 ################################################################################################
+# CFG FILE
+class CFGFile(GeometryOutputFile):
+    """
+    Class for storing the geometrical data needed for outputting a .cfg file
+    and the method __str__ that outputs the contents of the .coo file as a string.
+    """
+    def __init__(self,crystalstructure,string):
+        GeometryOutputFile.__init__(self,crystalstructure,string)
+        # Make sure the docstring has comment form
+        self.docstring = self.docstring.rstrip("\n")
+        tmpstrings = self.docstring.split("\n")
+        self.docstring = ""
+        for string in tmpstrings:
+            string = string.lstrip("#")
+            string = "#"+string+"\n"
+            self.docstring += string
+    def __str__(self):
+        # Set up atom list for printing.
+        tmplist = list(self.cell.atomset)
+        atomlist = []
+        for a in tmplist:
+            if a.alloy():
+                for sp,occ in a.species.iteritems():
+                    atomlist.append(AtomSite(position=a.position,species={sp : occ},charges={sp : a.charges[sp]}))
+            else:
+                atomlist.append(a)
+        atomlist.sort(key = lambda x: max([ed.elementnr[sp] for sp in x.species]),reverse=True)
+        prevsp = ""
+        natoms = len(atomlist)
+        # Make string
+        filestring = self.docstring
+        filestring += "Number of particles = %i \n"%(natoms)
+        filestring += "A = 1.0 Angstrom\n"
+        filestring += "H0(1,1) = %f A\n"%(self.cell.lengthscale*self.cell.latticevectors[0][0])
+        filestring += "H0(1,2) = %f A\n"%(self.cell.lengthscale*self.cell.latticevectors[0][1])
+        filestring += "H0(1,3) = %f A\n"%(self.cell.lengthscale*self.cell.latticevectors[0][2])
+        filestring += "H0(2,1) = %f A\n"%(self.cell.lengthscale*self.cell.latticevectors[1][0])
+        filestring += "H0(2,2) = %f A\n"%(self.cell.lengthscale*self.cell.latticevectors[1][1])
+        filestring += "H0(2,3) = %f A\n"%(self.cell.lengthscale*self.cell.latticevectors[1][2])
+        filestring += "H0(3,1) = %f A\n"%(self.cell.lengthscale*self.cell.latticevectors[2][0])
+        filestring += "H0(3,2) = %f A\n"%(self.cell.lengthscale*self.cell.latticevectors[2][1])
+        filestring += "H0(3,3) = %f A\n"%(self.cell.lengthscale*self.cell.latticevectors[2][2])
+        filestring += ".NO_VELOCITY.\n"
+        ## # Cut the fancy stuff for now, stick with just the positions
+        ## filestring += "entry_count = 3\n"
+        filestring += "entry_count = 6\n"
+        for a in atomlist:
+                for sp,occ in a.species.iteritems():
+                        if prevsp != sp:
+                            filestring += "%i\n"%(int(round(ed.elementweight[sp])))
+                            filestring += sp+"\n"
+                        prevsp = sp
+                        DW = 0.45*ed.elementnr['Si']/ed.elementnr[sp] # Debye-Waller factor, QSTEM prescription
+                        filestring += str(a.position)+" %f "%(DW)+" %f "%(occ)+" %f\n"%(a.charges[sp])
+                        ## filestring += str(a.position)+"\n"
+        return filestring
+    
+################################################################################################
 # COO FILE
 class COOFile(GeometryOutputFile):
     """

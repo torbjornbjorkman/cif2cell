@@ -41,20 +41,20 @@ from elementdata import *
 
 # Name and version
 programname = "cif2cell"
-version = "1.2.4"
+version = "1.2.5"
 
 # Turn of warnings about deprecated stuff
 warnings.simplefilter("ignore",DeprecationWarning)
 
 # All supported output formats
-outputprograms = set(['abinit','castep','coo','cpmd','cp2k','crystal09','elk','emto','exciting','fhi-aims',
+outputprograms = set(['abinit','castep','cfg','coo','cpmd','cp2k','crystal09','elk','emto','exciting','fhi-aims',
                       ## 'fleur','ncol','mcsqs','rspt','siesta','sprkkr','vasp', # mcsqs not ready
                       'fleur','hutsepot','ncol', 'pwscf', 'quantum-espresso', 'rspt','siesta','sprkkr','vasp',
                       'ase','bmdl','cellgen','cif','kgrn','kfcd','kstr','shape','spacegroup',
                        'spc','xband','xyz'])
 
 # Programs that can deal with alloys
-alloyprograms = set(["emto","kstr","bmdl","shape","kgrn","kfcd","cif","spc","sprkkr","xband"])
+alloyprograms = set(["cfg","emto","kstr","bmdl","shape","kgrn","kfcd","cif","spc","sprkkr","xband"])
 vcaprograms = set(["castep","vasp"])
 #
 setupallprogs = set(["vasp","pwscf","quantum-espresso","rspt"])
@@ -839,6 +839,8 @@ else:
             outputfile = outputfile+".in"
         elif outputprogram == "siesta":
             outputfile = outputfile+".fdf"
+        elif outputprogram == "cfg":
+            outputfile = outputfile+".cfg"
         elif outputprogram == "coo":
             outputfile = outputfile+".coo"
         elif outputprogram == "cpmd":
@@ -1638,6 +1640,17 @@ if outputprogram == 'ase':
     docstring = StandardDocstring()
     # Initialize the ASEFile structure
     sysfile = ASEFile(cd, docstring)
+    f = open(outputfile, outmode)
+    f.write(str(sysfile))
+    f.close()
+    sys.exit(0)
+
+################################################################################################
+# Output to cfg file
+if outputprogram == 'cfg':
+    docstring = StandardDocstring()
+    # Initialize the CFGFile structure
+    sysfile = CFGFile(cd, docstring)
     f = open(outputfile, outmode)
     f.write(str(sysfile))
     f.close()

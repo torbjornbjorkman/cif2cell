@@ -106,25 +106,25 @@ class CellData(GeometryObject):
         self.atomset = set([])
         self.numberOfAtoms = None
         # initial lattice parameters
-        self.ainit = 0
-        self.binit = 0
-        self.cinit = 0
-        self.alphainit = 0
-        self.betainit = 0
-        self.gammainit = 0
-        self.coainit = 1
-        self.boainit = 1
+        self.ainit = 0.
+        self.binit = 0.
+        self.cinit = 0.
+        self.alphainit = 0.
+        self.betainit = 0.
+        self.gammainit = 0.
+        self.coainit = 1.
+        self.boainit = 1.
         # lattice parameters used to generate the cell
-        self.a = 0
-        self.b = 0
-        self.c = 0
-        self.alpha = 0
-        self.beta = 0
-        self.gamma = 0
-        self.coa = 1
-        self.boa = 1
+        self.a = 0.
+        self.b = 0.
+        self.c = 0.
+        self.alpha = 0.
+        self.beta = 0.
+        self.gamma = 0.
+        self.coa = 1.
+        self.boa = 1.
         self.latticevectors = None
-        self.lengthscale = 1
+        self.lengthscale = 1.
         self.unit = "angstrom"
         self.alloy = False
         self.numofineqsites = 0
@@ -649,6 +649,7 @@ class CellData(GeometryObject):
                                 self.atomdata[i][0].species[k] = v
                             else:
                                 self.atomdata[i][0].species[k] = self.atomdata[j][0].species[k]
+                    self.atomdata[i][0].charges.update(self.atomdata[j][0].charges)
                     removeindices.append(j)
                     # ...also fix self.occupations
                     self.occupations[i][self.occupations[j].keys()[0]] = self.occupations[j].values()[0]

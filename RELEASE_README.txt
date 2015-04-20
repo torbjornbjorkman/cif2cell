@@ -1,5 +1,11 @@
 CIF2CELL RELEASE INFORMATION
 
+VERSION 1.2.5
+
+* Added output of .cfg files suitable for QSTEM simulations.
+* Small bugfixes.
+
+--------------------------------------------------------------   
 VERSION 1.2.4
 
 * Adjustments in the RSPt interface.

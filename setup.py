@@ -54,7 +54,7 @@ periodiccifs = glob('cifs/periodic_table/*.cif')+['cifs/periodic_table/README']
 modulelist = pycifrwmodulelist+['utils','uctools','spacegroupdata','elementdata','ESPInterfaces']
 
 setup(name='cif2cell',
-      version='1.2.4',
+      version='1.2.5',
       description='Construct a unit cell from CIF data',
       long_description='A command-line tool to generate the geometrical setup for various electronic structure codes from a CIF format file.',
       author='Torbjorn Bjorkman',

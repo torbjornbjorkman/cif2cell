@@ -110,15 +110,3 @@ Department of Applied Physics,
 Espoo, Finland
 torbjorn@cc.hut.fi
 
-
-
-
-############### PyCIFRW instructions #################
-The program uses the library PyCIFRW, which must be installed somewhere in 
-your PYTHONPATH. It can be found in this directory or downloaded from
-<http://sourceforge.net/projects/pycifrw.berlios/>. 
-The relevant components should be automatically installed. To install the library manually in the 
-'whereyouwantit/lib/python[version]/site-packages' directory, first unpack the file PyCifRW-X.Y.tar.gz. 
-Then go into the directory
-PyCifRW-X.Y and type 
-python setup.py install --prefix=[wheryouwantit]
