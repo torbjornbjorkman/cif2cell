@@ -661,6 +661,7 @@ class SymtFile2(GeometryOutputFile):
         # parameters for spin polarization
         self.spinpol = False
         self.relativistic = False
+        self.forcenospin = False
         self.rsptcartlatvects = False
         self.mtradii = 0
         self.passwyckoff = False
@@ -681,7 +682,7 @@ class SymtFile2(GeometryOutputFile):
             filestring += "1.000 \n"
         else:
             filestring += str(self.cell.lengthscale)+"\n"
-        if self.spinpol:
+        if self.spinpol and not self.forcenospin:
             filestring += "# Spin polarized calculation\nspinpol\n"
             filestring += "# Spin polarize atomic densities\nspinpol_atomdens\n"
         if self.relativistic:
@@ -690,7 +691,7 @@ class SymtFile2(GeometryOutputFile):
             else:
                 filestring += "# Relativistic symmetries\nfullrel\n"
             # Default to z-direction for relativistic calculations...
-            t = self.spinaxis - Vector([0.,0.,0.,])
+            t = self.spinaxis - Vector([0.,0.,0.])
             if t.length() < 1e-7:
                 self.spinaxis = mvmult3(minv3(self.cell.latticevectors),Vector([0.,0.,1.]))
                 # ... unless these space group settings, when we pick a more likely high-symmetry axis
@@ -738,7 +739,7 @@ class SymtFile2(GeometryOutputFile):
                     tmpstring += "%3i"%ed.elementnr[b.spcstring()]
                 if self.passwyckoff:
                     label = chr(it+96)
-                if self.setupall and b.spcstring() in suspiciouslist:
+                if self.setupall and b.spcstring() in suspiciouslist and not self.forcenospin:
                     label = "up"
                 tmpstring += " l "+label+"   # "+b.spcstring()+"\n"
                 filestring += tmpstring
@@ -2842,3 +2843,61 @@ class SPCFile(GeometryOutputFile):
             filestring += "100                   nsteps\n"
         return filestring
 
+################################################################################################
+# MOPAC FILE
+class MOPACFile(GeometryOutputFile):
+    """
+    Class for storing the geometrical data needed for outputting a MOPAC file
+    and the method __str__ that outputs the contents of the MOPAC file as a string.
+    """
+    def __init__(self,crystalstructure,string,setupall=False,firstline="",secondline="",thirdline="",freeze=-1):
+        GeometryOutputFile.__init__(self,crystalstructure,string)
+        self.cell.newunit(newunit="angstrom")
+        self.setupall = setupall
+        self.firstline = firstline
+        self.secondline = secondline
+        self.thirdline = thirdline
+        self.freeze = freeze
+        # Make sure the docstring has comment form
+        self.docstring = self.docstring.rstrip("\n")
+        tmpstrings = self.docstring.split("\n")
+        t = True
+        for s in tmpstrings:
+            t = t and (s[0] == '*')
+        if t:
+            self.docstring += "\n"
+        else:
+            self.docstring = ""
+            for string in tmpstrings:
+                string = string.lstrip("*")
+                string = "*"+string+"\n"
+                self.docstring += string
+    def __str__(self):
+        filestring = self.docstring
+        if self.setupall:
+            if self.firstline == "":
+                filestring += " BZ \n"
+            else:
+                filestring += self.firstline.rstrip("\n")+"\n"
+            filestring += self.secondline.rstrip("\n")+"\n"
+            filestring += self.thirdline.rstrip("\n")+"\n"
+        # Set up lattice vectors
+        lv = []
+        for i in range(3):
+            lv.append(Vector([self.cell.lengthscale*self.cell.latticevectors[i][j] for j in range(3)]))
+        # Print sites
+        if self.freeze == 0:
+            freezestring = " 0"
+        elif self.freeze == 1:
+            freezestring = " 1"
+        else:
+            freezestring = ""
+        for a in self.cell.atomdata:
+            for b in a:
+                t = Vector(mvmult3(lv,b.position))
+                filestring += str(b).split()[0]+"  "+str(t)+freezestring+"\n"
+        # Print lattice vectors
+        for l in lv:
+            filestring += "Tv  "+str(l)+"\n"
+        return filestring
+    

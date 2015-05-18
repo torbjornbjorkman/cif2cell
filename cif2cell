@@ -41,7 +41,7 @@ from elementdata import *
 
 # Name and version
 programname = "cif2cell"
-version = "1.2.5"
+version = "1.2.7"
 
 # Turn of warnings about deprecated stuff
 warnings.simplefilter("ignore",DeprecationWarning)
@@ -49,7 +49,7 @@ warnings.simplefilter("ignore",DeprecationWarning)
 # All supported output formats
 outputprograms = set(['abinit','castep','cfg','coo','cpmd','cp2k','crystal09','elk','emto','exciting','fhi-aims',
                       ## 'fleur','ncol','mcsqs','rspt','siesta','sprkkr','vasp', # mcsqs not ready
-                      'fleur','hutsepot','ncol', 'pwscf', 'quantum-espresso', 'rspt','siesta','sprkkr','vasp',
+                      'fleur','hutsepot','mopac','ncol', 'pwscf', 'quantum-espresso', 'rspt','siesta','sprkkr','vasp',
                       'ase','bmdl','cellgen','cif','kgrn','kfcd','kstr','shape','spacegroup',
                        'spc','xband','xyz'])
 
@@ -57,7 +57,7 @@ outputprograms = set(['abinit','castep','cfg','coo','cpmd','cp2k','crystal09','e
 alloyprograms = set(["cfg","emto","kstr","bmdl","shape","kgrn","kfcd","cif","spc","sprkkr","xband"])
 vcaprograms = set(["castep","vasp"])
 #
-setupallprogs = set(["vasp","pwscf","quantum-espresso","rspt"])
+setupallprogs = set(["vasp","pwscf","quantum-espresso","rspt","mopac"])
 setupallstring = ""
 for p in setupallprogs:
     setupallstring += p+", "
@@ -135,6 +135,11 @@ progspec.add_option("--cpmd-cutoff",dest="cpmdcutoff",help="Set the cutoff writt
 progspec.add_option("--emto-hard-sphere-radii",dest="hardsphereradii",help="Set hard spheres in KSTR to something other than the default (=0.67).")
 # FHI-AIMS
 progspec.add_option("--fhi-aims-cartesian", dest="aimscartesian", help="Store the coordinates for FHI-AIMS in cartesian format.", action="store_true")
+# MOPAC
+progspec.add_option("--mopac-first-line", dest="mopacfirstline", help="String to be used for the first line (the run commands) of the MOPAC input.",metavar='"string"')
+progspec.add_option("--mopac-second-line", dest="mopacsecondline", help="String to be used for the second line (documentation) of the MOPAC input.",metavar='"string"')
+progspec.add_option("--mopac-third-line", dest="mopacthirdline", help="String to be used for the third line (documentation) of the MOPAC input.",metavar='"string"')
+progspec.add_option("--mopac-freeze-structure", dest="mopacfreeze", help="If set to 'T' then add a 0 after each coordinate (freezing the structure), if set to 'F' then add a 1 (allowing everything to relax).",metavar='T/F')
 # PWSCF
 progspec.add_option("--pwscf-pseudostring",dest="pwscfpseudostring",help='String to attach to the element name to identify the pseudopotential file (e.g. something like "_HSCV_PBE-1.0.UPF").',metavar="_PSEUDO")
 progspec.add_option("--pwscf-atomic-units",dest="pwscfatomicunits",help="Write PWSCF .in file in atomic units (bohr) rather than angstrom.",action="store_true")
@@ -147,6 +152,7 @@ progspec.add_option("--rspt-new", dest="newsymt", help="Generate a symt.inp file
 progspec.add_option("--rspt-spinpol", dest="rsptspinpol", help="Generate new format symt.inp file with spin polarization.", action="store_true")
 progspec.add_option("--rspt-relativistic", dest="rsptrelativistic", help="Generate new format symt.inp file with relativistic effects.", action="store_true")
 progspec.add_option("--rspt-spinaxis", dest="rsptspinaxis", help="Spin axis for symt.inp (default is [0.0,0.0,0.0].", metavar="[x,y,z]")
+progspec.add_option("--rspt-no-spin", dest="rsptnospin", help="Force a nonmagnetic setup in conjunction with --setup-all.", action="store_true")
 progspec.add_option("--rspt-mtradii", dest="rsptmtradii", help="Integer that gives the method for setting muffin tin radii.", metavar="N")
 progspec.add_option("--rspt-cartesian-latticevectors", dest="rsptcartlatvects", help="Put lattice vectors in atomic units and the lenght scale parameter to 1.", action="store_true")
 progspec.add_option("--rspt-pass-wyckoff", dest="rsptpasswyckoff", help="Pass wyckoff labels from CIF file to the symt/rspt.inp file.", action="store_true")
@@ -651,23 +657,23 @@ if verbose or not options.program and not options.quiet:
 
     print ""
     cd.printCell(printcart=options.printcart, printdigits=printdigits, printcharges=options.printcharges)
-    # Print volume and density 
-    weight = 0.0
-    for a in cd.atomdata:
-        for b in a:
-            for k,v in b.species.iteritems():
-                weight += ed.elementweight[k]*v
+    # Print volume and density
     if options.printau:
         volume = cd.volume()*(cd.lengthscale*angtobohr)**3
-        density = weight/volume
-        print "\nUnit cell volume  : "+decform%volume+" (a.u.)^3"
-        print "Unit cell density : "+decform%density+" u/(a.u.)^3 = "+decform%(density*uperautogpercm)+" g/cm^3"
+        volstring = "(a.u.)"
     else:
         volume = cd.volume()*cd.lengthscale**3
-        density = weight/volume
-        print "\nUnit cell volume  : "+decform%volume+" A^3"
-        print "Unit cell density : "+decform%density+" u/A^3 = "+decform%(density*uperatogpercm)+" g/cm^3"
-    
+        volstring = "A"
+    print "\nUnit cell volume  : "+decform%volume+" "+volstring+"^3"
+    try:
+        weight = 0.0
+        for a in cd.atomdata:
+            for b in a:
+                for k,v in b.species.iteritems():
+                    weight += ed.elementweight[k]*v
+        print "Unit cell density : "+decform%density+" u/"+volstring+"^3 = "+decform%(density*uperautogpercm)+" g/cm^3"
+    except:
+        sys.stderr.write("***Warning: Error printing unit cell density.\n")
 
 ##############################################
 # Rotate cell
@@ -837,35 +843,37 @@ else:
         # Append file endings etc.
         if outputprogram == "abinit":
             outputfile = outputfile+".in"
-        elif outputprogram == "siesta":
-            outputfile = outputfile+".fdf"
+        elif outputprogram == "castep":
+            outputfile = outputfile+".cell"
         elif outputprogram == "cfg":
             outputfile = outputfile+".cfg"
         elif outputprogram == "coo":
             outputfile = outputfile+".coo"
-        elif outputprogram == "cpmd":
-            outputfile = outputfile+".inp"
         elif outputprogram == "cp2k":
             outputfile = outputfile+".inp"
-        elif outputprogram == "castep":
-            outputfile = outputfile+".cell"
+        elif outputprogram == "cpmd":
+            outputfile = outputfile+".inp"
+        elif outputprogram == "crystal09":
+            # This is the naming convention from a large bunch of test cases, no idea why
+            outputfile = outputfile+".d12"
         elif outputprogram == "fhi-aims":
             outputfile = "geometry.in"
         elif outputprogram == "fleur":
             outputfile = "inp_"+outputfile
         elif outputprogram == "hutsepot":
             outputfile = outputfile+".str"
-        elif outputprogram == "crystal09":
-            # This is the naming convention from a large bunch of test cases, no idea why
-            outputfile = outputfile+".d12"
+        elif outputprogram == "mopac":
+            outputfile = outputfile+".mop"
+        elif outputprogram == "pwscf":
+            outputfile = outputfile+".in"
+        elif outputprogram == "siesta":
+            outputfile = outputfile+".fdf"
         elif outputprogram == "sprkkr" or outputprogram == "xband":
             outputfile = outputfile+".sys"
         elif outputprogram == "spc":
             outputfile = outputfile+".dat"
         elif outputprogram == "xyz":
             outputfile = outputfile+".xyz"
-        elif outputprogram == "pwscf":
-            outputfile = outputfile+".in"
         else:
             pass
 
@@ -1018,6 +1026,85 @@ if outputprogram == 'cif':
     f.close()
 
 ################################################################################################
+# Output for ABINIT
+if outputprogram == 'abinit':
+    docstring = StandardDocstring()
+    abinitinput = ABINITFile(cd, docstring)
+    if options.abinitbraces:
+        abinitinput.printbraces = True
+    f = open(outputfile, outmode)
+    f.write(str(abinitinput))
+    f.close()
+    
+################################################################################################
+# Output for ASE file (python script)
+if outputprogram == 'ase':
+    # The second comment line with info from the CIF file 
+    docstring = StandardDocstring()
+    # Initialize the ASEFile structure
+    sysfile = ASEFile(cd, docstring)
+    f = open(outputfile, outmode)
+    f.write(str(sysfile))
+    f.close()
+    sys.exit(0)
+
+################################################################################################
+# Output for CASTEP
+if outputprogram == 'castep':
+    docstring = StandardDocstring()
+    castepinput = CASTEPFile(cd, docstring)
+    if options.castepatomicunits:
+        castepinput.unit = "bohr"
+    if options.castepcartesian:
+        castepinput.cartesian = True
+    if options.vca:
+        castepinput.vca = True
+    f = open(outputfile, outmode)
+    f.write(str(castepinput))
+    f.close()
+    
+################################################################################################
+# Output to cfg file
+if outputprogram == 'cfg':
+    docstring = StandardDocstring()
+    # Initialize the CFGFile structure
+    sysfile = CFGFile(cd, docstring)
+    f = open(outputfile, outmode)
+    f.write(str(sysfile))
+    f.close()
+    sys.exit(0)
+
+################################################################################################
+# Output to coo file
+if outputprogram == 'coo':
+    # !!!TODO: Think of something better for docstring !!!
+    docstring = "Generated by cif2cell "+version
+    # Initialize the COOFile structure
+    sysfile = COOFile(cd, docstring)
+    f = open(outputfile, outmode)
+    f.write(str(sysfile))
+    f.close()
+    sys.exit(0)
+
+################################################################################################
+# Output for CP2k
+if outputprogram == 'cp2k':
+    docstring = StandardDocstring()
+    cp2kinput = CP2KFile(cd, docstring)
+    f = open(outputfile, outmode)
+    f.write(str(cp2kinput))
+    f.close()
+    
+################################################################################################
+# Output for CPMD
+if outputprogram == 'cpmd':
+    docstring = StandardDocstring()
+    cpmdinput = CPMDFile(cd, docstring)
+    f = open(outputfile, outmode)
+    f.write(str(cpmdinput))
+    f.close()
+    
+################################################################################################
 # Output for Crystal09
 if outputprogram == 'crystal09':
     # Get documentation string
@@ -1046,357 +1133,6 @@ if outputprogram == 'crystal09':
     # Print to file
     f = open(outputfile, outmode)
     f.write(str(crystal09file))
-    f.close()
-    sys.exit(0)
-
-################################################################################################
-# Output for Hutsepot
-if outputprogram == 'hutsepot':
-    # Get documentation string
-    docstring = StandardDocstring()
-    # Get output file object
-    hutsepotinput = HUTSEPOTFile(cd, docstring)
-    f = open(outputfile,outmode)
-    f.write(str(hutsepotinput))
-    f.close()
-
-################################################################################################
-# Output for mcsqs
-if outputprogram == 'mcsqs':
-    # Get documentation string
-    docstring = StandardDocstring()
-    # Get output file object
-    mcsqsinput = MCSQSFile(cd, docstring)
-    f = open(outputfile,outmode)
-    f.write(str(mcsqsinput))
-    f.close()
-
-################################################################################################
-# Output for FHI-AIMS
-if outputprogram == 'fhi-aims':
-    # Get documentation string
-    docstring = StandardDocstring()
-    # Get output file object
-    aimsinput = AIMSFile(cd, docstring)
-    if options.aimscartesian:
-        aimsinput.cartesian = True
-    f = open(outputfile,outmode)
-    f.write(str(aimsinput))
-    f.close()
-
-################################################################################################
-# Output for Fleur
-if outputprogram == 'fleur':
-    # The first line with info from the CIF file and species order
-    docstring = "Generated by "+programname+" "+version+" : "+ref.cpd+" ("+ref.compound+")"+" :  "+ref.referencestring()
-    fleurinput = FleurFile(cd, docstring)
-    f = open(outputfile, outmode)
-    f.write(str(fleurinput))
-    f.close()
-    
-################################################################################################
-# Output for CASTEP
-if outputprogram == 'castep':
-    docstring = StandardDocstring()
-    castepinput = CASTEPFile(cd, docstring)
-    if options.castepatomicunits:
-        castepinput.unit = "bohr"
-    if options.castepcartesian:
-        castepinput.cartesian = True
-    if options.vca:
-        castepinput.vca = True
-    f = open(outputfile, outmode)
-    f.write(str(castepinput))
-    f.close()
-    
-################################################################################################
-# Output for CPMD
-if outputprogram == 'cpmd':
-    docstring = StandardDocstring()
-    cpmdinput = CPMDFile(cd, docstring)
-    f = open(outputfile, outmode)
-    f.write(str(cpmdinput))
-    f.close()
-    
-################################################################################################
-# Output for CP2k
-if outputprogram == 'cp2k':
-    docstring = StandardDocstring()
-    cp2kinput = CP2KFile(cd, docstring)
-    f = open(outputfile, outmode)
-    f.write(str(cp2kinput))
-    f.close()
-    
-################################################################################################
-# Output for Siesta
-if outputprogram == 'siesta':
-    docstring = StandardDocstring()
-    siestainput = SiestaFile(cd, docstring)
-    f = open(outputfile, outmode)
-    f.write(str(siestainput))
-    f.close()
-    
-################################################################################################
-# Output for ABINIT
-if outputprogram == 'abinit':
-    docstring = StandardDocstring()
-    abinitinput = ABINITFile(cd, docstring)
-    if options.abinitbraces:
-        abinitinput.printbraces = True
-    f = open(outputfile, outmode)
-    f.write(str(abinitinput))
-    f.close()
-    
-################################################################################################
-# Output for PWSCF (Quantum Espresso)
-if outputprogram == 'pwscf':
-    docstring = StandardDocstring()
-    pwscfinput = PWSCFFile(cd, docstring,kresolution=kresolution)
-    if options.setupall:
-        pwscfinput.setupall = True
-        pwscfinput.kresolution = kresolution
-    if options.pwscfpseudostring:
-        pwscfinput.pseudostring = options.pwscfpseudostring
-    if options.pwscfcart:
-        pwscfinput.cartesian = True
-    if options.pwscfcartvects:
-        pwscfinput.cartesianlatvects = True
-    if options.pwscfcartpos:
-        pwscfinput.cartesianpositions = True
-    if options.pwscfalatunits:
-        pwscfinput.scaledcartesianpositions = True
-    if options.pwscfatomicunits:
-        pwscfinput.unit = "bohr"
-    f = open(outputfile, outmode)
-    f.write(str(pwscfinput))
-    f.close()
-    
-################################################################################################
-# Output for VASP
-if outputprogram == 'vasp':
-    # The first line with info from the CIF file and species order
-    docstring =  "Generated by "+programname+" "+version
-    if ref.database != "" and ref.databasecode != "":
-        docstring += " from "+ref.databaseabbr[ref.database]+" reference: "+ref.databasecode
-    docstring += ". "
-    if len(ref.cpd) > len(ref.compound):
-        docstring += ref.compound
-    else:
-        docstring += ref.cpd
-    docstring += " :  "+ref.referencestring()+"."
-    # Initialize the POSCARFile structure
-    poscar = POSCARFile(cd, docstring, vca=options.vca)
-    # Convert to cartesian coordinates if requested
-    if options.vaspcartpos:
-        poscar.printcartpos = True
-    if options.vaspcartvecs:
-        poscar.printcartvecs = True
-    if options.vaspcart:
-        poscar.printcartpos = True
-        poscar.printcartvecs = True
-    if options.vaspformat == "5":
-        poscar.vasp5format = True
-    if options.vaspselectivedyn:
-        poscar.selectivedyn = True
-    f = open(outputfile, outmode)
-    f.write(str(poscar))
-    f.close()
-    # Print species order to screen if requested
-    if options.vaspprintspcs:
-        print poscar.SpeciesOrder()
-    # Set up all files?
-    if setupall:
-        # POTCAR
-        if options.vasppseudolib:
-            lib = options.vasppseudolib
-        else:
-            lib = ""
-        # Make selection of potcars
-        if options.vasppppriority:
-            prioritylist = options.vasppppriority.split(",")
-            prioritylist.append("")
-            print prioritylist
-        else:
-            try:
-                pl = os.environ['VASP_PP_PRIORITY']
-                prioritylist = pl.split(",")
-                prioritylist.append("")
-            except:
-                prioritylist=["_d","_pv","_sv","","_h","_s"]
-        if options.vaspencutfac:
-            encutfac=float(options.vaspencutfac)
-        else:
-            encutfac=1.5
-        potcarfile = POTCARFile(cd,directory=lib,vca=options.vca,prioritylist=prioritylist)
-        f = open("POTCAR", "w")
-        f.write(str(potcarfile))
-        f.close()
-        # KPOINTS
-        docstring="Generated by cif2cell "+version+"."
-        kpointsfile = KPOINTSFile(cd,docstring=docstring,kresolution=kresolution)
-        f = open("KPOINTS", "w")
-        f.write(str(kpointsfile))
-        f.close()
-        # INCAR
-        incarfile = INCARFile(cd,docstring=docstring,vca=options.vca,prioritylist=prioritylist,encutfac=encutfac)
-        f = open("INCAR", "w")
-        f.write(str(incarfile))
-        f.close()
-    sys.exit(0)
-    
-################################################################################################
-# Output for elk
-if outputprogram == 'elk':
-    # Get documentation string
-    docstring = StandardDocstring()
-    # Get output file object
-    geometryfile = ElkFile(cd, docstring)
-    f = open(outputfile, outmode)
-    f.write(str(geometryfile))
-    f.close()
-    sys.exit(0)
-
-################################################################################################
-# Output for exciting
-if outputprogram == 'exciting':
-    # Get documentation string
-    docstring = StandardDocstring()
-    # Get output file object
-    excitingfile = ExcitingFile(cd, docstring)
-    f = open(outputfile, outmode)
-    f.write(str(excitingfile))
-    f.close()
-    sys.exit(0)
-
-################################################################################################
-# Output for spacegroup.in for Elk/Exciting cell utility spacegroup
-if outputprogram == 'spacegroup':
-    # Get documentation string
-    docstring = StandardDocstring()
-    # Get output file object
-    spacegroupfile = SpacegroupFile(cd, docstring)
-    angtobohr = 1e-10 * 4 * pi * 10973731.568527/7.2973525376e-3
-    spacegroupfile.HermannMauguin = cd.HMSymbol.replace("/","")
-    spacegroupfile.a = cd.a*angtobohr
-    spacegroupfile.b = cd.b*angtobohr
-    spacegroupfile.c = cd.c*angtobohr
-    spacegroupfile.alpha = cd.alpha
-    spacegroupfile.beta  = cd.beta
-    spacegroupfile.gamma = cd.gamma
-    if options.spacegroupsupercell:
-        spacegroupfile.supercelldims = safe_matheval(options.spacegroupsupercell)
-    # Print to file
-    f = open(outputfile, outmode)
-    f.write(str(spacegroupfile))
-    f.close()
-    sys.exit(0)
-
-################################################################################################
-# Output for RSPt
-if outputprogram == 'rspt':
-    # Construct documentation string
-    docstring = StandardDocstring()
-    # Get file string and print to symt.inp/rspt.inp
-    if options.newsymt or setupall:
-        symtfile = SymtFile2(cd, docstring, kresolution=kresolution/angtobohr)
-        # k-mesh generation etc
-        if setupall:
-            symtfile.setupall = True
-        # spin polarization and relativity
-        if options.rsptspinpol:
-            symtfile.spinpol = True
-        if options.rsptrelativistic:
-            symtfile.relativistic = True
-        if options.rsptmtradii:
-            symtfile.mtradii = int(options.rsptmtradii)
-    else:
-        symtfile = SymtFile(cd, docstring)
-    # spin axis 
-    if options.rsptspinaxis:
-        symtfile.spinaxis = safe_matheval(options.rsptspinaxis)
-    if options.rsptpasswyckoff:
-        symtfile.passwyckoff = True
-    if options.rsptcartlatvects:
-        symtfile.rsptcartlatvects = True
-    f = open(outputfile, outmode)
-    f.write(str(symtfile))
-    f.close()
-    sys.exit(0)
-    
-################################################################################################
-# Output for RSPt supercell generator cellgen
-if outputprogram == 'cellgen':
-    # Construct documentation string
-    docstring = StandardDocstring()
-    # Initialize file object
-    cellgenfile = CellgenFile(cd, docstring)
-    if options.cellgenrefvec:
-        cellgenfile.referencevector = safe_matheval(options.cellgenrefvec)
-    if options.cellgensupercelldims:
-        tmplist = safe_matheval(options.cellgensupercelldims)
-        tmpmat = []
-        for i in range(3):
-            tmpmat.append([])
-            for j in range(3):
-                tmpmat[i].append(0)
-            tmpmat[i][i] = tmplist[i]
-        cellgenfile.supercellmap = tmpmat
-    if options.cellgenmap:
-        tmpmat = safe_matheval(options.cellgenmap)
-        cellgenfile.supercellmap = tmpmat
-    # Print to file
-    f = open(outputfile, outmode)
-    f.write(str(cellgenfile))
-    f.close()
-    sys.exit(0)
-
-################################################################################################
-# Output for TB-LMTO program ncol
-if outputprogram == 'ncol' or outputprogram == 'bstr':
-    # Set up names for files. 
-    if cd.HMSymbol == "":
-        bstrjobnam = ref.cpd.replace(" ", "").replace("(","").replace(")","")
-    else:
-        bstrjobnam = cd.HMSymbol.replace("/","")
-    jobnam = ref.cpd.replace(" ", "").replace("(","").replace(")","")
-    # If the jobnames are long, replace by the name of the cif file
-    if len(bstrjobnam) > 30 and len(cif_file_name) < len(bstrjobnam)+4:
-        bstrjobnam = cif_file_name.replace(".cif","")
-    if len(jobnam) > 10:
-        if len(cif_file_name) < len(jobnam):
-            jobnam = cif_file_name.replace(".cif","")
-        else:
-            jobnam = jobnam[0:9]
-    # Build docstring
-    docstring = ref.compound+", "+ref.referencestring()
-    # Document details of creation
-    programdoc = "Generated by "+programname+" "+version+" "+datestring
-        
-# Output for TB-LMTO structure constant program bstr
-if outputprogram == 'bstr' or outputprogram == 'ncol':
-    # Initialize BSTRFile
-    bstrfile = BSTRFile(cd, docstring)
-    bstrfile.jobnam = bstrjobnam
-    bstrfile.a = cd.a
-    bstrfile.b = cd.b
-    bstrfile.c = cd.c
-    # Document program
-    bstrfile.programdoc = programdoc
-    f = open(bstrjobnam+".dat","w")
-    f.write(str(bstrfile))
-    f.close()
-    if outputprogram == 'bstr':
-        sys.exit(0)
-
-if outputprogram == 'ncol':
-    # Initialize ncolfile
-    ncolfile = OldNCOLFile(cd, docstring)
-    ncolfile.jobnam = jobnam
-    ncolfile.bstrjobnam = bstrjobnam
-    # Document program
-    ncolfile.programdoc = programdoc
-    f = open(jobnam+".dat","w")
-    f.write(str(ncolfile))
     f.close()
     sys.exit(0)
 
@@ -1589,6 +1325,355 @@ if outputprogram == "emto":
     sys.exit(0)
 
 ################################################################################################
+# Output for elk
+if outputprogram == 'elk':
+    # Get documentation string
+    docstring = StandardDocstring()
+    # Get output file object
+    geometryfile = ElkFile(cd, docstring)
+    f = open(outputfile, outmode)
+    f.write(str(geometryfile))
+    f.close()
+    sys.exit(0)
+
+# Output for exciting
+if outputprogram == 'exciting':
+    # Get documentation string
+    docstring = StandardDocstring()
+    # Get output file object
+    excitingfile = ExcitingFile(cd, docstring)
+    f = open(outputfile, outmode)
+    f.write(str(excitingfile))
+    f.close()
+    sys.exit(0)
+
+# Output for spacegroup.in for Elk/Exciting cell utility spacegroup
+if outputprogram == 'spacegroup':
+    # Get documentation string
+    docstring = StandardDocstring()
+    # Get output file object
+    spacegroupfile = SpacegroupFile(cd, docstring)
+    angtobohr = 1e-10 * 4 * pi * 10973731.568527/7.2973525376e-3
+    spacegroupfile.HermannMauguin = cd.HMSymbol.replace("/","")
+    spacegroupfile.a = cd.a*angtobohr
+    spacegroupfile.b = cd.b*angtobohr
+    spacegroupfile.c = cd.c*angtobohr
+    spacegroupfile.alpha = cd.alpha
+    spacegroupfile.beta  = cd.beta
+    spacegroupfile.gamma = cd.gamma
+    if options.spacegroupsupercell:
+        spacegroupfile.supercelldims = safe_matheval(options.spacegroupsupercell)
+    # Print to file
+    f = open(outputfile, outmode)
+    f.write(str(spacegroupfile))
+    f.close()
+    sys.exit(0)
+
+################################################################################################
+# Output for Hutsepot
+if outputprogram == 'hutsepot':
+    # Get documentation string
+    docstring = StandardDocstring()
+    # Get output file object
+    hutsepotinput = HUTSEPOTFile(cd, docstring)
+    f = open(outputfile,outmode)
+    f.write(str(hutsepotinput))
+    f.close()
+
+################################################################################################
+# Output for FHI-AIMS
+if outputprogram == 'fhi-aims':
+    # Get documentation string
+    docstring = StandardDocstring()
+    # Get output file object
+    aimsinput = AIMSFile(cd, docstring)
+    if options.aimscartesian:
+        aimsinput.cartesian = True
+    f = open(outputfile,outmode)
+    f.write(str(aimsinput))
+    f.close()
+
+################################################################################################
+# Output for Fleur
+if outputprogram == 'fleur':
+    # The first line with info from the CIF file and species order
+    docstring = "Generated by "+programname+" "+version+" : "+ref.cpd+" ("+ref.compound+")"+" :  "+ref.referencestring()
+    fleurinput = FleurFile(cd, docstring)
+    f = open(outputfile, outmode)
+    f.write(str(fleurinput))
+    f.close()
+    
+################################################################################################
+# Output for mcsqs
+if outputprogram == 'mcsqs':
+    # Get documentation string
+    docstring = StandardDocstring()
+    # Get output file object
+    mcsqsinput = MCSQSFile(cd, docstring)
+    f = open(outputfile,outmode)
+    f.write(str(mcsqsinput))
+    f.close()
+
+################################################################################################
+# Output for MOPAC
+if outputprogram == 'mopac':
+    docstring = StandardDocstring()
+    mopacfirstline = ""
+    mopacsecondline = ""
+    mopacthirdline = ""
+    mopacfreeze = -1
+    mopacsetup = setupall
+    if options.mopacfirstline:
+        mopacsetup = True
+        mopacfirstline = options.mopacfirstline
+    if options.mopacsecondline:
+        mopacsetup = True
+        mopacsecondline = options.mopacsecondline
+    if options.mopacthirdline:
+        mopacsetup = True
+        mopacthirdline = options.mopacthirdline
+    if options.mopacfreeze:
+        if options.mopacfreeze.upper() == 'F':
+            mopacfreeze = 1
+        elif options.mopacfreeze.upper() == 'T':
+            mopacfreeze = 0
+        else:
+            sys.stderr.write("***Warning: I do not understand. --mopac-freeze-structure takes T (t) or F (f) as inputs.\n")
+    mopacinput = MOPACFile(cd, docstring,setupall=mopacsetup,firstline=mopacfirstline,\
+                           secondline=mopacsecondline,thirdline=mopacthirdline,freeze=mopacfreeze)
+    f = open(outputfile, outmode)
+    f.write(str(mopacinput))
+    f.close()
+    
+################################################################################################
+# Output for TB-LMTO program ncol
+if outputprogram == 'ncol' or outputprogram == 'bstr':
+    # Set up names for files. 
+    if cd.HMSymbol == "":
+        bstrjobnam = ref.cpd.replace(" ", "").replace("(","").replace(")","")
+    else:
+        bstrjobnam = cd.HMSymbol.replace("/","")
+    jobnam = ref.cpd.replace(" ", "").replace("(","").replace(")","")
+    # If the jobnames are long, replace by the name of the cif file
+    if len(bstrjobnam) > 30 and len(cif_file_name) < len(bstrjobnam)+4:
+        bstrjobnam = cif_file_name.replace(".cif","")
+    if len(jobnam) > 10:
+        if len(cif_file_name) < len(jobnam):
+            jobnam = cif_file_name.replace(".cif","")
+        else:
+            jobnam = jobnam[0:9]
+    # Build docstring
+    docstring = ref.compound+", "+ref.referencestring()
+    # Document details of creation
+    programdoc = "Generated by "+programname+" "+version+" "+datestring
+        
+# Output for TB-LMTO structure constant program bstr
+if outputprogram == 'bstr' or outputprogram == 'ncol':
+    # Initialize BSTRFile
+    bstrfile = BSTRFile(cd, docstring)
+    bstrfile.jobnam = bstrjobnam
+    bstrfile.a = cd.a
+    bstrfile.b = cd.b
+    bstrfile.c = cd.c
+    # Document program
+    bstrfile.programdoc = programdoc
+    f = open(bstrjobnam+".dat","w")
+    f.write(str(bstrfile))
+    f.close()
+    if outputprogram == 'bstr':
+        sys.exit(0)
+
+if outputprogram == 'ncol':
+    # Initialize ncolfile
+    ncolfile = OldNCOLFile(cd, docstring)
+    ncolfile.jobnam = jobnam
+    ncolfile.bstrjobnam = bstrjobnam
+    # Document program
+    ncolfile.programdoc = programdoc
+    f = open(jobnam+".dat","w")
+    f.write(str(ncolfile))
+    f.close()
+    sys.exit(0)
+
+################################################################################################
+# Output for PWSCF (Quantum Espresso)
+if outputprogram == 'pwscf':
+    docstring = StandardDocstring()
+    pwscfinput = PWSCFFile(cd, docstring,kresolution=kresolution)
+    if options.setupall:
+        pwscfinput.setupall = True
+        pwscfinput.kresolution = kresolution
+    if options.pwscfpseudostring:
+        pwscfinput.pseudostring = options.pwscfpseudostring
+    if options.pwscfcart:
+        pwscfinput.cartesian = True
+    if options.pwscfcartvects:
+        pwscfinput.cartesianlatvects = True
+    if options.pwscfcartpos:
+        pwscfinput.cartesianpositions = True
+    if options.pwscfalatunits:
+        pwscfinput.scaledcartesianpositions = True
+    if options.pwscfatomicunits:
+        pwscfinput.unit = "bohr"
+    f = open(outputfile, outmode)
+    f.write(str(pwscfinput))
+    f.close()
+    
+################################################################################################
+# Output for VASP
+if outputprogram == 'vasp':
+    # The first line with info from the CIF file and species order
+    docstring =  "Generated by "+programname+" "+version
+    if ref.database != "" and ref.databasecode != "":
+        docstring += " from "+ref.databaseabbr[ref.database]+" reference: "+ref.databasecode
+    docstring += ". "
+    if len(ref.cpd) > len(ref.compound):
+        docstring += ref.compound
+    else:
+        docstring += ref.cpd
+    docstring += " :  "+ref.referencestring()+"."
+    # Initialize the POSCARFile structure
+    poscar = POSCARFile(cd, docstring, vca=options.vca)
+    # Convert to cartesian coordinates if requested
+    if options.vaspcartpos:
+        poscar.printcartpos = True
+    if options.vaspcartvecs:
+        poscar.printcartvecs = True
+    if options.vaspcart:
+        poscar.printcartpos = True
+        poscar.printcartvecs = True
+    if options.vaspformat == "5":
+        poscar.vasp5format = True
+    if options.vaspselectivedyn:
+        poscar.selectivedyn = True
+    f = open(outputfile, outmode)
+    f.write(str(poscar))
+    f.close()
+    # Print species order to screen if requested
+    if options.vaspprintspcs:
+        print poscar.SpeciesOrder()
+    # Set up all files?
+    if setupall:
+        # POTCAR
+        if options.vasppseudolib:
+            lib = options.vasppseudolib
+        else:
+            lib = ""
+        # Make selection of potcars
+        if options.vasppppriority:
+            prioritylist = options.vasppppriority.split(",")
+            prioritylist.append("")
+            print prioritylist
+        else:
+            try:
+                pl = os.environ['VASP_PP_PRIORITY']
+                prioritylist = pl.split(",")
+                prioritylist.append("")
+            except:
+                prioritylist=["_d","_pv","_sv","","_h","_s"]
+        if options.vaspencutfac:
+            encutfac=float(options.vaspencutfac)
+        else:
+            encutfac=1.5
+        potcarfile = POTCARFile(cd,directory=lib,vca=options.vca,prioritylist=prioritylist)
+        f = open("POTCAR", "w")
+        f.write(str(potcarfile))
+        f.close()
+        # KPOINTS
+        docstring="Generated by cif2cell "+version+"."
+        kpointsfile = KPOINTSFile(cd,docstring=docstring,kresolution=kresolution)
+        f = open("KPOINTS", "w")
+        f.write(str(kpointsfile))
+        f.close()
+        # INCAR
+        incarfile = INCARFile(cd,docstring=docstring,vca=options.vca,prioritylist=prioritylist,encutfac=encutfac)
+        f = open("INCAR", "w")
+        f.write(str(incarfile))
+        f.close()
+    sys.exit(0)
+    
+################################################################################################
+# Output for RSPt
+if outputprogram == 'rspt':
+    # Construct documentation string
+    docstring = StandardDocstring()
+    # Get file string and print to symt.inp/rspt.inp
+    if options.newsymt or setupall:
+        symtfile = SymtFile2(cd, docstring, kresolution=kresolution/angtobohr)
+        # k-mesh generation etc
+        if setupall:
+            symtfile.setupall = True
+        # spin polarization and relativity
+        if options.rsptspinpol:
+            symtfile.spinpol = True
+        if options.rsptrelativistic:
+            symtfile.relativistic = True
+        if options.rsptmtradii:
+            symtfile.mtradii = int(options.rsptmtradii)
+        if options.rsptnospin:
+            symtfile.forcenospin = True
+    else:
+        symtfile = SymtFile(cd, docstring)
+    # spin axis 
+    if options.rsptspinaxis:
+        symtfile.spinaxis = safe_matheval(options.rsptspinaxis)
+    if options.rsptpasswyckoff:
+        symtfile.passwyckoff = True
+    if options.rsptcartlatvects:
+        symtfile.rsptcartlatvects = True
+    f = open(outputfile, outmode)
+    f.write(str(symtfile))
+    f.close()
+    sys.exit(0)
+    
+# Output for RSPt supercell generator cellgen
+if outputprogram == 'cellgen':
+    # Construct documentation string
+    docstring = StandardDocstring()
+    # Initialize file object
+    cellgenfile = CellgenFile(cd, docstring)
+    if options.cellgenrefvec:
+        cellgenfile.referencevector = safe_matheval(options.cellgenrefvec)
+    if options.cellgensupercelldims:
+        tmplist = safe_matheval(options.cellgensupercelldims)
+        tmpmat = []
+        for i in range(3):
+            tmpmat.append([])
+            for j in range(3):
+                tmpmat[i].append(0)
+            tmpmat[i][i] = tmplist[i]
+        cellgenfile.supercellmap = tmpmat
+    if options.cellgenmap:
+        tmpmat = safe_matheval(options.cellgenmap)
+        cellgenfile.supercellmap = tmpmat
+    # Print to file
+    f = open(outputfile, outmode)
+    f.write(str(cellgenfile))
+    f.close()
+    sys.exit(0)
+
+################################################################################################
+# Output for Siesta
+if outputprogram == 'siesta':
+    docstring = StandardDocstring()
+    siestainput = SiestaFile(cd, docstring)
+    f = open(outputfile, outmode)
+    f.write(str(siestainput))
+    f.close()
+    
+################################################################################################
+# Output for SPC file
+if outputprogram == 'spc':
+    # The second comment line with info from the CIF file 
+    docstring = StandardDocstring()
+    # Initialize the SPCFile structure
+    sysfile = SPCFile(cd, docstring)
+    f = open(outputfile, outmode)
+    f.write(str(sysfile))
+    f.close()
+    sys.exit(0)
+
+################################################################################################
 # Output for xband
 if outputprogram == 'xband' or outputprogram == 'sprkkr':
     # The first line with info from the CIF file and species order
@@ -1628,53 +1713,6 @@ if outputprogram == 'xyz':
     if options.xyzatomicunits:
         cd.newunit("bohr")
     sysfile = XYZFile(cd, docstring)
-    f = open(outputfile, outmode)
-    f.write(str(sysfile))
-    f.close()
-    sys.exit(0)
-
-################################################################################################
-# Output for ASE file (python script)
-if outputprogram == 'ase':
-    # The second comment line with info from the CIF file 
-    docstring = StandardDocstring()
-    # Initialize the ASEFile structure
-    sysfile = ASEFile(cd, docstring)
-    f = open(outputfile, outmode)
-    f.write(str(sysfile))
-    f.close()
-    sys.exit(0)
-
-################################################################################################
-# Output to cfg file
-if outputprogram == 'cfg':
-    docstring = StandardDocstring()
-    # Initialize the CFGFile structure
-    sysfile = CFGFile(cd, docstring)
-    f = open(outputfile, outmode)
-    f.write(str(sysfile))
-    f.close()
-    sys.exit(0)
-
-################################################################################################
-# Output to coo file
-if outputprogram == 'coo':
-    # !!!TODO: Think of something better for docstring !!!
-    docstring = "Generated by cif2cell "+version
-    # Initialize the COOFile structure
-    sysfile = COOFile(cd, docstring)
-    f = open(outputfile, outmode)
-    f.write(str(sysfile))
-    f.close()
-    sys.exit(0)
-
-################################################################################################
-# Output for SPC file
-if outputprogram == 'spc':
-    # The second comment line with info from the CIF file 
-    docstring = StandardDocstring()
-    # Initialize the SPCFile structure
-    sysfile = SPCFile(cd, docstring)
     f = open(outputfile, outmode)
     f.write(str(sysfile))
     f.close()

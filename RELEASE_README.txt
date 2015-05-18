@@ -1,5 +1,15 @@
 CIF2CELL RELEASE INFORMATION
 
+VERSION 1.2.7
+
+* Small tweak of the RSPt interface.
+
+--------------------------------------------------------------   
+VERSION 1.2.6
+
+* Added MOPAC interface.
+
+--------------------------------------------------------------   
 VERSION 1.2.5
 
 * Added output of .cfg files suitable for QSTEM simulations.
