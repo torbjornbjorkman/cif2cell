@@ -757,7 +757,6 @@ class SymtFile2(GeometryOutputFile):
             if self.cell.primcell:
                 if self.cell.spacegroupsetting == 'F':
                     mapmatrix = LatticeMatrix([[1,1,0],[1,0,1],[0,1,1]])
-                    t = mmmult3(mapmatrix.reclatvect)
                 elif self.cell.spacegroupsetting == 'I':
                     if self.cell.crystal_system() == 'cubic':
                         mapmatrix = LatticeMatrix([[-1,1,1],[1,-1,1],[1,1,-1]])

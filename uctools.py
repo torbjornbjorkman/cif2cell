@@ -41,6 +41,7 @@ from utils import *
 from spacegroupdata import *
 from elementdata import *
 from random import random, gauss
+from fractions import gcd
     
 ################################################################################################
 class CellData(GeometryObject):
@@ -105,6 +106,7 @@ class CellData(GeometryObject):
         self.atomdata = []
         self.atomset = set([])
         self.numberOfAtoms = None
+        self.ChemicalComposition = dict([])
         # initial lattice parameters
         self.ainit = 0.
         self.binit = 0.
@@ -265,12 +267,12 @@ class CellData(GeometryObject):
     
     def primitive(self):
         """ Return a CrystalStructure object for the primitive cell."""
-        self.getCrystalStructure(reduce=True)
+        self.getCrystalStructure(reducecell=True)
         return self
     
     def conventional(self):
         """ Return a CrystalStructure object for the conventional cell."""
-        w = self.getCrystalStructure(reduce=False)
+        w = self.getCrystalStructure(reducecell=False)
         return w
 
     # Fill out sites that are not occupied to 100% with
@@ -314,13 +316,13 @@ class CellData(GeometryObject):
         # We need to reset implicit symmetry information here
         self.atomdata = tmp
     
-    def getCrystalStructure(self, reduce=False):
+    def getCrystalStructure(self, reducecell=False):
         """
         Return a CrystalStructure object, either as it is or reduced to the
         primitive cell.
         """
         # reduce to primitive cell?
-        self.primcell = reduce
+        self.primcell = reducecell
         
         ###################################
         #   INITIALIZE SPACE GROUP DATA   #
@@ -710,6 +712,21 @@ class CellData(GeometryObject):
         ######################
         #    MISCELLANEOUS   #
         ######################
+        # Chemical content dictionary
+        for a in self.atomdata:
+            for b in a:
+                for k,v in b.species.iteritems():
+                    if k in self.ChemicalComposition:
+                        n = self.ChemicalComposition[k]
+                        self.ChemicalComposition[k] = v+n
+                    else:
+                        self.ChemicalComposition[k] = v
+        if not self.alloy:
+            L = self.ChemicalComposition.values()
+            divisor = reduce(gcd,L)
+            for k,v in self.ChemicalComposition.iteritems():
+                self.ChemicalComposition[k] = v/divisor
+        # Number of atoms
         self.numberOfAtoms = self.natoms()
         # Set flag and return the CrystalStructure in the conventional setting
         self.initialized = True
@@ -1497,6 +1514,7 @@ class ReferenceData:
         self.databasestring = ""
         self.compound = ""
         self.cpd = ""
+        self.ChemicalComposition = dict([])
         self.authors = []
         self.authorstring = ""
         self.title = ""
@@ -1609,6 +1627,30 @@ class ReferenceData:
             self.compound = ""
         if type(self.cpd) != StringType:
             self.cpd = ""
+        # Ty to set up chemical content set
+        tmp = cifblock.get('_chemical_formula_sum').split()
+        alloy = False
+        for t in tmp:
+            e = t.strip(string.digits+string.punctuation)
+            n = max(t.strip(string.ascii_letters+string.punctuation),'1')
+            try:
+                n = int(n)
+            except:
+                try:
+                    n = float(n)
+                    alloy = True
+                except:
+                    raise ValueError()
+            if e in self.ChemicalComposition.keys():
+                nold = self.ChemicalComposition[e]
+                self.ChemicalComposition[e] = nold+n
+            else:
+                self.ChemicalComposition[e] = n
+        if not alloy:
+            L = self.ChemicalComposition.values()
+            divisor = reduce(gcd,L)
+            for k,v in self.ChemicalComposition.iteritems():
+                self.ChemicalComposition[k] = v/divisor
         # Try to identify a source database for the CIF
         for db in self.databasenames:
             # First all the standard ones

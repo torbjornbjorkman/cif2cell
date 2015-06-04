@@ -41,7 +41,7 @@ from elementdata import *
 
 # Name and version
 programname = "cif2cell"
-version = "1.2.7"
+version = "1.2.8"
 
 # Turn of warnings about deprecated stuff
 warnings.simplefilter("ignore",DeprecationWarning)
@@ -452,6 +452,17 @@ except SymmetryError, e:
 except CellError, e:
     sys.stderr.write("***Error: cell setup: "+e.value+"\n")
     sys.exit(2)
+
+# Test if generated cell agrees with given chemical formula
+if len(ref.ChemicalComposition) > 0:
+    if ref.ChemicalComposition != cd.ChemicalComposition:
+        if force:
+            sys.stderr.write("***Warning: Chemical composition of the generated cell differs from that given\n"+\
+                "            by _chemical_formula_sum.\n")
+        else:
+            sys.stderr.write("***Error: Chemical composition of the generated cell differs from that given\n"+\
+                "          by _chemical_formula_sum. Use --force to generate a cell anyway.\n")
+            sys.exit(2)
 
 inputcell = copy.copy(cd)
 # Randomly displace atoms if requested. This erases all symmetry operations.

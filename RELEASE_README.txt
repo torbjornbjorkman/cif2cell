@@ -1,5 +1,12 @@
 CIF2CELL RELEASE INFORMATION
 
+VERSION 1.2.8
+
+* The code will now stop with an error message if the chemical formula
+  of the generated cell does not match that given by _chemical_formula_sum.
+  Useful for example for detecting compounds with missing hydrogen atoms.
+
+--------------------------------------------------------------   
 VERSION 1.2.7
 
 * Small tweak of the RSPt interface.
