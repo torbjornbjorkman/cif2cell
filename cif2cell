@@ -453,13 +453,16 @@ except CellError, e:
     sys.stderr.write("***Error: cell setup: "+e.value+"\n")
     sys.exit(2)
 
-# Test if generated cell agrees with given chemical formula
-if len(ref.ChemicalComposition) > 0:
+# Test if generated cell agrees with given chemical formula.
+# Too difficult for alloys.
+if len(ref.ChemicalComposition) > 0 and not cd.alloy:
     if ref.ChemicalComposition != cd.ChemicalComposition:
         if force:
             sys.stderr.write("***Warning: Chemical composition of the generated cell differs from that given\n"+\
                 "            by _chemical_formula_sum.\n")
         else:
+            print ref.ChemicalComposition
+            print cd.ChemicalComposition
             sys.stderr.write("***Error: Chemical composition of the generated cell differs from that given\n"+\
                 "          by _chemical_formula_sum. Use --force to generate a cell anyway.\n")
             sys.exit(2)
@@ -682,9 +685,11 @@ if verbose or not options.program and not options.quiet:
             for b in a:
                 for k,v in b.species.iteritems():
                     weight += ed.elementweight[k]*v
+        density = weight/volume
         print "Unit cell density : "+decform%density+" u/"+volstring+"^3 = "+decform%(density*uperautogpercm)+" g/cm^3"
     except:
-        sys.stderr.write("***Warning: Error printing unit cell density.\n")
+        if not options.quiet:
+            sys.stderr.write("***Warning: Error printing unit cell density.\n")
 
 ##############################################
 # Rotate cell
