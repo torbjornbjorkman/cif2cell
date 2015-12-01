@@ -593,6 +593,7 @@ class SymtFile(GeometryOutputFile):
         self.spinaxis = [0.0, 0.0, 0.0]
         self.rsptcartlatvects = False
         self.passwyckoff = False
+        self.printlabels = False
     def __str__(self):
         # Initialize element data
         ed = ElementData()
@@ -633,7 +634,10 @@ class SymtFile(GeometryOutputFile):
                     tmpstring +=  "%3i"%ed.elementnr[b.spcstring()]
                 if self.passwyckoff:
                     label = chr(it+96)
-                tmpstring += " l "+label+"   # "+b.spcstring()+"\n"
+                if self.printlabels:
+                    tmpstring += " l "+label+"   # "+b.label+"\n"
+                else:
+                    tmpstring += " l "+label+"   # "+b.spcstring()+"\n"
                 filestring += tmpstring
             it += 1
         return filestring
@@ -669,7 +673,8 @@ class SymtFile2(GeometryOutputFile):
         self.setupall = False
         self.kresolution = kresolution
         self.nokshifts = False
-        self.kshifts = [[0,0,0],[1,1,1]] 
+        self.kshifts = [[0,0,0],[1,1,1]]
+        self.printlabels = False
     def __str__(self):
         # Initialize element data
         ed = ElementData()
@@ -741,7 +746,10 @@ class SymtFile2(GeometryOutputFile):
                     label = chr(it+96)
                 if self.setupall and b.spcstring() in suspiciouslist and not self.forcenospin:
                     label = "up"
-                tmpstring += " l "+label+"   # "+b.spcstring()+"\n"
+                if self.printlabels:
+                    tmpstring += " l "+label+"   # "+b.label+"\n"
+                else:
+                    tmpstring += " l "+label+"   # "+b.spcstring()+"\n"
                 filestring += tmpstring
             it += 1
         # k-mesh setup for new input
@@ -1232,6 +1240,8 @@ class CASTEPFile(GeometryOutputFile):
             self.docstring += string
         # VCA calculation?
         self.vca = False
+        # Print labels?
+        self.printlabels = False
     def __str__(self):
         # Set units
         self.cell.newunit(self.unit)
@@ -1278,11 +1288,14 @@ class CASTEPFile(GeometryOutputFile):
                     if len(b.species) > 1:
                         i = i + 1
                         for sp,conc in b.species.iteritems():
-                            filestring += sp.ljust(2)+" "+str(pos)+"  MIXTURE:( %i %6.5f )\n"%(i,conc)
+                            filestring += sp.ljust(2)+" "+str(pos)+"  MIXTURE:( %i %6.5f )"%(i,conc)
                     else:
-                        filestring += b.spcstring().ljust(2)+" "+str(pos)+"\n"
+                        filestring += b.spcstring().ljust(2)+" "+str(pos)
                 else:
-                    filestring += b.spcstring().ljust(2)+" "+str(pos)+"\n"
+                    filestring += b.spcstring().ljust(2)+" "+str(pos)
+                if self.printlabels and b.label != "":
+                    filestring += " ID="+b.label
+                filestring += "\n"
         if self.cartesian:
             filestring += "%ENDBLOCK POSITIONS_ABS\n"
         else:

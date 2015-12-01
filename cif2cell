@@ -19,9 +19,11 @@
 #  Description: A command-line tool to generate the geometrical setup
 #               for various electronic structure codes from a CIF format file.
 #               This code was published in Comp. Phys. Comm. 182, 1183-1186 (2011).
-#  Author:      Torbjorn Bjorkman, torbjorn.bjorkman(at)aalto.fi
-#  Affiliation: COMP, Aaalto University School of Science,
-#               Department of Applied Physics, Espoo, Finland
+#  Author:      Torbjorn Bjorkman, torbjorn.bjorkman(at)abo.fi
+#  Affiliation: Abo Akademi University
+#               Physics/Department of Natural Sciences
+#               Porthansgatan 3
+#               20500 Turku, Finland
 #************************************************************************************
 from __future__ import division
 import os
@@ -41,7 +43,7 @@ from elementdata import *
 
 # Name and version
 programname = "cif2cell"
-version = "1.2.8"
+version = "1.2.9"
 
 # Turn of warnings about deprecated stuff
 warnings.simplefilter("ignore",DeprecationWarning)
@@ -102,6 +104,7 @@ cellgenopts.add_option("--cubic-diagonal-z",dest="cubediagz",help="Set up cubic 
 cellgenopts.add_option("--rhombohedral-diagonal",dest="rhombdiag",help="Set up rhombohedral cell with threefold axis along pseudocubic [111] direction.",action="store_true")
 cellgenopts.add_option("--random-displacements",dest="randomdisp",help="Randomly displace all atoms. Depending on the distribution, the displacement size is either the maximal displacement (for uniform distribution) or the standard deviation (for gaussian distribution) in Angstrom.",metavar="displacementsize")
 cellgenopts.add_option("--random-displacements-distribution",dest="randomdistr",help="The distribution used for displacing the atoms.",metavar="uniform/gaussian")
+cellgenopts.add_option("--export-cif-labels",dest="exportlabels",help="Export atom labels from the CIF file (currently only supported for castep and RSPt).",action="store_true")
 # Supercell options
 cellgenopts.add_option("--supercell",dest="supercellmap",help="Three integers separated with commas and enclosed in square brackets that specify the dimensions of a supercell OR three vectors of integers that gives the map to the supercell to be constructed from the primitive cell. If combined with the --no-reduce option the supercell will instead be generated based on the conventional cell.",metavar="[k,l,m]/[[],[],[]]")
 cellgenopts.add_option("--supercell-dimensions",dest="supercelldims",help="Three numbers separated with commas and enclosed in square brackets that specify the desired ABSOLUTE dimensions of a supercell (in angstrom) OR three vectors of numbers that gives the desired lattice vectors. The program will automatically generate a supercell, attempting to get as close as possible to the desired dimensions.",metavar="[x,y,z]/[[],[],[]]")
@@ -461,8 +464,6 @@ if len(ref.ChemicalComposition) > 0 and not cd.alloy:
             sys.stderr.write("***Warning: Chemical composition of the generated cell differs from that given\n"+\
                 "            by _chemical_formula_sum.\n")
         else:
-            print ref.ChemicalComposition
-            print cd.ChemicalComposition
             sys.stderr.write("***Error: Chemical composition of the generated cell differs from that given\n"+\
                 "          by _chemical_formula_sum. Use --force to generate a cell anyway.\n")
             sys.exit(2)
@@ -1075,6 +1076,8 @@ if outputprogram == 'castep':
         castepinput.cartesian = True
     if options.vca:
         castepinput.vca = True
+    if options.exportlabels:
+        castepinput.printlabels = True
     f = open(outputfile, outmode)
     f.write(str(castepinput))
     f.close()
@@ -1632,11 +1635,14 @@ if outputprogram == 'rspt':
         symtfile = SymtFile(cd, docstring)
     # spin axis 
     if options.rsptspinaxis:
-        symtfile.spinaxis = safe_matheval(options.rsptspinaxis)
+        symtfile.spinaxis = Vector(safe_matheval(options.rsptspinaxis))
     if options.rsptpasswyckoff:
         symtfile.passwyckoff = True
     if options.rsptcartlatvects:
         symtfile.rsptcartlatvects = True
+    #
+    if options.exportlabels:
+        symtfile.printlabels = True
     f = open(outputfile, outmode)
     f.write(str(symtfile))
     f.close()

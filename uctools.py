@@ -618,7 +618,7 @@ class CellData(GeometryObject):
         for i in range(len(self.ineqsites)):
             # Set up atomdata
             self.atomdata.append([])
-            self.atomdata[i].append(AtomSite(position=self.ineqsites[i]))
+            self.atomdata[i].append(AtomSite(position=self.ineqsites[i], label=self.sitelabels[i]))
             # Add species and occupations to atomdata
             for k,v in self.occupations[i].iteritems():
                 self.atomdata[i][0].species[k] = v
@@ -674,7 +674,7 @@ class CellData(GeometryObject):
                     posexpr[k] = posexpr[k].replace('y',str(a[0].position[1]))
                     posexpr[k] = posexpr[k].replace('z',str(a[0].position[2]))
                 position = LatticeVector([safe_matheval(pos) for pos in posexpr])
-                b = AtomSite(position=position,species=a[0].species,charges=a[0].charges)
+                b = AtomSite(position=position,species=a[0].species,charges=a[0].charges,label=a[0].label)
                 self.atomset.add(b)
                 append = True
                 for site in a:
@@ -1254,6 +1254,15 @@ class CellData(GeometryObject):
                 sys.stderr.write("***Warning: Could not find element names.\n")
                 elementsymbs = ["??" for site in sitexer]
 
+        # Site labels from _atom_site_label
+        self.sitelabels = tmpdata.get('_atom_site_label')
+        if type(self.sitelabels) == NoneType:
+            # Fill up with question marks if not found
+            if not self.quiet:
+                sys.stderr.write("Could not find site labels.\n")
+            self.sitelabels = ["" for site in sitexer]
+
+
         # Find charge state
         self.chargedict = dict([])
         self.charges = []
@@ -1297,17 +1306,17 @@ class CellData(GeometryObject):
         except:
             pass
         # Remove stuff (usually charge state specification) from element symbol strings
-        elements = []
+        self.elements = []
         i = 0
         for elem in elementsymbs:
-            elements.append(elem.strip(string.punctuation+string.digits))
+            self.elements.append(elem.strip(string.punctuation+string.digits))
             # Make it ?? if there was nothing left after removing junk
-            if elements[i] == "":
-                elements[i] = "??"
+            if self.elements[i] == "":
+                self.elements[i] = "??"
             i += 1
         # Make element name start with capital and then have lower case letters
-        elements[:] = [element[0].upper()+element[1:].lower() for element in elements]
-        for element in elements:
+        self.elements[:] = [element[0].upper()+element[1:].lower() for element in self.elements]
+        for element in self.elements:
             if not element in ElementData().elementnr:
                 sys.stderr.write("***Warning: "+element+" is not a chemical element.\n")
         # Find occupancies
@@ -1319,14 +1328,14 @@ class CellData(GeometryObject):
             if not self.quiet:
                 sys.stderr.write("***Warning : Site occupancies not found, assuming all occupancies = 1.\n")
             siteoccer = []
-            for site in elements:
+            for site in self.elements:
                 siteoccer.append("1.0")
         #
         self.ineqsites = []
         self.occupations = []
-        for i in range(len(elements)):
+        for i in range(len(self.elements)):
             self.ineqsites.append([])
-            # Remove error estimation from coordinates
+            # Remove error estimates from coordinates
             for j in sitexer[i], siteyer[i], sitezer[i]:
                 try:
                     self.ineqsites[i].append(float(removeerror(j)))
@@ -1339,7 +1348,7 @@ class CellData(GeometryObject):
             # Improve precision
             self.ineqsites[i] = Vector(self.ineqsites[i])
             # dictionary of elements and occupancies
-            k = elements[i]
+            k = self.elements[i]
             try:
                 v = float(removeerror(siteoccer[i]))
             except ValueError:
@@ -1618,39 +1627,45 @@ class ReferenceData:
             if type(self.compound) == NoneType:
                 self.compound = ""
         # Get short compound name
-        self.cpd = cifblock.get('_chemical_formula_structural')
-        if type(self.cpd) == NoneType:
-            self.cpd = cifblock.get('_chemical_formula_sum')
-            if type(self.cpd) == NoneType:
+        try:
+            self.cpd = cifblock.get('_chemical_formula_structural')
+        except:
+            try:
+                self.cpd = cifblock.get('_chemical_formula_sum')
+            except:
                 self.cpd = ""
         if type(self.compound) != StringType:
             self.compound = ""
         if type(self.cpd) != StringType:
             self.cpd = ""
         # Ty to set up chemical content set
-        tmp = cifblock.get('_chemical_formula_sum').split()
-        alloy = False
-        for t in tmp:
-            e = t.strip(string.digits+string.punctuation)
-            n = max(t.strip(string.ascii_letters+string.punctuation),'1')
-            try:
-                n = int(n)
-            except:
+        try:
+            tmp = cifblock.get('_chemical_formula_sum').split()
+            alloy = False
+            for t in tmp:
+                e = t.strip(string.digits+string.punctuation)
+                n = max(t.strip(string.ascii_letters+string.punctuation),'1')
                 try:
-                    n = float(n)
-                    alloy = True
+                    n = int(n)
                 except:
-                    raise ValueError()
-            if e in self.ChemicalComposition.keys():
-                nold = self.ChemicalComposition[e]
-                self.ChemicalComposition[e] = nold+n
-            else:
-                self.ChemicalComposition[e] = n
-        if not alloy:
-            L = self.ChemicalComposition.values()
-            divisor = reduce(gcd,L)
-            for k,v in self.ChemicalComposition.iteritems():
-                self.ChemicalComposition[k] = v/divisor
+                    try:
+                        n = float(n)
+                        alloy = True
+                    except:
+                        raise ValueError()
+                if e in self.ChemicalComposition.keys():
+                    nold = self.ChemicalComposition[e]
+                    self.ChemicalComposition[e] = nold+n
+                else:
+                    self.ChemicalComposition[e] = n
+            if not alloy:
+                L = self.ChemicalComposition.values()
+                divisor = reduce(gcd,L)
+                for k,v in self.ChemicalComposition.iteritems():
+                    self.ChemicalComposition[k] = v/divisor
+        except:
+            # If not found, then ignore, this is just to test internal consistency.
+            pass
         # Try to identify a source database for the CIF
         for db in self.databasenames:
             # First all the standard ones
