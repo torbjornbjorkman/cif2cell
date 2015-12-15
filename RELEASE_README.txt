@@ -1,5 +1,11 @@
 CIF2CELL RELEASE INFORMATION
 
+VERSION 1.2.9
+
+* CIF labels now printed to CASTEP input file.
+* Small tweak of the RSPt interface.
+
+--------------------------------------------------------------   
 VERSION 1.2.8
 
 * The code will now stop with an error message if the chemical formula

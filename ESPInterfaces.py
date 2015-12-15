@@ -804,11 +804,12 @@ class SymtFile2(GeometryOutputFile):
                     kgrid[0] += kgrid[0]%2
                     kgrid[1] += kgrid[1]%2
                 elif self.cell.spacegroupsetting == 'R' and abs(self.cell.latticevectors[0].angle(self.cell.latticevectors[1])*180/pi) > 10:
-                    # This rounds to nearest multiple of 3
-                    if kgrid[2]%3 == 1:
-                        kgrid[2] -= 1
-                    elif kgrid[2]%3 == 2:
-                        kgrid[2] += 1
+                    for i in range(3):
+                        # This rounds to nearest multiple of 3
+                        if kgrid[i]%3 == 1:
+                            kgrid[i] -= 1
+                        elif kgrid[i]%3 == 2:
+                            kgrid[i] += 1
             filestring += "\n# k-points\n"
             filestring += "kpoints\n"
             filestring += " %i %i %i\n\n"%(kgrid[0], kgrid[1], kgrid[2])

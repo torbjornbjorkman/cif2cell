@@ -1262,7 +1262,6 @@ class CellData(GeometryObject):
                 sys.stderr.write("Could not find site labels.\n")
             self.sitelabels = ["" for site in sitexer]
 
-
         # Find charge state
         self.chargedict = dict([])
         self.charges = []
