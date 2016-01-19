@@ -708,6 +708,14 @@ class CellData(GeometryObject):
         removeindices.sort(reverse=True)
         for i,j in removeindices:
             self.atomdata[i].pop(j)
+        # Check if any type is now completely empty
+        removeindices = []
+        for i in range(len(self.atomdata)):
+            if len(self.atomdata[i]) == 0:
+                removeindices.append(i)
+        removeindices.sort(reverse=True)
+        for i in removeindices:
+            self.atomdata.pop(i)
         
         ######################
         #    MISCELLANEOUS   #
