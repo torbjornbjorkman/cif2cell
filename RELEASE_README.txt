@@ -1,5 +1,17 @@
 CIF2CELL RELEASE INFORMATION
 
+VERSION 1.2.11
+
+* Added possibility to change the choice of lattice vectors for
+  body-centred settings (--alternate-body-centred-setting).
+* Bugfix in cell transformation routine.
+
+--------------------------------------------------------------   
+VERSION 1.2.10
+
+* Fixed bug sometimes triggered by CIF's that list symmetry equivalent sites.
+
+--------------------------------------------------------------   
 VERSION 1.2.9
 
 * CIF labels now printed to CASTEP input file.

@@ -135,6 +135,8 @@ class CellData(GeometryObject):
         self.rhomb2hex = False
         self.rhombohedral = False
         self.supercell = False
+        # alternate settings for some space groups
+        self.specialIsetting = 0
 
     def newunit(self,newunit="angstrom"):
         """ Set new unit for the length scale. Valid choices are:
@@ -486,7 +488,7 @@ class CellData(GeometryObject):
                 # Body centered
                 self.transvecs = [LatticeVector([zero,zero,zero]),
                                   LatticeVector([half,half,half])]
-                if self.crystal_system() == 'cubic':
+                if self.crystal_system() == 'cubic' or self.specialIsetting != 0:
                     self.lattrans = LatticeMatrix([[-half, half, half],
                                                    [half, -half, half],
                                                    [half, half, -half]])
@@ -748,19 +750,22 @@ class CellData(GeometryObject):
         r = LatticeMatrix(transformation)
         fac = pow(abs(det3(r)),float(1)/3)
         # Check that the transformation does not skew the cell.
-        oldanglen = set([CellFloat(self.latticevectors[0].angle(self.latticevectors[1])),
+        oldanglen = set([Vector([CellFloat(self.latticevectors[0].angle(self.latticevectors[1])),
                          CellFloat(self.latticevectors[0].angle(self.latticevectors[2])),
-                         CellFloat(self.latticevectors[1].angle(self.latticevectors[2])),
-                         CellFloat(self.latticevectors[0].length()),
+                         CellFloat(self.latticevectors[1].angle(self.latticevectors[2]))]),
+                         Vector([CellFloat(self.latticevectors[0].length()),
                          CellFloat(self.latticevectors[1].length()),
-                         CellFloat(self.latticevectors[2].length())])
+                         CellFloat(self.latticevectors[2].length())])])
         t = LatticeMatrix(mmmult3(self.latticevectors,r))
-        newanglen = set([CellFloat(t[0].angle(t[1])),
+        newanglen = set([Vector([CellFloat(t[0].angle(t[1])),
                          CellFloat(t[0].angle(t[2])),
-                         CellFloat(t[1].angle(t[2])),
-                         CellFloat(t[0].length()/fac),
+                         CellFloat(t[1].angle(t[2]))]),
+                         Vector([CellFloat(t[0].length()/fac),
                          CellFloat(t[1].length()/fac),
-                         CellFloat(t[2].length()/fac)])
+                         CellFloat(t[2].length()/fac)])])
+        print oldanglen
+        print newanglen
+        print len(oldanglen), len(newanglen)
         if oldanglen==newanglen or self.force:
             self.latticevectors = t
             self.lengthscale /= fac
@@ -1633,6 +1638,7 @@ class ReferenceData:
             self.compound = cifblock.get('_chemical_name_mineral')
             if type(self.compound) == NoneType:
                 self.compound = ""
+        self.compound = self.compound.strip()
         # Get short compound name
         try:
             self.cpd = cifblock.get('_chemical_formula_structural')
@@ -1645,6 +1651,7 @@ class ReferenceData:
             self.compound = ""
         if type(self.cpd) != StringType:
             self.cpd = ""
+        self.cpd = self.cpd.strip()
         # Ty to set up chemical content set
         try:
             tmp = cifblock.get('_chemical_formula_sum').split()

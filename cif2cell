@@ -43,7 +43,7 @@ from elementdata import *
 
 # Name and version
 programname = "cif2cell"
-version = "1.2.10"
+version = "1.2.11"
 
 # Turn of warnings about deprecated stuff
 warnings.simplefilter("ignore",DeprecationWarning)
@@ -100,6 +100,7 @@ cellgenopts.add_option("--coordinate-tolerance",dest="coordtol",help="Parameter 
 cellgenopts.add_option("--setup-all",dest="setupall",help="Make a more complete setup, not just the geometrical part. This is currently only available for "+setupallstring+".",action="store_true")
 cellgenopts.add_option("--k-resolution",dest="kresolution",help="The desired resolution in k-space (default=0.2). Used for generating k-space grid options if --setup-all is specified.")
 cellgenopts.add_option("--transform-cell",dest="celltransformation",help="Transformation matrix applied to the lattice vectors and the symmetry operations if you, for example, want to realign the cell.",metavar="[[],[],[]]")
+cellgenopts.add_option("--body-centred-setting",dest="specialIsetting",help="Use the more symmetrical set of primitive translation vectors used for the bcc structure also for other body-centred crystals.",metavar="0,1")
 cellgenopts.add_option("--cubic-diagonal-z",dest="cubediagz",help="Set up cubic cell with [111] direction along the z-axis.",action="store_true")
 cellgenopts.add_option("--rhombohedral-diagonal",dest="rhombdiag",help="Set up rhombohedral cell with threefold axis along pseudocubic [111] direction.",action="store_true")
 cellgenopts.add_option("--random-displacements",dest="randomdisp",help="Randomly displace all atoms. Depending on the distribution, the displacement size is either the maximal displacement (for uniform distribution) or the standard deviation (for gaussian distribution) in Angstrom.",metavar="displacementsize")
@@ -204,6 +205,8 @@ if options.filenamequery and not options.program:
 if options.supercellmap and options.supercelldims:
     sys.stderr.write("***Error: cannot use both --supercell and --supercell-dimensions.")
     sys.exit(1)
+
+    
 #############################################################
 # INITIAL PARSING OF VARIOUS INPUT DATA
 # Electronic structure program
@@ -441,6 +444,11 @@ except SymmetryError, e:
     sys.stderr.write("***Error: cell setup: "+e.value+"\n")
     sys.exit(2)
 
+
+##############################################
+# Set flags for cell generation
+if options.specialIsetting=='1':
+    cd.specialIsetting = True
 
 ##############################################
 # Generate cell
