@@ -16,13 +16,12 @@
 #
 #******************************************************************************************
 #  Description: Interfaces for a number of electronic structure programs. Currently only
-#               reads CIF and outputs to the ESP's. Supported programs are: ABINIT, CASTEP,
-#               CPMD, Crystal09, Elk, EMTO, Exciting, Fleur, Hutsepot, NCOL, Quantum Espresso,
-#               RSPt, Siesta, VASP, xyz
+#               reads CIF and outputs to the ESP's. Supported programs are: ABINIT, ATAT,
+#               CASTEP, CPMD, Crystal09, Elk, EMTO, Exciting, Fleur, Hutsepot, NCOL, 
+#               Quantum Espresso, RSPt, Siesta, VASP, xyz
 #               
-#  Author:      Torbjorn Bjorkman, torbjorn.bjorkman(at)aalto.fi
-#  Affiliation: COMP, Aaalto University School of Science,
-#               Department of Applied Physics, Espoo, Finland
+#  Author:      Torbjorn Bjorkman
+#  ORCID:       0000-0002-1154-9846
 #******************************************************************************************
 import copy
 import os
@@ -55,6 +54,39 @@ class GeometryOutputFile:
         self.cell = crystalstructure
         self.docstring = string
 
+################################################################################################
+# ATAT FILE
+class ATATFile(GeometryOutputFile):
+    """
+    Class for storing the geometrical data needed for outputting an ATAT input file
+    and the method __str__ that outputs the contents of the file as a string.
+    """
+    def __init__(self,crystalstructure,string):
+        GeometryOutputFile.__init__(self,crystalstructure,string)
+        # Document string on first line after '//'
+        self.programdoc = string.rstrip("\n")
+        # set up species list
+        tmp = set([])
+        for a in self.cell.atomdata:
+            for b in a:
+                tmp.add(b.spcstring())
+        self.species = list(tmp)
+        # make sure the docstring goes on one line
+        self.cell.newunit("bohr")
+    def __str__(self):
+        filestring = str(self.cell.a)+" "+str(self.cell.b)+" "+str(self.cell.c)+" "+str(self.cell.alpha)+" "+str(self.cell.beta)+" "+str(self.cell.gamma)+"\n"
+        filestring += str(self.cell.lattrans)
+        for a in self.cell.atomdata:
+            for b in a:
+                filestring += str(b.position)
+                if b.alloy():
+                    for k,v in b.species.iteritems():
+                        filestring += k+"="+str(v)+","
+                    filestring = filestring.rstrip(",")+"\n"
+                else:
+                    filestring += " "+b.spcstring(separator=',')+"\n"
+        return filestring
+        
 ################################################################################################
 # HUTSEPOT FILE
 class HUTSEPOTFile(GeometryOutputFile):
@@ -826,21 +858,15 @@ class Crystal09File(GeometryOutputFile):
     """
     Class for storing the geometrical data needed by Crystal09 and the method
     __str__ that outputs the contents of an Crystal09 input file as a string.
-    Presently only handles standard settings (space group numbers, not H-M symbols)
+    Presently only handles standard settings (space group numbers, not H-M symbols),
+    and the special case of rhombohedral settings for relevant trigonal space groups.
     """
-    def __init__(self,crystalstructure,string):
+    def __init__(self,crystalstructure,string,rhombohedral=False):
         GeometryOutputFile.__init__(self,crystalstructure,string)
-        self.HermannMauguin = ""
-        self.spacegroupnr = 0
-        self.a = 1
-        self.b = 1
-        self.c = 1
-        self.alpha = 90
-        self.beta = 90
-        self.gamma = 90
-        self.trigonalsetting = "H"
         # Set atomic units for length scale
         self.cell.newunit("angstrom")
+        # Rhombohedral cell setting
+        self.rhombohedral = rhombohedral
         # Make sure the docstring has the form of a f90 comment
         self.docstring = self.docstring.rstrip("\n")
         tmpstrings = self.docstring.split("\n")
@@ -855,49 +881,45 @@ class Crystal09File(GeometryOutputFile):
         # Add docstring
         filestring = self.docstring
         filestring += "CRYSTAL\n"
-        system = crystal_system(self.spacegroupnr)
         # Space group setting and crystal parameters
-        if system == "triclinic":
+        if self.cell.is_spacegroup("triclinic"):
             filestring += "0 0 0\n"
             filestring += str(self.spacegroupnr)+"\n"
-            filestring += "%13.8f %13.8f %13.8f %13.8f %13.8f %13.8f\n"%(self.a, self.b, self.c, self.alpha, self.beta, self.gamma)
-        elif system == "monoclinic":
+            filestring += "%13.8f %13.8f %13.8f %13.8f %13.8f %13.8f\n"%(self.cell.a, self.cell.b, self.cell.c, self.cell.alpha, self.cell.beta, self.cell.gamma)
+        elif self.cell.is_spacegroup("monoclinic"):
             filestring += "0 0 0\n"
             filestring += str(self.spacegroupnr)+"\n"
-            filestring += "%13.8f %13.8f %13.8f %13.8f\n"%(self.a, self.b, self.c, self.beta)
-        elif system == "orthorhombic":
+            filestring += "%13.8f %13.8f %13.8f %13.8f\n"%(self.cell.a, self.cell.b, self.cell.c, self.cell.beta)
+        elif self.cell.is_spacegroup("orthorhombic"):
             filestring += "0 0 0\n"
             filestring += str(self.spacegroupnr)+"\n"
-            filestring += "%13.8f %13.8f %13.8f\n"%(self.a, self.b, self.c)
-        elif system == "tetragonal":
+            filestring += "%13.8f %13.8f %13.8f\n"%(self.cell.a, self.cell.b, self.cell.c)
+        elif self.cell.is_spacegroup("tetragonal"):
             filestring += "0 0 0\n"
             filestring += str(self.spacegroupnr)+"\n"
-            filestring += "%13.8f %13.8f\n"%(self.a, self.c)
-        elif system == "trigonal":
-            if self.trigonalsetting == "H":
-                filestring += "0 0 0\n"
-                filestring += str(self.spacegroupnr)+"\n"
-                filestring += "%13.8f %13.8f\n"%(self.a, self.c)
-            elif self.trigonalsetting == "R":
+            filestring += "%13.8f %13.8f\n"%(self.cell.a, self.cell.c)
+        elif self.cell.is_spacegroup("trigonal") and not (self.cell.is_spacegroup("rhombohedral") and self.rhombohedral):
+            filestring += "0 0 0\n"
+            filestring += str(self.spacegroupnr)+"\n"
+            filestring += "%13.8f %13.8f\n"%(self.cell.a, self.cell.c)
+        elif self.cell.is_spacegroup("rhombohedral") and self.rhombohedral:
                 filestring += "0 1 0\n"
                 filestring += str(self.spacegroupnr)+"\n"
-                filestring += "%13.8f %13.8f\n"%(self.a, self.alpha)
-            else:
-                return "***Error: No such trigonal setting : "+self.trigonalsetting
-        elif system == "hexagonal":
+                filestring += "%13.8f %13.8f\n"%(self.cell.latticevectors[0].length()*self.cell.lengthscale, self.cell.latticevectors[1].angle(self.cell.latticevectors[2])*180/pi)
+        elif self.cell.is_spacegroup("hexagonal"):
             filestring += "0 0 0\n"
             filestring += str(self.spacegroupnr)+"\n"
-            filestring += "%13.8f %13.8f\n"%(self.a, self.c)
-        elif system == "cubic":
+            filestring += "%13.8f %13.8f\n"%(self.cell.a, self.cell.c)
+        elif self.cell.is_spacegroup("cubic"):
             filestring += "0 0 0\n"
             filestring += str(self.spacegroupnr)+"\n"
-            filestring += "%13.8f\n"%(self.a)
+            filestring += "%13.8f\n"%(self.cell.a)
         else:
             if self.force:
                 sys.stderr.write("***Warning: Could not determine crystal system corresponding to space group "+str(self.spacegroupnr)+".")
                 filestring += "0 0 0\n"
                 filestring += str(self.spacegroupnr)+"\n"
-                filestring += "%13.8f %13.8f %13.8f %13.8f %13.8f %13.8f\n"%(self.a, self.b, self.c, self.alpha, self.beta, self.gamma)
+                filestring += "%13.8f %13.8f %13.8f %13.8f %13.8f %13.8f\n"%(self.cell.a, self.cell.b, self.cell.c, self.cell.alpha, self.cell.beta, self.cell.gamma)
             else:
                 return "***Error: Could not determine crystal system corresponding to space group "+str(self.spacegroupnr)+"."
         # Number of atoms
@@ -911,23 +933,6 @@ class Crystal09File(GeometryOutputFile):
                 for k in a[0].species:
                     filestring += str(ed.elementnr[k]).rjust(2)
             filestring += "  "+str(a[0].position)+"      ! "+a[0].spcstring()+"\n"
-        ## occ = self.cell.occupations
-        ## for i in range(len(self.cell.ineqsites)):
-        ##     spcstring = ""
-        ##     if len(occ[i]) > 1:
-        ##         # don't know what to put for alloy
-        ##         filestring += "??"
-        ##         for k in occ[i]:
-        ##             spcstring += str(ed.elementnr[k])+"/"
-        ##         spcstring = spcstring.rstrip("/")+"  "
-        ##         for k in occ[i]:
-        ##             spcstring += k+"/"
-        ##         spcstring = spcstring.rstrip("/")
-        ##     else:
-        ##         for k in occ[i]:
-        ##             filestring += str(ed.elementnr[k]).rjust(2)
-        ##             spcstring = k
-        ##     filestring += str(self.cell.ineqsites[i])+"      ! "+spcstring+"\n"
         filestring += "END\n"
         return filestring
 
@@ -2316,7 +2321,7 @@ class KGRNFile(GeometryOutputFile):
         filestring += "ZMSH...= C NZ1..= 16 NZ2..= 16 NZ3..=  8 NRES.=  4 NZD.= 500\n"
         filestring += "DEPTH..=  1.500 IMAGZ.=  0.020 EPS...=  0.200 ELIM..= -1.000\n"
         filestring += "AMIX...=  0.100 EFMIX.=  1.000 VMTZ..=  0.000 MMOM..=  0.000\n"
-        filestring += "TOLE...= 1.d-07 TOLEF.= 1.d-07 TOLCPA= 1.d-06 TFERMI=  500.0 (K)\n"
+        filestring += "TOLE...= 1.d-05 TOLEF.= 1.d-05 TOLCPA= 1.d-05 TFERMI=  500.0 (K)\n"
         # Get number of sites
         nosites = 0
         for a in self.cell.atomdata:
@@ -2416,7 +2421,7 @@ class BMDLFile(GeometryOutputFile):
         filestring += tmpstring
         filestring += "DIR001=mdl/\n"
         filestring += "DIR006=./\n"
-        filestring += self.docstring.replace("\n"," ")+"\n"
+        filestring += "Madelung potential, "+self.docstring.replace("\n"," ")+"\n"
         filestring += "NL.....= 7\n"
         filestring += "LAMDA....=    2.5000 AMAX....=    4.5000 BMAX....=    4.5000\n"
         # Get number of sites
@@ -2477,7 +2482,7 @@ class KSTRFile(GeometryOutputFile):
         filestring += tmpstring
         filestring += "DIR001=smx/\n"
         filestring += "DIR006=./\n"
-        filestring += self.docstring.replace("\n"," ")+"\n"
+        filestring += "Slope matrices, "+self.docstring.replace("\n"," ")+"\n"
         # NL = maximal l from element blocks
         maxl = 1
         for a in self.cell.atomdata:

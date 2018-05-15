@@ -1,17 +1,30 @@
 CIF2CELL RELEASE INFORMATION
 
-VERSION 1.2.11
+
+VERSION 1.3.1
+
+Bugfixes and tweaks + new interface
+* ATAT interface (very much in beta).
+* Major bugfix in Crystal09 interface.
+* Tweak in how the code tries to identify certain conspicuous floating
+  point numbers in the input file. Now only 1/3 and 2/3 are identified
+  and rounded.
+* Bugfix in EMTO interface.
+
+
+--------------------------------------------------------------   
+VERSION 1.2.11 
 
 * Added possibility to change the choice of lattice vectors for
   body-centred settings (--alternate-body-centred-setting).
 * Bugfix in cell transformation routine.
 
 --------------------------------------------------------------   
-VERSION 1.2.10
+VERSION 1.2.10  
 
-* Fixed bug sometimes triggered by CIF's that list symmetry equivalent sites.
+* Fixed bug sometimes triggered by CIF's that list symmetry equivalent sites.  
 
---------------------------------------------------------------   
+--------------------------------------------------------------    
 VERSION 1.2.9
 
 * CIF labels now printed to CASTEP input file.

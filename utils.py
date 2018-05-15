@@ -17,9 +17,9 @@
 #******************************************************************************************
 #  Description: Definitions of basic classes  and functions for CIF2Cell.
 #
-#  Author:      Torbjorn Bjorkman, torbjorn.bjorkman(at)aalto.fi
-#  Affiliation: COMP, Aaalto University School of Science,
-#               Department of Applied Physics, Espoo, Finland
+#  Author:      Torbjorn Bjorkman
+#  ORCID:       0000-0002-1154-9846
+#
 #******************************************************************************************
 from __future__ import division
 from math import sqrt,acos
@@ -37,7 +37,8 @@ half = one/two
 fourth = one/four
 sixth = one/six
 occepsilon = 0.000001
-floatlist = [third, 2*third, half, fourth, one, zero, sqrt(2.0),sixth,5*sixth,sqrt(3.0),sqrt(3.0)/2]
+#floatlist = [third, 2*third, half, fourth, one, zero, sqrt(2.0),sixth,5*sixth,sqrt(3.0),sqrt(3.0)/2]
+floatlist = [third, 2*third]
 angtobohr = 1.8897261
 uperatogpercm = 1.6605388
 uperautogpercm = 11.205871
@@ -356,15 +357,15 @@ class AtomSite(GeometryObject):
     def __eq__(self,other):
         return self.position == other.position and self.species == other.species
     # Species string, sorted by atomic weight.
-    def spcstring(self):
+    def spcstring(self,separator='/'):
         t = []
         for k in self.species:
             t.append(k)
         t.sort(key = lambda x: ElementData().elementweight[x], reverse=True)
         tmp = ""
         for k in t:
-            tmp += k+"/"
-        tmp = tmp.rstrip("/")
+            tmp += k+separator
+        tmp = tmp.rstrip(separator)
         return tmp
     # Is there more than one species on this site?
     def alloy(self):

@@ -35,9 +35,8 @@
 #               All data was generated using the sginfo program (http://cci.lbl.gov/sginfo)
 #               and automatically processed into python code.
 #
-#  Author:      Torbjorn Bjorkman, torbjorn.bjorkman(at)aalto.fi
-#  Affiliation: COMP, Aaalto University School of Science,
-#               Department of Applied Physics, Espoo, Finland
+#  Author:      Torbjorn Bjorkman
+#  ORCID:       0000-0002-1154-9846
 #
 #******************************************************************************************
 
@@ -1073,6 +1072,7 @@ HM2Hall = {
     'R3c' : 'R 3 -2"c',
     'R3c:H' : 'R 3 -2"c',
     'R3cH' : 'R 3 -2"c',
+    'R3c(hexagonalaxes)' : 'R 3 -2"c',
     'R3c:R' : 'P 3* -2n',
     'R3cR' : 'P 3* -2n',
     # 162

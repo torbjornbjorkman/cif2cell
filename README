@@ -13,6 +13,7 @@ CURRENTLY SUPPORTS
 code           | support |   output files
 ---------------|---------|-----------------------------------
 ASE                no      positions.py
+ATAT              yes      [compoundname].in
 VASP              VCA      POSCAR
 ABINIT             no      [compoundname].in
 Siesta             no      [compoundname].fdf
@@ -105,8 +106,6 @@ along with cif2cell.  If not, see <http://www.gnu.org/licenses/>.
 Happy computing!
 
 Torbjorn Bjorkman
-COMP, Aaalto University School ofScience and Technology, 
-Department of Applied Physics, 
-Espoo, Finland
-torbjorn@cc.hut.fi
+https://orcid.org/0000-0002-1154-9846 
+
 

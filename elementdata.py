@@ -17,9 +17,8 @@
 #******************************************************************************************
 #  Description: Chemical element data useful for generating setups for electronic
 #               structure programs.
-#  Author:      Torbjorn Bjorkman, torbjorn.bjorkman(at)aalto.fi
-#  Affiliation: COMP, Aaalto University School of Science,
-#               Department of Applied Physics, Espoo, Finland
+#  Author:      Torbjorn Bjorkman
+#  ORCID:       0000-0002-1154-9846
 #******************************************************************************************
 class ElementData:
     """
@@ -624,6 +623,9 @@ class ElementData:
         self.angularmomentum = { 's' : 0, 'p' : 1, 'd' : 2, 'f' : 3 }
 
         self.elementweight = {
+            'Em' : 0.000,
+            'Va' : 0.000,
+            'Vc' : 0.000,
             'H' : 1.0075,
             'D' : 2.01410178,
             'He' : 4.002,
