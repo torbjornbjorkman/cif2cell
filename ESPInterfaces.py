@@ -80,7 +80,7 @@ class ATATFile(GeometryOutputFile):
             for b in a:
                 filestring += str(b.position)
                 if b.alloy():
-                    for k,v in b.species.iteritems():
+                    for k,v in b.species.items():
                         filestring += k+"="+str(v)+","
                     filestring = filestring.rstrip(",")+"\n"
                 else:
@@ -269,7 +269,7 @@ class CFGFile(GeometryOutputFile):
         atomlist = []
         for a in tmplist:
             if a.alloy():
-                for sp,occ in a.species.iteritems():
+                for sp,occ in a.species.items():
                     atomlist.append(AtomSite(position=a.position,species={sp : occ},charges={sp : a.charges[sp]}))
             else:
                 atomlist.append(a)
@@ -294,7 +294,7 @@ class CFGFile(GeometryOutputFile):
         ## filestring += "entry_count = 3\n"
         filestring += "entry_count = 6\n"
         for a in atomlist:
-                for sp,occ in a.species.iteritems():
+                for sp,occ in a.species.items():
                         if prevsp != sp:
                             filestring += "%i\n"%(int(round(ed.elementweight[sp])))
                             filestring += sp+"\n"
@@ -1293,7 +1293,7 @@ class CASTEPFile(GeometryOutputFile):
                 if self.cell.alloy and self.vca:
                     if len(b.species) > 1:
                         i = i + 1
-                        for sp,conc in b.species.iteritems():
+                        for sp,conc in b.species.items():
                             filestring += sp.ljust(2)+" "+str(pos)+"  MIXTURE:( %i %6.5f )"%(i,conc)
                     else:
                         filestring += b.spcstring().ljust(2)+" "+str(pos)
@@ -1310,7 +1310,7 @@ class CASTEPFile(GeometryOutputFile):
         species = set([])
         for a in self.cell.atomdata:
             if self.vca:
-                for sp,conc in a[0].species.iteritems():
+                for sp,conc in a[0].species.items():
                     species.add(sp)
             else:
                 species.add(a[0].spcstring())
@@ -1807,7 +1807,7 @@ class MCSQSFile(GeometryOutputFile):
         for a in self.cell.atomdata:
             for b in a:
                 filestring += +str(b.position)+" "
-                for k,v in b.species.iteritems():
+                for k,v in b.species.items():
                     filestring += k+"="+str(v)
         return filestring
         
@@ -1836,7 +1836,7 @@ class POSCARFile(GeometryOutputFile):
         for a in self.cell.atomdata:
             for b in a:
                 if self.vca:
-                    for k,v in b.species.iteritems():
+                    for k,v in b.species.items():
                         tmp.add(k)
                 else:
                     tmp.add(b.spcstring())
@@ -1928,7 +1928,7 @@ class POSCARFile(GeometryOutputFile):
             for a in self.cell.atomdata:
                 for b in a:
                     if self.vca:
-                        for k,v in b.species.iteritems():
+                        for k,v in b.species.items():
                             if k == sp:
                                 nsp += 1
                                 p = Vector(mvmult3(coordmat,mvmult3(transmtx,b.position)))
@@ -2055,7 +2055,7 @@ class INCARFile:
             tmp = set([])
             for a in self.cell.atomdata:
                 for b in a:
-                    for k,v in b.species.iteritems():
+                    for k,v in b.species.items():
                         tmp.add((k,v))
             tmp = list(tmp)
             self.vcaspecies = []
@@ -2068,7 +2068,7 @@ class INCARFile:
         for a in self.cell.atomdata:
             for b in a:
                 if self.vca:
-                    for k,v in b.species.iteritems():
+                    for k,v in b.species.items():
                         spcstr = k
                         if spcstr in speciesdict:
                             t = speciesdict[spcstr] + 1
@@ -2085,7 +2085,7 @@ class INCARFile:
         # species list in the same order as poscar
         self.species = []
         for s in poscarfile.species:
-            for k,v in speciesdict.iteritems():
+            for k,v in speciesdict.items():
                 if k == s:
                     self.species.append((k,v))
         # get potcar list
@@ -2101,7 +2101,7 @@ class INCARFile:
         # get maximal encut and number of electrons from potcars
         enmaxs = dict([])
         zvals = dict([])
-        for a,f in potcars.iteritems():
+        for a,f in potcars.items():
             potcar = open(f,"r")
             for line in potcar:
                 if search("ZVAL",line):
@@ -2111,7 +2111,7 @@ class INCARFile:
                 if search("END of PSCTR",line):
                     break
             potcar.close()
-        self.maxencut = max([k for v,k in enmaxs.iteritems()])
+        self.maxencut = max([k for v,k in enmaxs.items()])
         # do we suspect that this might be magnetic?
         self.magnetic = False
         self.magmomlist = []
@@ -2124,7 +2124,7 @@ class INCARFile:
         # Determine NBANDS
         nmag = sum([eval(i) for i in self.magmomlist])
         nelect = 0.0
-        for sp,z in zvals.iteritems():
+        for sp,z in zvals.items():
             for a in self.cell.atomdata:
                 for b in a:
                     if sp == b.spcstring():
@@ -2571,7 +2571,7 @@ class XBandSysFile(GeometryOutputFile):
                      self.cell.spacegroupsetting == 'C':
                 filestring += "3  monoclinic  primitive      2/m    C_2h\n"
             else:
-                print "xband only knows primitive and base-centered monoclinic settings!"
+                sys.stderr.write("xband only knows primitive and base-centered monoclinic settings!\n")
                 sys.exit(43)
         elif self.cell.crystal_system() == 'orthorhombic':
             if self.cell.spacegroupsetting == 'P':
@@ -2584,7 +2584,7 @@ class XBandSysFile(GeometryOutputFile):
             elif self.cell.spacegroupsetting == "F":
                 filestring += "7  orthorombic face-centered  mmm    D_2h\n"
             else:
-                print "xband does not know %1s centering of an orthorhombic cell."%self.cell.spacegroupsetting
+                sys.stderr.write("xband does not know %1s centering of an orthorhombic cell.\n"%self.cell.spacegroupsetting)
                 sys.exit(43)
         elif self.cell.crystal_system() == "tetragonal":
             if self.cell.spacegroupsetting == "P":
@@ -2592,7 +2592,7 @@ class XBandSysFile(GeometryOutputFile):
             elif self.cell.spacegroupsetting == "I":
                 filestring += "9  tetragonal  body-centered  4/mmm  D_4h\n"
             else:
-                print "xband only knows primitive and body-centered tetragonal settings!"
+                sys.stderr.write("xband only knows primitive and body-centered tetragonal settings!\n")
                 sys.exit(43)
         elif self.cell.crystal_system() == "trigonal":
             filestring += "10 trigonal    primitive      -3m    D_3d\n"
@@ -2606,7 +2606,7 @@ class XBandSysFile(GeometryOutputFile):
             elif self.cell.spacegroupsetting == "I":
                 filestring += "14 cubic       body-centered  m3m    O_h \n"
             else:
-                print "xband does not know %1s centering of a cubic cell."%self.cell.spacegroupsetting
+                sys.stderr.write("xband does not know %1s centering of a cubic cell.\n"%self.cell.spacegroupsetting)
                 sys.exit(43)
         filestring += "space group number (ITXC and AP)\n"
         filestring += "%5i%5i"%(self.cell.spacegroupnr,Number2AP[self.cell.spacegroupnr])+"\n"
@@ -2680,7 +2680,7 @@ class XBandSysFile(GeometryOutputFile):
         it = 0
         for a in self.cell.atomdata:
             corr = 0
-            for sp,conc in a[0].species.iteritems():
+            for sp,conc in a[0].species.items():
                 it += 1
                 filestring += " %2i%4i  %8s%5i%6.3f"%(it,ed.elementnr[sp],sp,len(a),conc)
                 iq -= corr*len(a)
@@ -2813,7 +2813,7 @@ class SPCFile(GeometryOutputFile):
             natom = 0
             conc.append([])
             for a in self.cell.atomdata:
-                for k,v in a[0].species.iteritems():
+                for k,v in a[0].species.items():
                     if a == b:
                         conc[i].append((ascii[natom],v))
                     else:
