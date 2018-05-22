@@ -23,7 +23,7 @@
 #******************************************************************************************
 from __future__ import division
 from math import sqrt,acos
-from elementdata import *
+from cif2cell.elementdata import *
 ################################################################################################
 # Miscellaneous
 zero = 0.0

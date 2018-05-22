@@ -36,10 +36,10 @@ import CifFile
 from types import *
 from math import sin,cos,pi,sqrt,pow,ceil,floor
 from utils import *
-from spacegroupdata import *
-from elementdata import *
 from random import random, gauss
 from fractions import gcd
+from cif2cell.spacegroupdata import *
+from cif2cell.elementdata import *
     
 ################################################################################################
 class CellData(GeometryObject):
