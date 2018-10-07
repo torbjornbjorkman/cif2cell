@@ -35,11 +35,13 @@ import copy
 import CifFile
 from types import *
 from math import sin,cos,pi,sqrt,pow,ceil,floor
-from utils import *
+from cif2cell.utils import *
 from random import random, gauss
 from fractions import gcd
 from cif2cell.spacegroupdata import *
 from cif2cell.elementdata import *
+if sys.version_info >= (3,0):
+    from functools import reduce
     
 ################################################################################################
 class CellData(GeometryObject):
@@ -780,9 +782,9 @@ class CellData(GeometryObject):
                          Vector([CellFloat(t[0].length()/fac),
                          CellFloat(t[1].length()/fac),
                          CellFloat(t[2].length()/fac)])])
-        print (oldanglen)
-        print (newanglen)
-        print (len(oldanglen), len(newanglen))
+#        print (oldanglen)
+#        print (newanglen)
+#        print (len(oldanglen), len(newanglen))
         if oldanglen==newanglen or self.force:
             self.latticevectors = t
             self.lengthscale /= fac
@@ -801,7 +803,7 @@ class CellData(GeometryObject):
             raise CellError("The transformation matrix skews the lattice. Only combinations of "+
                             "rotations and rescaling of the whole cell are allowed.")
 
-    def getSuperCell(self, supercellmap, vacuum, prevactransvec, postvactransvec=[.0,.0,.0], sort=""):
+    def getSuperCell(self, supercellmap, vacuum, prevactransvec, postvactransvec=[.0,.0,.0], sort="", realign=0):
         """
         Returns a supercell based on the input supercell map, vacuum layers and translation vector.
         The cell must have been initialized prior to calling getSuperCell.
@@ -1051,6 +1053,26 @@ class CellData(GeometryObject):
                         self.atomdata.sort(key = lambda a: a[0].position[int(i)-1])
         self.supercell = True
         self.numberOfAtoms = self.natoms()
+
+        # Realign lattice vectors in the cartesian reference frame?
+        if realign:
+            # "lattice parameters" of the cell
+            a = self.latticevectors[0].length()
+            b = self.latticevectors[1].length()
+            c = self.latticevectors[2].length()
+            boa = b/a
+            coa = c/a
+            alpha = self.latticevectors[1].angle(self.latticevectors[2])
+            beta = self.latticevectors[0].angle(self.latticevectors[2])
+            gamma = self.latticevectors[0].angle(self.latticevectors[1])
+            # new lattice vectors
+            angfac1 = (cos(alpha) - cos(beta)*cos(gamma))/sin(gamma)
+            angfac2 = sqrt(sin(gamma)**2 - cos(beta)**2 - cos(alpha)**2 
+                       + 2*cos(alpha)*cos(beta)*cos(gamma))/sin(gamma)
+            self.latticevectors = LatticeMatrix([[one, zero, zero], 
+                                            [boa*cos(gamma), boa*sin(gamma), zero], 
+                                            [coa*cos(beta), coa*angfac1, coa*angfac2]])
+
         return self
 
     # Get lattice information from CIF block
@@ -1108,8 +1130,9 @@ class CellData(GeometryObject):
                 eqsitedata = cifblock.GetLoop(symopid)
                 try:
                     eqsitestrs = eqsitedata.get(symopid)
-                    # This if fixes a funny exception that can occur for the P1 space group.
-                    if isinstance(eqsitestrs,str):
+                    # This if fixes a funny exception that can occur for the P1 space group,
+                    # if the single operation is just a string and not in a _loop
+                    if isinstance(eqsitestrs,basestring):
                         eqsitestrs = [eqsitestrs]
                     eqsites = []
                     for i in range(len(eqsitestrs)):
@@ -1664,10 +1687,16 @@ class ReferenceData:
                 self.cpd = cifblock.get('_chemical_formula_sum')
             except:
                 self.cpd = ""
-        if not isinstance(self.compound, str):
+        # Safeguard in case we read a loop
+        try:
+            self.compound = str(self.compound)
+        except:
             self.compound = ""
-        if not isinstance(self.cpd, str):
+        try:
+            self.cpd = str(self.cpd)
+        except:
             self.cpd = ""
+        # Strip whitespace
         self.cpd = self.cpd.strip()
         # Ty to set up chemical content set
         try:
@@ -1736,7 +1765,7 @@ class ReferenceData:
         # Authors
             authorsloop = cifblock.GetLoop('_publ_author_name')
             self.authors = authorsloop.get('_publ_author_name')
-            if isinstance(self.authors,str):
+            if isinstance(self.authors,basestring):   # If just a string and not a list from a _loop
                 self.authors = deletenewline(self.authors)
                 self.authorstring = self.authors
                 self.authors = self.authors.split(";")
