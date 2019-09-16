@@ -47,6 +47,8 @@
 #        - Original version in Ruby.
 # ***********************************************************
 
+from __future__ import absolute_import
+from __future__ import print_function
 import os
 import sys
 import commands
@@ -55,6 +57,8 @@ import re
 from math import copysign
 from subprocess import Popen,call,PIPE
 from optparse import OptionParser
+from six.moves import map
+from six.moves import range
 
 # Input parser
 parser = OptionParser()
@@ -175,7 +179,7 @@ def ciffilestring(cell):
 				cifout = True
 				break
 		if not cifout:
-			print "***Error: FINDSYM failed to produce a CIF file, no symmetrization done."
+			print("***Error: FINDSYM failed to produce a CIF file, no symmetrization done.")
 			nofindsym = True
 
 	outstring += "data_" + cell.label.strip(" ")+"\n"
@@ -293,18 +297,18 @@ if len(args) == 0:
 	cif_file = sys.stdout
 elif len(args) == 1:
 	#Write to input.cif
-	input_files = [(file(arg,'r'),arg) for arg in args]
+	input_files = [(open(arg,'r'),arg) for arg in args]
 	if options.output:
-		cif_file = file(options.output,'w')
+		cif_file = open(options.output,'w')
 	else:
-		cif_file = file(args[0] + ".cif",'w')
+		cif_file = open(args[0] + ".cif",'w')
 else:
 	#Write to input.cif
-	input_files = [(file(arg,'r'),arg) for arg in args[0:]]
+	input_files = [(open(arg,'r'),arg) for arg in args[0:]]
 	if options.output:
-		cif_file = file(options.output,'w')
+		cif_file = open(options.output,'w')
 	else:
-		cif_file = file(args[0] + "_etc.cif",'w')
+		cif_file = open(args[0] + "_etc.cif",'w')
 
 # Initialize Cell object.
 cell = Cell()
@@ -389,9 +393,9 @@ for input_file,filename in input_files:
 
 		if scale_volume:
 			lattice_constant = (final_volume/unscaled_volume)**(1.0/3.0)
-			a = map(lambda x: lattice_constant*x,a)
-			b = map(lambda x: lattice_constant*x,b)
-			c = map(lambda x: lattice_constant*x,c)
+			a = [lattice_constant*x for x in a]
+			b = [lattice_constant*x for x in b]
+			c = [lattice_constant*x for x in c]
 			volume = a[0]*b[1]*c[2]-a[0]*b[2]*c[1]+a[1]*b[2]*c[0]-a[1]*b[0]*c[2]+a[2]*b[0]*c[1]-a[2]*b[1]*c[0]
 
 		cell.a = math.sqrt(a[0]*a[0]+a[1]*a[1]+a[2]*a[2])
@@ -424,7 +428,7 @@ for input_file,filename in input_files:
 			occupancies = [1.0 for i in range(len(atomcounts))]
 				
 		if len(occupancies) != len(atoms):
-			print "Error: Different number of occupancies and atoms."
+			print("Error: Different number of occupancies and atoms.")
 			sys.exit(1)
 		
 		n_atoms = 0
@@ -457,7 +461,7 @@ for input_file,filename in input_files:
 		cell.sites = []
 		for i in range(0,len(atomlabels)):
 			#extract first three fields in POSCAR line
-			coords = map(float,poscar[i+offset+1].split()[0:3])
+			coords = list(map(float,poscar[i+offset+1].split()[0:3]))
 
 			if not direct_coordinates:
 				coords = mvmult3(inverse_lattice_vectors, coords)
@@ -516,7 +520,7 @@ for input_file,filename in input_files:
 			occupancies = [1.0 for i in range(len(atomcounts))]
 				
 		if len(occupancies) != len(atoms):
-			print "Error: Different number of occupancies and atoms."
+			print("Error: Different number of occupancies and atoms.")
 			sys.exit(1)
 		
 		# Set up initial position array
@@ -659,9 +663,9 @@ for input_file,filename in input_files:
 
 		if scale_volume:
                         lattice_constant = (final_volume/unscaled_volume)**(1.0/3.0)
-                        a = map(lambda x: lattice_constant*x,a)
-                        b = map(lambda x: lattice_constant*x,b)
-                        c = map(lambda x: lattice_constant*x,c)
+                        a = [lattice_constant*x for x in a]
+                        b = [lattice_constant*x for x in b]
+                        c = [lattice_constant*x for x in c]
                         volume = a[0]*b[1]*c[2]-a[0]*b[2]*c[1]+a[1]*b[2]*c[0]-a[1]*b[0]*c[2]+a[2]*b[0]*c[1]-a[2]*b[1]*c[0]
 
 		cell.a = math.sqrt(a[0]*a[0]+a[1]*a[1]+a[2]*a[2])
@@ -710,7 +714,7 @@ for input_file,filename in input_files:
 			cell.sites = []
                         for i in range(0,len(atomlabels)):
                                 #extract first three fields in POSCAR line
-                                coords = map(float,poscar[i+offset+1].split()[0:3])
+                                coords = list(map(float,poscar[i+offset+1].split()[0:3]))
 
 				if not direct_coordinates:
                                         coords = mvmult3(inverse_lattice_vectors, coords)

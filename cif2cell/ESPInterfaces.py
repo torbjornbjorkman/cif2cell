@@ -23,6 +23,8 @@
 #  Author:      Torbjorn Bjorkman
 #  ORCID:       0000-0002-1154-9846
 #******************************************************************************************
+from __future__ import absolute_import
+from __future__ import print_function
 import copy
 import os
 import math
@@ -31,6 +33,7 @@ from cif2cell.utils import *
 from cif2cell.elementdata import *
 from cif2cell.uctools import *
 from re import search
+from six.moves import range
 
 
 ################################################################################################
@@ -390,8 +393,8 @@ class LAMMPSFile(GeometryOutputFile):
             self.cell.latticevectors[2] = Vector(mvmult3(R,self.cell.latticevectors[2]))
 
         if self.cell.latticevectors[0][1]!=0 or self.cell.latticevectors[0][2] != 0 or self.cell.latticevectors[1][2]!=0 or self.cell.latticevectors[0][0] <= 0 or self.cell.latticevectors[1][1] <= 0 or self.cell.latticevectors[2][2] <= 0:
-            print "Error in triclinic box. Vectors should follow these rules: http://lammps.sandia.gov/doc/Section_howto.html#howto-12"
-            print "Ideally, this program should solve this, but it doesn't yet. You need to fix it."
+            print("Error in triclinic box. Vectors should follow these rules: http://lammps.sandia.gov/doc/Section_howto.html#howto-12")
+            print("Ideally, this program should solve this, but it doesn't yet. You need to fix it.")
             exit()
 
         xy = self.cell.lengthscale*self.cell.latticevectors[1][0]
