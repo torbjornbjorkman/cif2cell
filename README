@@ -62,11 +62,7 @@ Prerequisites: The program requires Python 2.4 or higher and the
 	       with Python 2.4 than with later versions.
 
 To install the program in your systems standard location, simply type:
-python setup.py install 
-To choose a different location, add 
---prefix=where/you/want/it 
-to the above line. For help and more options type
-python setup.py --help
+pip install cif2cell
 
 The installation will also create a directory $PREFIX/lib/cif2cell
 that contains the manual and sample cif files.
@@ -107,5 +103,3 @@ Happy computing!
 
 Torbjorn Bjorkman
 https://orcid.org/0000-0002-1154-9846 
-
-

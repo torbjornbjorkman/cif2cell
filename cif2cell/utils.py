@@ -22,8 +22,10 @@
 #
 #******************************************************************************************
 from __future__ import division
+from __future__ import absolute_import
 from math import sqrt,acos,pi
 from cif2cell.elementdata import *
+from six.moves import range
 ################################################################################################
 # Miscellaneous
 zero = 0.0

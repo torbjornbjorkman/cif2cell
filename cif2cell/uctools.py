@@ -28,6 +28,7 @@
 #
 #******************************************************************************************
 from __future__ import division
+from __future__ import absolute_import
 import os
 import sys
 import string
@@ -40,6 +41,8 @@ from random import random, gauss
 from fractions import gcd
 from cif2cell.spacegroupdata import *
 from cif2cell.elementdata import *
+import six
+from six.moves import range
 if sys.version_info >= (3,0):
     from functools import reduce
     
@@ -751,7 +754,7 @@ class CellData(GeometryObject):
                         else:
                             self.ChemicalComposition[k] = v
         if not self.alloy:
-            L = self.ChemicalComposition.values()
+            L = list(self.ChemicalComposition.values())
             divisor = reduce(gcd,L)
             for k,v in self.ChemicalComposition.items():
                 self.ChemicalComposition[k] = v/divisor
@@ -1132,7 +1135,7 @@ class CellData(GeometryObject):
                     eqsitestrs = eqsitedata.get(symopid)
                     # This if fixes a funny exception that can occur for the P1 space group,
                     # if the single operation is just a string and not in a _loop
-                    if isinstance(eqsitestrs,basestring):
+                    if isinstance(eqsitestrs,six.string_types):
                         eqsitestrs = [eqsitestrs]
                     eqsites = []
                     for i in range(len(eqsitestrs)):
@@ -1713,13 +1716,13 @@ class ReferenceData:
                         alloy = True
                     except:
                         raise ValueError()
-                if e in self.ChemicalComposition.keys():
+                if e in list(self.ChemicalComposition.keys()):
                     nold = self.ChemicalComposition[e]
                     self.ChemicalComposition[e] = nold+n
                 else:
                     self.ChemicalComposition[e] = n
             if not alloy:
-                L = self.ChemicalComposition.values()
+                L = list(self.ChemicalComposition.values())
                 divisor = reduce(gcd,L)
                 for k,v in self.ChemicalComposition.items():
                     self.ChemicalComposition[k] = v/divisor
@@ -1765,7 +1768,7 @@ class ReferenceData:
         # Authors
             authorsloop = cifblock.GetLoop('_publ_author_name')
             self.authors = authorsloop.get('_publ_author_name')
-            if isinstance(self.authors,basestring):   # If just a string and not a list from a _loop
+            if isinstance(self.authors,six.string_types):   # If just a string and not a list from a _loop
                 self.authors = deletenewline(self.authors)
                 self.authorstring = self.authors
                 self.authors = self.authors.split(";")
