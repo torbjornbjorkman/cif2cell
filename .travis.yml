@@ -1,0 +1,12 @@
+language: python
+
+python:
+  - "3.6"
+  - "2.7"
+
+install:
+  - pip install -e .
+
+script:
+  - cif2cell --help
+  - .ci/test_script.sh
