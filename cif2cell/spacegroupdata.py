@@ -3090,7 +3090,7 @@ Rhomb2HexHall = { 'P 3*'     : 'R 3',
                   '-P 3* 2n' : '-R 3 2"c'}
 
 Hex2RhombHall = dict([])
-for k,v in Rhomb2HexHall.iteritems():
+for k,v in Rhomb2HexHall.items():
     Hex2RhombHall[v] = k
 
 # A. Perlov's numbering -> international tables numbers

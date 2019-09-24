@@ -1,0 +1,93 @@
+#------------------------------------------------------------------------------
+#$Date: 2016-02-13 21:28:24 +0200 (Sat, 13 Feb 2016) $
+#$Revision: 176429 $
+#$URL: svn://www.crystallography.net/cod/cif/1/52/69/1526931.cif $
+#------------------------------------------------------------------------------
+#
+# This file is available in the Crystallography Open Database (COD),
+# http://www.crystallography.net/
+#
+# All data on this site have been placed in the public domain by the
+# contributors.
+#
+data_1526931
+loop_
+_publ_author_name
+'Weirich, T.E.'
+'Winterer, M.'
+'Seifried, S.'
+'Fuess, H.'
+'Hahn, H.'
+_publ_section_title
+;
+ Rietveld analysis of electron powder diffraction data from
+ nanocrystalline anatase, Ti O2
+;
+_journal_name_full               Ultramicroscopy
+_journal_page_first              263
+_journal_page_last               270
+_journal_volume                  81
+_journal_year                    2000
+_chemical_formula_sum            'O2 Ti'
+_chemical_name_systematic        'Ti O2'
+_space_group_IT_number           141
+_symmetry_space_group_name_Hall  '-I 4bd 2'
+_symmetry_space_group_name_H-M   'I 41/a m d :2'
+_cell_angle_alpha                90
+_cell_angle_beta                 90
+_cell_angle_gamma                90
+_cell_formula_units_Z            4
+_cell_length_a                   3.771
+_cell_length_b                   3.771
+_cell_length_c                   9.43
+_cell_volume                     134.099
+_citation_journal_id_ASTM        ULTRD6
+_cod_data_source_file            Weirich_ULTRD6_2000_665.cif
+_cod_data_source_block           O2Ti1
+_cod_original_cell_volume        134.0988
+_cod_original_formula_sum        'O2 Ti1'
+_cod_database_code               1526931
+loop_
+_symmetry_equiv_pos_as_xyz
+x,y,z
+-y+1/4,x+3/4,z+1/4
+-x+1/2,-y,z+1/2
+y+1/4,-x+1/4,z+3/4
+x,-y,-z
+y+1/4,x+3/4,-z+1/4
+-x+1/2,y,-z+1/2
+-y+1/4,-x+1/4,-z+3/4
+-x,-y,-z
+y-1/4,-x-3/4,-z-1/4
+x-1/2,y,-z-1/2
+-y-1/4,x-1/4,-z-3/4
+-x,y,z
+-y-1/4,-x-3/4,z-1/4
+x-1/2,-y,z-1/2
+y-1/4,x-1/4,z-3/4
+x+1/2,y+1/2,z+1/2
+-y+3/4,x+5/4,z+3/4
+-x+1,-y+1/2,z+1
+y+3/4,-x+3/4,z+5/4
+x+1/2,-y+1/2,-z+1/2
+y+3/4,x+5/4,-z+3/4
+-x+1,y+1/2,-z+1
+-y+3/4,-x+3/4,-z+5/4
+-x+1/2,-y+1/2,-z+1/2
+y+1/4,-x-1/4,-z+1/4
+x,y+1/2,-z
+-y+1/4,x+1/4,-z-1/4
+-x+1/2,y+1/2,z+1/2
+-y+1/4,-x-1/4,z+1/4
+x,-y+1/2,z
+y+1/4,x+1/4,z-1/4
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+_atom_site_occupancy
+_atom_site_U_iso_or_equiv
+O1 O-2 0 0.25 0.1656 1 0.0
+Ti1 Ti+4 0 0.25 0.375 1 0.0

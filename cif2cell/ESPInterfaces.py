@@ -27,9 +27,9 @@ import copy
 import os
 import math
 import string
-from utils import *
-from elementdata import *
-from uctools import *
+from cif2cell.utils import *
+from cif2cell.elementdata import *
+from cif2cell.uctools import *
 from re import search
 
 
@@ -80,7 +80,7 @@ class ATATFile(GeometryOutputFile):
             for b in a:
                 filestring += str(b.position)
                 if b.alloy():
-                    for k,v in b.species.iteritems():
+                    for k,v in b.species.items():
                         filestring += k+"="+str(v)+","
                     filestring = filestring.rstrip(",")+"\n"
                 else:
@@ -269,7 +269,7 @@ class CFGFile(GeometryOutputFile):
         atomlist = []
         for a in tmplist:
             if a.alloy():
-                for sp,occ in a.species.iteritems():
+                for sp,occ in a.species.items():
                     atomlist.append(AtomSite(position=a.position,species={sp : occ},charges={sp : a.charges[sp]}))
             else:
                 atomlist.append(a)
@@ -294,7 +294,7 @@ class CFGFile(GeometryOutputFile):
         ## filestring += "entry_count = 3\n"
         filestring += "entry_count = 6\n"
         for a in atomlist:
-                for sp,occ in a.species.iteritems():
+                for sp,occ in a.species.items():
                         if prevsp != sp:
                             filestring += "%i\n"%(int(round(ed.elementweight[sp])))
                             filestring += sp+"\n"
@@ -330,6 +330,107 @@ class COOFile(GeometryOutputFile):
                 filestring += str(b.position)+" %3i  0.500 0.000 1.000\n"%(ed.elementnr[b.spcstring()])
         return filestring
     
+################################################################################################
+# LAMMPS FILE
+class LAMMPSFile(GeometryOutputFile):
+    """
+    Class for storing the geometrical data needed for outputting an .data LAMMPS file
+    and the method __str__ that outputs the contents of the .data file as a string.
+    """
+    def __init__(self,crystalstructure,string):
+        GeometryOutputFile.__init__(self,crystalstructure,string)
+        # To be put on the second line
+        self.programdoc = ""
+    def __str__(self):
+        filestring = ""
+        filestring += "#"+self.docstring+"\n\n"
+        filestring += "%i atoms\n" % sum([len(v) for v in self.cell.atomdata])
+        atomTypes = {}
+        nextAtomTypeId = 1
+
+        for a in self.cell.atomdata:
+            for b in a:
+                atomType = str(b).split()[0]
+                if not atomType in atomTypes:
+                    atomTypes[atomType] = nextAtomTypeId
+                    nextAtomTypeId += 1
+        filestring += "%i atom types\n\n" % len(atomTypes)
+
+        if self.cell.latticevectors[0][1]!=0:
+            theta = math.atan2(-self.cell.latticevectors[0][1], self.cell.latticevectors[0][0])
+            c = cos(theta)
+            s = sin(theta)
+            R = LatticeMatrix([[c, s, 0],
+                                [-s, c, 0],
+                                [0, 0, 1]])
+            self.cell.latticevectors[0] = Vector(mvmult3(R,self.cell.latticevectors[0]))
+            self.cell.latticevectors[1] = Vector(mvmult3(R,self.cell.latticevectors[1]))
+            self.cell.latticevectors[2] = Vector(mvmult3(R,self.cell.latticevectors[2]))
+
+        if self.cell.latticevectors[0][2]!=0:
+            theta = math.atan2(-self.cell.latticevectors[0][2], self.cell.latticevectors[0][0])
+            c = cos(theta)
+            s = sin(theta)
+            R = LatticeMatrix([[c, s, 0],
+                                [0, 1, 0],
+                                [-s, c, 0]])
+            self.cell.latticevectors[0] = Vector(mvmult3(R,self.cell.latticevectors[0]))
+            self.cell.latticevectors[1] = Vector(mvmult3(R,self.cell.latticevectors[1]))
+            self.cell.latticevectors[2] = Vector(mvmult3(R,self.cell.latticevectors[2]))
+
+        if self.cell.latticevectors[1][2]!=0:
+            theta = math.atan2(-self.cell.latticevectors[1][2], self.cell.latticevectors[1][1])
+            c = cos(theta)
+            s = sin(theta)
+            R = LatticeMatrix([[1, 0, 0],
+                                [0, c, s],
+                                [0, -s, c]])
+            self.cell.latticevectors[0] = Vector(mvmult3(R,self.cell.latticevectors[0]))
+            self.cell.latticevectors[1] = Vector(mvmult3(R,self.cell.latticevectors[1]))
+            self.cell.latticevectors[2] = Vector(mvmult3(R,self.cell.latticevectors[2]))
+
+        if self.cell.latticevectors[0][1]!=0 or self.cell.latticevectors[0][2] != 0 or self.cell.latticevectors[1][2]!=0 or self.cell.latticevectors[0][0] <= 0 or self.cell.latticevectors[1][1] <= 0 or self.cell.latticevectors[2][2] <= 0:
+            print "Error in triclinic box. Vectors should follow these rules: http://lammps.sandia.gov/doc/Section_howto.html#howto-12"
+            print "Ideally, this program should solve this, but it doesn't yet. You need to fix it."
+            exit()
+
+        xy = self.cell.lengthscale*self.cell.latticevectors[1][0]
+        xz = self.cell.lengthscale*self.cell.latticevectors[2][0]
+        yz = self.cell.lengthscale*self.cell.latticevectors[2][1]
+
+        a = self.cell.latticevectors[0][0]*self.cell.lengthscale
+        b = self.cell.latticevectors[1][1]*self.cell.lengthscale
+        c = self.cell.latticevectors[2][2]*self.cell.lengthscale
+
+        filestring += "0.0 %f xlo xhi\n" % a
+        filestring += "0.0 %f ylo yhi\n" % b
+        filestring += "0.0 %f zlo zhi\n" % c
+        if xy!=0 or xz !=0 or yz != 0:
+            filestring += str(xy) + " " + str(xz) + " " + str(yz) + " xy xz yz\n"
+
+        filestring += "\n"
+        filestring += "Atoms\n\n"
+
+        nextAtomId = 1
+
+        #for b in [a for a in self.cell.atomdata]:
+            #print str(b).split()[0]
+        #atomTypes str(b).split()[0]
+
+        lv = []
+        for i in range(3):
+            lv.append([])
+            for j in range(3):
+                lv[i].append(self.cell.lengthscale*self.cell.latticevectors[i][j])
+        for a in self.cell.atomdata:
+            for b in a:
+                t = Vector(mvmult3(lv,b.position))
+                atomType = str(b).split()[0]
+                atomTypeId = atomTypes[atomType]
+                filestring += str(nextAtomId)+" "+str(atomTypeId)+" "+str(t)+"\n"
+                nextAtomId += 1
+        return filestring
+
 ################################################################################################
 # XYZ FILE
 class XYZFile(GeometryOutputFile):
@@ -1293,7 +1394,7 @@ class CASTEPFile(GeometryOutputFile):
                 if self.cell.alloy and self.vca:
                     if len(b.species) > 1:
                         i = i + 1
-                        for sp,conc in b.species.iteritems():
+                        for sp,conc in b.species.items():
                             filestring += sp.ljust(2)+" "+str(pos)+"  MIXTURE:( %i %6.5f )"%(i,conc)
                     else:
                         filestring += b.spcstring().ljust(2)+" "+str(pos)
@@ -1310,7 +1411,7 @@ class CASTEPFile(GeometryOutputFile):
         species = set([])
         for a in self.cell.atomdata:
             if self.vca:
-                for sp,conc in a[0].species.iteritems():
+                for sp,conc in a[0].species.items():
                     species.add(sp)
             else:
                 species.add(a[0].spcstring())
@@ -1807,7 +1908,7 @@ class MCSQSFile(GeometryOutputFile):
         for a in self.cell.atomdata:
             for b in a:
                 filestring += +str(b.position)+" "
-                for k,v in b.species.iteritems():
+                for k,v in b.species.items():
                     filestring += k+"="+str(v)
         return filestring
         
@@ -1836,7 +1937,7 @@ class POSCARFile(GeometryOutputFile):
         for a in self.cell.atomdata:
             for b in a:
                 if self.vca:
-                    for k,v in b.species.iteritems():
+                    for k,v in b.species.items():
                         tmp.add(k)
                 else:
                     tmp.add(b.spcstring())
@@ -1928,7 +2029,7 @@ class POSCARFile(GeometryOutputFile):
             for a in self.cell.atomdata:
                 for b in a:
                     if self.vca:
-                        for k,v in b.species.iteritems():
+                        for k,v in b.species.items():
                             if k == sp:
                                 nsp += 1
                                 p = Vector(mvmult3(coordmat,mvmult3(transmtx,b.position)))
@@ -2055,7 +2156,7 @@ class INCARFile:
             tmp = set([])
             for a in self.cell.atomdata:
                 for b in a:
-                    for k,v in b.species.iteritems():
+                    for k,v in b.species.items():
                         tmp.add((k,v))
             tmp = list(tmp)
             self.vcaspecies = []
@@ -2068,7 +2169,7 @@ class INCARFile:
         for a in self.cell.atomdata:
             for b in a:
                 if self.vca:
-                    for k,v in b.species.iteritems():
+                    for k,v in b.species.items():
                         spcstr = k
                         if spcstr in speciesdict:
                             t = speciesdict[spcstr] + 1
@@ -2085,7 +2186,7 @@ class INCARFile:
         # species list in the same order as poscar
         self.species = []
         for s in poscarfile.species:
-            for k,v in speciesdict.iteritems():
+            for k,v in speciesdict.items():
                 if k == s:
                     self.species.append((k,v))
         # get potcar list
@@ -2101,7 +2202,7 @@ class INCARFile:
         # get maximal encut and number of electrons from potcars
         enmaxs = dict([])
         zvals = dict([])
-        for a,f in potcars.iteritems():
+        for a,f in potcars.items():
             potcar = open(f,"r")
             for line in potcar:
                 if search("ZVAL",line):
@@ -2111,7 +2212,7 @@ class INCARFile:
                 if search("END of PSCTR",line):
                     break
             potcar.close()
-        self.maxencut = max([k for v,k in enmaxs.iteritems()])
+        self.maxencut = max([k for v,k in enmaxs.items()])
         # do we suspect that this might be magnetic?
         self.magnetic = False
         self.magmomlist = []
@@ -2124,7 +2225,7 @@ class INCARFile:
         # Determine NBANDS
         nmag = sum([eval(i) for i in self.magmomlist])
         nelect = 0.0
-        for sp,z in zvals.iteritems():
+        for sp,z in zvals.items():
             for a in self.cell.atomdata:
                 for b in a:
                     if sp == b.spcstring():
@@ -2571,7 +2672,7 @@ class XBandSysFile(GeometryOutputFile):
                      self.cell.spacegroupsetting == 'C':
                 filestring += "3  monoclinic  primitive      2/m    C_2h\n"
             else:
-                print "xband only knows primitive and base-centered monoclinic settings!"
+                sys.stderr.write("xband only knows primitive and base-centered monoclinic settings!\n")
                 sys.exit(43)
         elif self.cell.crystal_system() == 'orthorhombic':
             if self.cell.spacegroupsetting == 'P':
@@ -2584,7 +2685,7 @@ class XBandSysFile(GeometryOutputFile):
             elif self.cell.spacegroupsetting == "F":
                 filestring += "7  orthorombic face-centered  mmm    D_2h\n"
             else:
-                print "xband does not know %1s centering of an orthorhombic cell."%self.cell.spacegroupsetting
+                sys.stderr.write("xband does not know %1s centering of an orthorhombic cell.\n"%self.cell.spacegroupsetting)
                 sys.exit(43)
         elif self.cell.crystal_system() == "tetragonal":
             if self.cell.spacegroupsetting == "P":
@@ -2592,7 +2693,7 @@ class XBandSysFile(GeometryOutputFile):
             elif self.cell.spacegroupsetting == "I":
                 filestring += "9  tetragonal  body-centered  4/mmm  D_4h\n"
             else:
-                print "xband only knows primitive and body-centered tetragonal settings!"
+                sys.stderr.write("xband only knows primitive and body-centered tetragonal settings!\n")
                 sys.exit(43)
         elif self.cell.crystal_system() == "trigonal":
             filestring += "10 trigonal    primitive      -3m    D_3d\n"
@@ -2606,7 +2707,7 @@ class XBandSysFile(GeometryOutputFile):
             elif self.cell.spacegroupsetting == "I":
                 filestring += "14 cubic       body-centered  m3m    O_h \n"
             else:
-                print "xband does not know %1s centering of a cubic cell."%self.cell.spacegroupsetting
+                sys.stderr.write("xband does not know %1s centering of a cubic cell.\n"%self.cell.spacegroupsetting)
                 sys.exit(43)
         filestring += "space group number (ITXC and AP)\n"
         filestring += "%5i%5i"%(self.cell.spacegroupnr,Number2AP[self.cell.spacegroupnr])+"\n"
@@ -2680,7 +2781,7 @@ class XBandSysFile(GeometryOutputFile):
         it = 0
         for a in self.cell.atomdata:
             corr = 0
-            for sp,conc in a[0].species.iteritems():
+            for sp,conc in a[0].species.items():
                 it += 1
                 filestring += " %2i%4i  %8s%5i%6.3f"%(it,ed.elementnr[sp],sp,len(a),conc)
                 iq -= corr*len(a)
@@ -2813,7 +2914,7 @@ class SPCFile(GeometryOutputFile):
             natom = 0
             conc.append([])
             for a in self.cell.atomdata:
-                for k,v in a[0].species.iteritems():
+                for k,v in a[0].species.items():
                     if a == b:
                         conc[i].append((ascii[natom],v))
                     else:

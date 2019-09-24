@@ -28,7 +28,7 @@ try:
     import CifFile
 except:
     try:
-        print "PyCifRW not found. Installing relevant modules."
+        print("PyCifRW not found. Installing relevant modules.")
         pycifrwmodulelist = ['CifFile','StarFile','YappsStarParser_1_0','YappsStarParser_1_1',
                              'YappsStarParser_DDLm','yapps3_compiled_rt']
         tar = tarfile.open('PyCifRW-3.3.tar.gz')
@@ -37,10 +37,10 @@ except:
             shutil.copy("PyCifRW-3.3/"+mod+".py","./")
         shutil.rmtree('PyCifRW-3.3')
     except:
-        print "PyCifRW could neither be found nor installed. Please install PyCIFRW manually, "+\
+        print("PyCifRW could neither be found nor installed. Please install PyCIFRW manually, "+\
               "either from the\ncopy provided in this package or from: "+\
               "https://sourceforge.net/projects/pycifrw.berlios/\n"+\
-              "(or maybe you have it installed and just need to adjust your PYTHONPATH)."
+              "(or maybe you have it installed and just need to adjust your PYTHONPATH).")
         sys.exit(1)
 
 # Set up documentation
@@ -54,7 +54,7 @@ periodiccifs = glob('cifs/periodic_table/*.cif')+['cifs/periodic_table/README']
 modulelist = pycifrwmodulelist+['utils','uctools','spacegroupdata','elementdata','ESPInterfaces']
 
 setup(name='cif2cell',
-      version='1.3.1',
+      version='2.0.0',
       description='Construct a unit cell from CIF data',
       long_description='A command-line tool to generate the geometrical setup for various electronic structure codes from a CIF format file.',
       author='Torbjorn Bjorkman',

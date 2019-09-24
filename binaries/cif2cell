@@ -33,14 +33,14 @@ from optparse import OptionParser, OptionGroup
 import warnings
 import CifFile
 import subprocess
-from utils import *
-from uctools import *
-from ESPInterfaces import *
-from elementdata import *
+from cif2cell.utils import *
+from cif2cell.uctools import *
+from cif2cell.ESPInterfaces import *
+from cif2cell.elementdata import *
 
 # Name and version
 programname = "cif2cell"
-version = "1.2.11"
+version = "2.0.0"
 
 # Turn of warnings about deprecated stuff
 warnings.simplefilter("ignore",DeprecationWarning)
@@ -48,7 +48,7 @@ warnings.simplefilter("ignore",DeprecationWarning)
 # All supported output formats
 outputprograms = set(['abinit','atat','castep','cfg','coo','cpmd','cp2k','crystal09','elk','emto','exciting','fhi-aims',
                       ## 'fleur','ncol','mcsqs','rspt','siesta','sprkkr','vasp', # mcsqs not ready
-                      'fleur','hutsepot','mopac','ncol', 'pwscf', 'quantum-espresso', 'rspt','siesta','sprkkr','vasp',
+                      'fleur','hutsepot','lammps','mopac','ncol', 'pwscf', 'quantum-espresso', 'rspt','siesta','sprkkr','vasp',
                       'ase','bmdl','cellgen','cif','kgrn','kfcd','kstr','shape','spacegroup',
                        'spc','xband','xyz'])
 
@@ -75,8 +75,8 @@ description = "A program for generating input lattice structures to various elec
 usage = "usage: %prog FILE [-p PROGRAM] [other options]"
 parser = OptionParser(usage=usage, description=description)
 parser.add_option("--version",dest="version",help="Print version number.",action="store_true")
-parser.add_option("-v","--verbose",dest="verbose",help="Print a lot of extra information to screen",action="store_true")
-parser.add_option("-q","--quiet",dest="quiet",help="Suppress most screen output, such as warnings and overrides --verbose flag, but will print all other requested output.",action="store_true")
+parser.add_option("-v","--verbose",dest="verbose",help="Be as verbose as possible.",action="store_true")
+parser.add_option("-q","--quiet",dest="quiet",help="Suppress all but explicitly requested screen output. Overrides --verbose flag.",action="store_true")
 # GENERAL OPTIONS
 generalopts = OptionGroup(parser, "General options")
 generalopts.add_option("-f","--file",dest="file",help="Input CIF file, unless given as first argument to the program.",metavar="FILE")
@@ -97,19 +97,24 @@ cellgenopts.add_option("--coordinate-tolerance",dest="coordtol",help="Parameter 
 cellgenopts.add_option("--setup-all",dest="setupall",help="Make a more complete setup, not just the geometrical part. This is currently only available for "+setupallstring+".",action="store_true")
 cellgenopts.add_option("--k-resolution",dest="kresolution",help="The desired resolution in k-space (default=0.2). Used for generating k-space grid options if --setup-all is specified.")
 cellgenopts.add_option("--transform-cell",dest="celltransformation",help="Transformation matrix applied to the lattice vectors and the symmetry operations if you, for example, want to realign the cell.",metavar="[[],[],[]]")
-cellgenopts.add_option("--body-centred-setting",dest="specialIsetting",help="Use the more symmetrical set of primitive translation vectors used for the bcc structure also for other body-centred crystals.",metavar="0,1")
+cellgenopts.add_option("--body-centred-setting",dest="specialIsetting",help="If set to 1, use the more symmetrical set of primitive translation vectors used for the bcc structure also for other body-centred crystals.",metavar="0,1")
 cellgenopts.add_option("--cubic-diagonal-z",dest="cubediagz",help="Set up cubic cell with [111] direction along the z-axis.",action="store_true")
 cellgenopts.add_option("--rhombohedral-diagonal",dest="rhombdiag",help="Set up rhombohedral cell with threefold axis along pseudocubic [111] direction.",action="store_true")
 cellgenopts.add_option("--random-displacements",dest="randomdisp",help="Randomly displace all atoms. Depending on the distribution, the displacement size is either the maximal displacement (for uniform distribution) or the standard deviation (for gaussian distribution) in Angstrom.",metavar="displacementsize")
 cellgenopts.add_option("--random-displacements-distribution",dest="randomdistr",help="The distribution used for displacing the atoms.",metavar="uniform/gaussian")
 cellgenopts.add_option("--export-cif-labels",dest="exportlabels",help="Export atom labels from the CIF file (currently only supported for castep and RSPt).",action="store_true")
-# Supercell options
-cellgenopts.add_option("--supercell",dest="supercellmap",help="Three integers separated with commas and enclosed in square brackets that specify the dimensions of a supercell OR three vectors of integers that gives the map to the supercell to be constructed from the primitive cell. If combined with the --no-reduce option the supercell will instead be generated based on the conventional cell.",metavar="[k,l,m]/[[],[],[]]")
-cellgenopts.add_option("--supercell-dimensions",dest="supercelldims",help="Three numbers separated with commas and enclosed in square brackets that specify the desired ABSOLUTE dimensions of a supercell (in angstrom) OR three vectors of numbers that gives the desired lattice vectors. The program will automatically generate a supercell, attempting to get as close as possible to the desired dimensions.",metavar="[x,y,z]/[[],[],[]]")
-cellgenopts.add_option("--supercell-vacuum",dest="supercellvacuum",help="Three numbers >=0 separated with commas and enclosed in square brackets that specify a number of unit cell units of vacuum to be added along the first, second or third of the generated lattice vectors.",metavar="[k,l,m]")
-cellgenopts.add_option("--supercell-translation-vector","--supercell-prevacuum-translation",dest="supercellprevactransvec",help="Three numbers separated with commas and enclosed in square brackets that specify a shift of all atomic positions in the cell prior to vacuum generation (in units of the lattice vectors of the supercell).",metavar="[k,l,m]")
-cellgenopts.add_option("--supercell-postvacuum-translation",dest="supercellpostvactransvec",help="Three numbers separated with commas and enclosed in square brackets that specify a final shift of all atomic positions in the final cell (in units of the lattice vectors of the new cell).",metavar="[k,l,m]")
-cellgenopts.add_option("--supercell-sort",dest="supercellsort",help="Sort the atom positions by some scheme. Currently available are:     1) By cartesian coordinate - example: xzy will sort first on x then on z then on y.     2) by lattice vector - example: 132 will sort first by lattice vector 1 then by lattice vector 3 and last by lattice vector 2.")
+# SUPERCELL OPTIONS
+supercellopts = OptionGroup(parser, "Supercell generation options")
+supercellopts.add_option("--supercell",dest="supercellmap",help="Three integers separated with commas and enclosed in square brackets that specify the dimensions of a supercell OR three vectors of integers that gives the map to the supercell to be constructed from the primitive cell. If combined with the --no-reduce option the supercell will instead be generated based on the conventional cell.",metavar="[k,l,m]/[[],[],[]]")
+supercellopts.add_option("--supercell-dimensions",dest="supercelldims",help="Three numbers separated with commas and enclosed in square brackets that specify the desired ABSOLUTE dimensions of a supercell (in angstrom) OR three vectors of numbers that gives the desired lattice vectors. The program will automatically generate a supercell, attempting to get as close as possible to the desired dimensions.",metavar="[x,y,z]/[[],[],[]]")
+supercellopts.add_option("--supercell-vacuum",dest="supercellvacuum",help="Three numbers >=0 separated with commas and enclosed in square brackets that specify a number of unit cell units of vacuum to be added along the first, second or third of the generated lattice vectors.",metavar="[k,l,m]")
+supercellopts.add_option("--supercell-translation-vector","--supercell-prevacuum-translation",dest="supercellprevactransvec",help="Three numbers separated with commas and enclosed in square brackets that specify a shift of all atomic positions in the cell prior to vacuum generation (in units of the lattice vectors of the supercell).",metavar="[k,l,m]")
+supercellopts.add_option("--supercell-postvacuum-translation",dest="supercellpostvactransvec",help="Three numbers separated with commas and enclosed in square brackets that specify a final shift of all atomic positions in the final cell (in units of the lattice vectors of the new cell).",metavar="[k,l,m]")
+supercellopts.add_option("--supercell-realign",dest="supercellrealign",help="Realign the supercell lattice vectors with respect to the cartesian reference frame. For orthorhombic cells, it puts the first, second and third lattice vectors along x, y and z, respectively.",metavar="0,1")
+supercellopts.add_option("--supercell-sort",dest="supercellsort",help="Sort the atom positions by some scheme. Currently available are: \n1) By cartesian coordinate - example: xzy will sort first on x then on z then on y. \n2) by lattice vector - example: 132 will sort first by lattice vector 1 then by lattice vector 3 and last by lattice vector 2.")
+# SURFACE OPTIONS
+surfaceopts = OptionGroup(parser, "Surface generation options")
+surfaceopts.add_option("--surface-wizard",dest="surfacewizardhkl",help="Three integers separated with commas and enclosed in square brackets that specify a (hkl) plane. The wizard will suggest a supercell map that gives the first two lattice vectors in the (hkl) plane. The third lattice vector is selected as the [hkl] direction, or reasonably orthogonal to the (hkl) plane (if the [hkl] direction is far from orthogonal to this plane).",metavar="[h,k,l]")
 # PRINTING OPTIONS
 printopts = OptionGroup(parser, "Printing options")
 printopts.add_option("--print-digits",dest="printdigits",help="Number of digits used when printing coordinates etc. to screen (default=8). Useful if you need to tweak the screen output for cutting and pasting into some unsupported program. There is no point in going over 16 because of the floating point accuracy.")
@@ -178,13 +183,15 @@ progspec.add_option("--xyz-atomic-units",dest="xyzatomicunits",help="Output xyz 
 #
 parser.add_option_group(generalopts)
 parser.add_option_group(cellgenopts)
+parser.add_option_group(supercellopts)
+parser.add_option_group(surfaceopts)
 parser.add_option_group(printopts)
 parser.add_option_group(progspec)
 (options,args) = parser.parse_args()
 
 # Print version number and exit
 if options.version:
-    print programname+" version "+version
+    sys.stdout.write(programname+" version "+version+"\n")
     sys.exit(0)
 
 #############################################################
@@ -202,7 +209,7 @@ if options.filenamequery and not options.program:
     sys.stderr.write("***Error: option --which-filename requires that --program is given.\n")
     sys.exit(1)
 if options.supercellmap and options.supercelldims:
-    sys.stderr.write("***Error: cannot use both --supercell and --supercell-dimensions.")
+    sys.stderr.write("***Error: cannot use both --supercell and --supercell-dimensions.\n")
     sys.exit(1)
 
     
@@ -212,7 +219,7 @@ if options.supercellmap and options.supercelldims:
 if options.program:
     outputprogram = options.program.lower()
     if not outputprogram in outputprograms:
-        print "Error: Unknown output format: "+outputprogram
+        sys.stderr.write("Error: Unknown output format: "+outputprogram+"\n")
         sys.exit(1)
     # Quantum Espresso is just an alias...
     if outputprogram == 'quantum-espresso':
@@ -333,42 +340,60 @@ if cif_file:
         cif_grammar = options.grammar
     else:
         cif_grammar = '1.1'
-    # Skip validation for now... it causes too much trouble.
+    # Skip validation... it causes too much trouble.
     ## cdic = CifFile.CifDic("cif_core.dic",grammar='1.1')     
     ## val_results = CifFile.validate(cif_file,dic=cdic)
-    ## print validate_report(val_results)
+    ## print(validate_report(val_results))
     ## val_report = CifFile.ValidationResult(val_results)
     try:
         cf = CifFile.ReadCif(cif_file,grammar=cif_grammar)
-    except Exception, e:
+#        cf = CifFile.ReadCif(cif_file)
+    except Exception as e1:
+        print (e1)
         # test if data_ statement in the beginning is missing
         try:
             f = open(cif_file,'r')
             lines = f.readlines()
             f.close()
-            tmpname = cif_file.replace('.cif','_tmp.cif') 
-            f = open(tmpname,'w')
-            f.write("data_default\n")
+            datamissing = False
+            counter = 0
             for line in lines:
-                f.write(line)
-            f.close()
-            cf = CifFile.ReadCif(tmpname,grammar=cif_grammar)
-            wrongfile = cif_file.replace('.cif','_wrong.cif')
-            sys.stderr.write("***Warning: The cif file is missing a data statement.")
-            sys.stderr.write(" The file has been renamed '"+wrongfile+"' and replaced by a")
-            sys.stderr.write(" corrected file.\n")
-            os.rename(cif_file,wrongfile)
-            os.rename(tmpname,cif_file)
-        except:
+                if line.strip()[0] == '#':
+                    continue
+                else:
+                    if not line.strip()[0:5] == 'data_' and counter == 0:
+                        datamissing = True
+                    counter += 1
+            if datamissing:
+                tmpname = cif_file.replace('.cif','_tmp.cif') 
+                f = open(tmpname,'w')
+                f.write("data_default\n")
+                for line in lines:
+                    f.write(line)
+                f.close()
+                cf = CifFile.ReadCif(tmpname,grammar=cif_grammar)
+                wrongfile = cif_file.replace('.cif','_wrong.cif')
+                sys.stderr.write("***Warning: The cif file is missing a data statement.")
+                sys.stderr.write(" The file has been renamed '"+wrongfile+"' and replaced by a")
+                sys.stderr.write(" corrected file.\n")
+                os.rename(cif_file,wrongfile)
+                os.rename(tmpname,cif_file)
+            else:
+                sys.stderr.write("***Error: could not read "+cif_file+".\n")
+                sys.stderr.write("Something may be wrong with the CIF file, you can check it with ")
+                sys.stderr.write("the free IUCr CIF valitation tool at http://checkcif.iucr.org/\n")
+                sys.stderr.write(e1.value+"\n")
+                sys.exit(2)
+        except Exception as er2:
             try:
                 os.remove(tmpname)
             except:
                 pass
             sys.stderr.write("***Error: could not read "+cif_file+".\n")
             sys.stderr.write("Something may be wrong with the CIF file, you can check it with ")
-            sys.stderr.write("the free IUCr CIF valitation tool at http://http://checkcif.iucr.org/\n")
-            sys.stderr.write(e.value+"\n")
-            sys.exit(2)
+            sys.stderr.write("the free IUCr CIF valitation tool at http://checkcif.iucr.org/\n")
+            sys.stderr.write(er2.value+"\n")
+#            sys.exit(2)
 else:
     sys.stderr.write("***Error: No input CIF file given\n")
     sys.exit(2)
@@ -406,6 +431,10 @@ if makesupercell:
         supercellsort = options.supercellsort.lower()
     else:
         supercellsort = ""
+    if options.supercellrealign:
+        supercellrealign = int(options.supercellrealign)
+    else:
+        supercellrealign = 0
 
 ##############################################
 # Get blocks
@@ -421,7 +450,7 @@ else:
 ref = ReferenceData()
 ref.getFromCIF(cb)
 if bibtexref:
-    print ref.bibtexref()
+    sys.stdout.write(ref.bibtexref())
     sys.exit(0)
 if options.coordtol:
     # Get cell data
@@ -435,13 +464,13 @@ cd.quiet = options.quiet
 cd.force = force
 try:
     cd.getFromCIF(cb)
-except PositionError, e:
+except PositionError as e:
     sys.stderr.write("***Error: cell setup: "+e.value+"\n")
     sys.exit(2)
-except CellError, e:
+except CellError as e:
     sys.stderr.write("***Error: cell setup: "+e.value+"\n")
     sys.exit(2)
-except SymmetryError, e:
+except SymmetryError as e:
     sys.stderr.write("***Error: cell setup: "+e.value+"\n")
     sys.exit(2)
 
@@ -458,15 +487,32 @@ try:
         cd.primitive()
     else:
         cd.conventional()
-except SymmetryError, e:
+except SymmetryError as e:
     sys.stderr.write("***Error: cell setup: "+e.value+"\n")
     sys.exit(2)
-except CellError, e:
+except CellError as e:
     sys.stderr.write("***Error: cell setup: "+e.value+"\n")
     sys.exit(2)
 
+##############################################
+# Surface wizard
+# If present, print suggestion and exit.
+if options.surfacewizardhkl:
+    hkl = safe_matheval(options.surfacewizardhkl)
+    mapsuggestion = SurfaceWizard(cd,hkl)
+    wizardstr = "--supercell=["
+    for i in mapsuggestion:
+        wizardstr += "["
+        for j in i:
+            wizardstr += str(j)+','
+        wizardstr = wizardstr.rstrip(',')+"],"
+    wizardstr = wizardstr.rstrip(',')+"]\n"
+    sys.stdout.write(wizardstr)
+    sys.exit()
+        
+##############################################
 # Test if generated cell agrees with given chemical formula.
-# Too difficult for alloys.
+# Too difficult for alloys (no universally agreed-upon way to write the formula into cifs).
 if len(ref.ChemicalComposition) > 0 and not cd.alloy:
     if ref.ChemicalComposition != cd.ChemicalComposition:
         if force:
@@ -477,8 +523,9 @@ if len(ref.ChemicalComposition) > 0 and not cd.alloy:
                 "          by _chemical_formula_sum. Use --force to generate a cell anyway.\n")
             sys.exit(2)
 
-inputcell = copy.copy(cd)
+##############################################
 # Randomly displace atoms if requested. This erases all symmetry operations.
+inputcell = copy.copy(cd)
 if options.randomdisp and not makesupercell:
     if options.randomdistr:
         distr = options.randomdistr
@@ -486,7 +533,7 @@ if options.randomdisp and not makesupercell:
         distr = "uniform"
     try:
         cd.randomDisplacements(float(options.randomdisp),distribution=distr)
-    except SetupError, e:
+    except SetupError as e:
         sys.stderr.write("***Error: random displacements: "+e.value+"\n")
         sys.exit(3)
     # Reset space group operations
@@ -495,10 +542,11 @@ if options.randomdisp and not makesupercell:
     cd.HMSymbol = "P1"
     cd.symops = set([SymmetryOperation(['x','y','z'])])
 
+##############################################
 # Print cell
 if verbose or not options.program and not options.quiet:
-    print string.upper(programname)+" "+version
-    print datestring
+    sys.stdout.write(programname.upper()+" "+version+"\n")
+    sys.stdout.write(datestring+"\n")
     # Print compound
     compoundstring = "Output for "
     if ref.cpd == "" and ref.compound == "":
@@ -507,12 +555,12 @@ if verbose or not options.program and not options.quiet:
         compoundstring += ref.cpd
     if ref.compound != "":
         compoundstring += " ("+ref.compound+")"
-    print compoundstring
+    sys.stdout.write(compoundstring+"\n")
     # Print database
-    print ref.databasestring
+    sys.stdout.write(ref.databasestring)
     if cd.alloy and forcealloy and options.program:
-        print "\nEnforcing generation of file(s) for "+outputprogram+" for an alloy."
-    print "\n BIBLIOGRAPHIC INFORMATION"
+        sys.stdout.write("\nEnforcing generation of file(s) for "+outputprogram+" for an alloy.")
+    sys.stdout.write("\n BIBLIOGRAPHIC INFORMATION\n")
     refstrings = ref.referencestring().split()
     tmpstring = ""
     i = 0
@@ -521,55 +569,49 @@ if verbose or not options.program and not options.quiet:
             tmpstring += refstrings[i]+" "
             i += 1
         else:
-            print tmpstring
+            sys.stdout.write(tmpstring)
             tmpstring = ""
     if tmpstring != "":
-        print tmpstring
-    print "\n INPUT CELL INFORMATION"
-    print "Symmetry information:"
+        sys.stdout.write(tmpstring)
+    sys.stdout.write("\n INPUT CELL INFORMATION\n")
+    sys.stdout.write("Symmetry information:\n")
     if inputcell.HallSymbol != "":
-        print inputcell.crystal_system()[0].upper()+inputcell.crystal_system()[1:]+" crystal system."
-        print "Space group number     : ".rjust(2)+str(inputcell.spacegroupnr)
-        print "Hall symbol            : "+inputcell.HallSymbol
-        print "Hermann-Mauguin symbol : "+inputcell.HMSymbol
+        sys.stdout.write(inputcell.crystal_system()[0].upper()+inputcell.crystal_system()[1:]+" crystal system.\n")
+        sys.stdout.write("Space group number     : ".rjust(2)+str(inputcell.spacegroupnr)+"\n")
+        sys.stdout.write("Hall symbol            : "+inputcell.HallSymbol+"\n")
+        sys.stdout.write("Hermann-Mauguin symbol : "+inputcell.HMSymbol+"\n")
     else:
-        print "No space group information found."
+        sys.stdout.write("No space group information found.\n")
     # only print these if verbose
     if verbose:
-        print "Symmetry equivalent sites:"
+        sys.stdout.write("Symmetry equivalent sites:\n")
         symops = list(inputcell.symops)
         symops.sort()
         for i in range(len(symops)):
-            print "%4i  %8s, %8s, %8s" % (i+1, symops[i].eqsite[0], symops[i].eqsite[1], symops[i].eqsite[2])
-    print "\nLattice parameters:"
+            sys.stdout.write("%4i  %8s, %8s, %8s" % (i+1, symops[i].eqsite[0], symops[i].eqsite[1], symops[i].eqsite[2])+"\n")
+    sys.stdout.write("\nLattice parameters:\n")
     tmpstring = ""
     for i in ["a", "b", "c"]:
         tmpstring += i.rjust(decpos)+" "
-    print tmpstring
+    sys.stdout.write(tmpstring+"\n")
     formatstring = ""
     if options.printau:
-        ## aprint = inputcell.ainit*angtobohr
-        ## bprint = inputcell.binit*angtobohr
-        ## cprint = inputcell.cinit*angtobohr
         aprint = inputcell.a*angtobohr
         bprint = inputcell.b*angtobohr
         cprint = inputcell.c*angtobohr
     else:
-        ## aprint = inputcell.ainit
-        ## bprint = inputcell.binit
-        ## cprint = inputcell.cinit
         aprint = inputcell.a
         bprint = inputcell.b
         cprint = inputcell.c
     for i in range(3):
         formatstring = formatstring+decform+" "
-    print formatstring % (aprint, bprint, cprint)
+    sys.stdout.write(formatstring % (aprint, bprint, cprint)+"\n")
     tmpstring = ""
     for i in ["alpha", "beta", "gamma"]:
         tmpstring += i.rjust(decpos)+" "
-    print tmpstring
-    print formatstring % (inputcell.alpha, inputcell.beta, inputcell.gamma)
-    ## print formatstring % (inputcell.alphainit, inputcell.betainit, inputcell.gammainit)
+    sys.stdout.write(tmpstring+"\n")
+    sys.stdout.write(formatstring % (inputcell.alpha, inputcell.beta, inputcell.gamma)+"\n")
+    ## sys.stdout.write(formatstring % (inputcell.alphainit, inputcell.betainit, inputcell.gammainit))
     # Pretty printing in columns that need to have variable width
     # w1 = width of the atomic species column
     # w2 = width of a decimal column
@@ -585,11 +627,11 @@ if verbose or not options.program and not options.quiet:
                 tmpstring1 = ""
                 tmpstring2 = ""
                 tmpstring3 = ""
-                for k,v in b.species.iteritems():
+                for k,v in b.species.items():
                     tmpstring1 += k+"/"
                     tmpstring2 += str(v).rstrip("0.")+"/"
                     # charge output
-                    for k2,v2 in inputcell.chargedict.iteritems():
+                    for k2,v2 in inputcell.chargedict.items():
                         if k2.strip(string.punctuation+string.digits) == k:
                             tmpstring3 += str(v2)+"/"
                 tmpstring1 = tmpstring1.rstrip("/")
@@ -613,7 +655,7 @@ if verbose or not options.program and not options.quiet:
             w4 = 0
     # Now for the output...
     tmpstring = "Representative sites :"
-    print tmpstring
+    sys.stdout.write(tmpstring+"\n")
     siteheader = "Atom".ljust(w1)+" "
     if options.printcart:
         transmtx = []
@@ -637,17 +679,17 @@ if verbose or not options.program and not options.quiet:
             siteheader += "occ.".rjust(w3)
     if printcharges:
         siteheader += " "+"charge".rjust(w4)
-    print siteheader
+    sys.stdout.write(siteheader+"\n")
     # Representative sites
     for i in range(len(inputcell.ineqsites)):
         tmpstring = ""
         occstring = ""
         chargestring = ""
-        for k,v in inputcell.occupations[i].iteritems():
+        for k,v in inputcell.occupations[i].items():
             tmpstring += k+"/"
             occstring += str(v)+"/"
             # charge output
-            for k2,v2 in inputcell.chargedict.iteritems():
+            for k2,v2 in inputcell.chargedict.items():
                 if k2.strip(string.punctuation+string.digits) == k:
                     chargestring += str(v2)+"/"
         tmpstring = tmpstring.rstrip("/")
@@ -659,27 +701,27 @@ if verbose or not options.program and not options.quiet:
             tmpstring += " "+occstring.rjust(w3)
         if printcharges:
             tmpstring += " "+chargestring.rjust(w4)
-        print tmpstring
+        sys.stdout.write(tmpstring+"\n")
 
     # Output cell
-    print "\n OUTPUT CELL INFORMATION"
-    print "Symmetry information:"
+    sys.stdout.write("\n OUTPUT CELL INFORMATION\n")
+    sys.stdout.write("Symmetry information:\n")
     if cd.HallSymbol != "":
-        print cd.crystal_system()[0].upper()+cd.crystal_system()[1:]+" crystal system."
-        print "Space group number     : ".rjust(2)+str(cd.spacegroupnr)
-        print "Hall symbol            : "+cd.HallSymbol
-        print "Hermann-Mauguin symbol : "+cd.HMSymbol
+        sys.stdout.write(cd.crystal_system()[0].upper()+cd.crystal_system()[1:]+" crystal system.\n")
+        sys.stdout.write("Space group number     : ".rjust(2)+str(cd.spacegroupnr)+"\n")
+        sys.stdout.write("Hall symbol            : "+cd.HallSymbol+"\n")
+        sys.stdout.write("Hermann-Mauguin symbol : "+cd.HMSymbol+"\n")
     else:
-        print "No space group information found."
+        sys.stdout.write("No space group information found.\n")
     # only print these if verbose
     if verbose:
-        print "Symmetry equivalent sites:"
+        sys.stdout.write("Symmetry equivalent sites:\n")
         symops = list(cd.symops)
         symops.sort()
         for i in range(len(symops)):
-            print "%4i  %8s, %8s, %8s" % (i+1, symops[i].eqsite[0], symops[i].eqsite[1], symops[i].eqsite[2])
+            sys.stdout.write("%4i  %8s, %8s, %8s\n" % (i+1, symops[i].eqsite[0], symops[i].eqsite[1], symops[i].eqsite[2]))
 
-    print ""
+    sys.stdout.write("\n")
     cd.printCell(printcart=options.printcart, printdigits=printdigits, printcharges=options.printcharges)
     # Print volume and density
     if options.printau:
@@ -688,15 +730,15 @@ if verbose or not options.program and not options.quiet:
     else:
         volume = cd.volume()*cd.lengthscale**3
         volstring = "A"
-    print "\nUnit cell volume  : "+decform%volume+" "+volstring+"^3"
+    sys.stdout.write("\nUnit cell volume  : "+decform%volume+" "+volstring+"^3\n")
     try:
         weight = 0.0
         for a in cd.atomdata:
             for b in a:
-                for k,v in b.species.iteritems():
+                for k,v in b.species.items():
                     weight += ed.elementweight[k]*v
         density = weight/volume
-        print "Unit cell density : "+decform%density+" u/"+volstring+"^3 = "+decform%(density*uperautogpercm)+" g/cm^3"
+        sys.stdout.write("Unit cell density : "+decform%density+" u/"+volstring+"^3 = "+decform%(density*uperautogpercm)+" g/cm^3\n")
     except:
         if not options.quiet:
             sys.stderr.write("***Warning: Error printing unit cell density.\n")
@@ -733,13 +775,13 @@ if transformcell:
         celltransformation = safe_matheval(options.celltransformation)
     try:
         cd.transformCell(celltransformation)
-    except CellError, e:
+    except CellError as e:
         sys.stderr.write("***Error: Cell transformation: "+e.value+"\n")
         sys.exit(2)
     if verbose or not options.program and not options.quiet:
-        print "\n TRANSFORMED CELL"
+        sys.stdout.write("\n TRANSFORMED CELL")
         cd.printCell(printcart=options.printcart, printdigits=printdigits, printcharges=options.printcharges)
-    
+
 ##############################################
 # Generate supercell
 if makesupercell:
@@ -758,8 +800,8 @@ if makesupercell:
             for j in range(3):
                 supercellmap[i].append(int(round(t2[i][j])))
     try:
-        cd.getSuperCell(supercellmap,supercellvacuum,supercellprevactransvec,postvactransvec=supercellpostvactransvec,sort=supercellsort)
-    except CellError, e:
+        cd.getSuperCell(supercellmap,supercellvacuum,supercellprevactransvec,postvactransvec=supercellpostvactransvec,sort=supercellsort,realign=supercellrealign)
+    except CellError as e:
         sys.stderr.write("***Error: Supercell setup: "+e.value+"\n")
         sys.exit(2)
     # Randomly displace atoms if requested. This erases all symmetry operations.
@@ -770,41 +812,40 @@ if makesupercell:
             distr = "uniform"
         try:
             cd.randomDisplacements(float(options.randomdisp),distribution=distr)
-        except SetupError,e:
+        except SetupError as e:
             sys.stderr.write("***Error: random displacements: "+e.value+"\n")
             sys.exit(3)
         cd.symops = set([SymmetryOperation(['x','y','z'])])
     
     # Print supercell
     if verbose or not options.program and not options.quiet:
-        print "\n SUPERCELL INFORMATION"
+        sys.stdout.write("\n SUPERCELL INFORMATION\n")
         cd.printCell(printcart=options.printcart, printdigits=printdigits, printcharges=options.printcharges)
         
 if printsymops or printseitz or verbose:
     # Print symmetry operations. Need to make list of it to control order.
     symoplist = sorted(list(cd.symops))
+    sys.stdout.write("\nSymmetry operations :\n")
     if printsymops or verbose:
-        print "\nSymmetry operations : "
-        print "  3x3 rotation matrix +"
-        print "  3x1 translation vector"
+        sys.stdout.write("  3x3 rotation matrix +\n")
+        sys.stdout.write("  3x1 translation vector\n")
         i = 1
         for op in symoplist:
-            print "Operation "+str(i)
+            sys.stdout.write("Operation "+str(i)+"\n")
             for v in op.rotation:
-                print threedecs%(v[0],v[1],v[2])
-            print threedecs%(op.translation[0],op.translation[1],op.translation[2])
+                sys.stdout.write(threedecs%(v[0],v[1],v[2]))
+            sys.stdout.write(threedecs%(op.translation[0],op.translation[1],op.translation[2])+"\n")
             i += 1
     if printseitz:
-        print "\nSymmetry operations :"
-        print "  In Seitz matrix form"
+        sys.stdout.write("  In Seitz matrix form\n")
         i = 1
         for op in symoplist:
-            print "Operation "+str(i)
+            sys.stdout.write("Operation "+str(i)+"\n")
             tmpstring = ""
             for j in range(3):
                 tmpstring += fourdecs%(op.rotation[j][0],op.rotation[j][1],op.rotation[j][2],op.translation[j])+"\n"
             tmpstring += fourdecs%(0,0,0,1)
-            print tmpstring
+            sys.stdout.write(tmpstring)
             i += 1    
 
 # Remind that the result may be junk when using --force
@@ -855,7 +896,7 @@ else:
         outputfile = "positions.py"
     else:
         # A bunch of programs get default output constructed as:
-        # 1. chemical abbreviation (i.e. something like "H2SO4" or CeRhIn5)
+        # 1. chemical abbreviation (i.e. something like H2SO4 or CeRhIn5)
         # 2. if this is too long, use the original cif filename
         outputfile = ref.cpd.replace(" ", "").replace("(","").replace(")","")
         # If the filename seems too long or strange, replace by the name of the cif file
@@ -902,23 +943,25 @@ else:
             outputfile = outputfile+".dat"
         elif outputprogram == "xyz":
             outputfile = outputfile+".xyz"
+        elif outputprogram == "lammps":
+        	outputfile = outputfile+".data"
         else:
             pass
 
 # Print output filename to screen
 if outputprogram !="":
     if (verbose or options.filenamequery) and outputfile != "":
-        print "Data will be written to the file "+outputfile
+        sys.stdout.write("Data will be written to the file "+outputfile)
 
 ################################################################################################
 # stuff that should be printed irrespective of the verbose flag
 if cd.alloy and forcealloy and options.program and not verbose:
     tmpstring = "Enforcing file generation for alloy. "
     if outputprogram == 'bstr' or outputprogram == 'vasp' or outputprogram == 'cpmd':
-        print tmpstring
+        sys.stdout.write(tmpstring+"\n")
     else:
         tmpstring += "Warning! The file(s) will be incomplete!"
-        print tmpstring
+        sys.stdout.write(tmpstring+"\n")
     
 ################################################################################################
 # Stop here if no specific output was requested
@@ -927,12 +970,12 @@ if not options.program:
 
 # Don't generate output for alloys (for most programs)
 if cd.alloy and not forcealloy and not (outputprogram in alloyprograms or outputprogram in vcaprograms):
-    print "Error: This system is an alloy, but "+codename[outputprogram]+" has no way of dealing with alloys.\n       Run again with --force-alloy (or --force) if you want to generate an (incomplete) output file anyway."
+    sys.stderr.write("Error: This system is an alloy, but "+codename[outputprogram]+" has no way of dealing with alloys.\n       Run again with --force-alloy (or --force) if you want to generate an (incomplete) output file anyway.\n")
     sys.exit(17)
 # Deal with VCA
 if cd.alloy and outputprogram in vcaprograms:
     if not options.vca and not forcealloy:
-        print "Error: This system is an alloy. "+codename[outputprogram]+" can deal with some alloys using the virtual crystal approximation (VCA).\n       Run again with the flag --vca if you want to produce a VCA setup."
+        sys.stderr.write("Error: This system is an alloy. "+codename[outputprogram]+" can deal with some alloys using the virtual crystal approximation (VCA).\n       Run again with the flag --vca if you want to produce a VCA setup.\n")
         sys.exit(17)
 vcawarning1 = False
 vcawarning2 = False
@@ -941,7 +984,7 @@ if options.vca:
     groups = []
     for a in cd.atomdata:
         if len(a[0].species) > 1:
-            t = [ed.elementgroup[sp] for sp,conc in a[0].species.iteritems()]
+            t = [ed.elementgroup[sp] for sp,conc in a[0].species.items()]
             groups.append((min(t),max(t)))
             if len(a[0].species) > 2:
                 vcawarning1 = True
@@ -992,12 +1035,12 @@ if outputprogram == 'cif':
         a = Vector(cd.latticevectors[0].scalmult(cd.lengthscale))
         b = Vector(cd.latticevectors[1].scalmult(cd.lengthscale))
         c = Vector(cd.latticevectors[2].scalmult(cd.lengthscale))
-	cb['_cell_length_a'] = a.length()
-	cb['_cell_length_b'] = b.length()
-	cb['_cell_length_c'] = c.length()
-	cb['_cell_angle_alpha'] = acos(b.dot(c)/(b.length()*c.length()))*180/pi
-	cb['_cell_angle_beta'] = acos(a.dot(c)/(a.length()*c.length()))*180/pi
-	cb['_cell_angle_gamma'] = acos(b.dot(a)/(a.length()*b.length()))*180/pi
+        cb['_cell_length_a'] = a.length()
+        cb['_cell_length_b'] = b.length()
+        cb['_cell_length_c'] = c.length()
+        cb['_cell_angle_alpha'] = acos(b.dot(c)/(b.length()*c.length()))*180/pi
+        cb['_cell_angle_beta'] = acos(a.dot(c)/(a.length()*c.length()))*180/pi
+        cb['_cell_angle_gamma'] = acos(b.dot(a)/(a.length()*b.length()))*180/pi
         # Supercell may have broken symmetry, so just put P1
         cb['_space_group_IT_number'] = 1
         cb['_space_group_name_H-M_alt'] = "P1"
@@ -1578,7 +1621,7 @@ if outputprogram == 'vasp':
     f.close()
     # Print species order to screen if requested
     if options.vaspprintspcs:
-        print poscar.SpeciesOrder()
+        sys.stdout.write(poscar.SpeciesOrder())
     # Set up all files?
     if setupall:
         # POTCAR
@@ -1590,7 +1633,7 @@ if outputprogram == 'vasp':
         if options.vasppppriority:
             prioritylist = options.vasppppriority.split(",")
             prioritylist.append("")
-            print prioritylist
+            sys.stdout.write(prioritylist)
         else:
             try:
                 pl = os.environ['VASP_PP_PRIORITY']
@@ -1747,4 +1790,25 @@ if outputprogram == 'xyz':
     f.write(str(sysfile))
     f.close()
     sys.exit(0)
+
+################################################################################################
+# Output for LAMMPS file
+if outputprogram == 'lammps':
+    # The second comment line with info from the CIF file 
+    docstring =  "Generated by "+programname+" "+version
+    if ref.database != "" and ref.databasecode != "":
+        docstring += " from "+ref.databaseabbr[ref.database]+" reference: "+ref.databasecode
+    docstring += ". "
+    if len(ref.cpd) > len(ref.compound):
+        docstring += ref.compound
+    else:
+        docstring += ref.cpd
+    docstring += " :  "+ref.referencestring()+"."
+    # Initialize the LAMMPSFile structure
+    sysfile = LAMMPSFile(cd, docstring)
+    f = open(outputfile, outmode)
+    f.write(str(sysfile))
+    f.close()
+    sys.exit(0)
+
 

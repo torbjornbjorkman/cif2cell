@@ -22,8 +22,8 @@
 #
 #******************************************************************************************
 from __future__ import division
-from math import sqrt,acos
-from elementdata import *
+from math import sqrt,acos,pi
+from cif2cell.elementdata import *
 ################################################################################################
 # Miscellaneous
 zero = 0.0
@@ -49,11 +49,15 @@ codename = { 'abinit' : 'ABINIT',
              'cpmd' : 'CPMD',
              'cp2k' : 'CP2K',
              'cellgen' : 'cellgen',
+             'coo' : 'coo',
              'crystal09' : 'CRYSTAL09',
              'elk' : 'Elk',
              'emto' : 'EMTO',
              'exciting' : 'exciting',
+             'fhi-aims' : 'FHI-AIMS',
              'fleur' : 'Fleur',
+             'hutsepot' : 'Hutsepot',
+             'mopac' : 'MOPAC',
              'ncol' : 'NCOL',
              'rspt' : 'RSPt',
              'siesta' : 'Siesta',
@@ -369,7 +373,7 @@ class AtomSite(GeometryObject):
         return tmp
     # Is there more than one species on this site?
     def alloy(self):
-        occsum = sum([v for k,v in self.species.iteritems()])
+        occsum = sum([v for k,v in self.species.items()])
         return len(self.species) > 1 or abs(occsum-1) > self.compeps
     # print site data in some informative way
     def __str__(self):
@@ -378,7 +382,7 @@ class AtomSite(GeometryObject):
         # Position
         tmp += " %19.15f %19.15f %19.15f   "%(self.position[0],self.position[1],self.position[2])
         # occupancy
-        for k,v in self.species.iteritems():
+        for k,v in self.species.items():
             tmp += str(v)+"/"
         tmp = tmp.rstrip("/")
         return tmp
@@ -396,7 +400,7 @@ class AtomSite(GeometryObject):
                 except:
                     pass
         else:
-            for sp,ch in self.charges.iteritems():
+            for sp,ch in self.charges.items():
                 try:
                     t.append(ElementData().IonicRadius[sp+str(ch)])
                 except:
@@ -648,3 +652,88 @@ def deletenewline(string, replace=""):
     if "\n" in string:
         tmp = tmp.replace("\n",replace)
     return tmp
+
+def SurfaceWizard(cell,hkl):
+    """
+    Take a plane [hkl] and generate suggestion for a supercell map that puts
+    the plane normal along the third lattice vector and makes the two first
+    vectors lie in the (hkl) plane.
+
+    Uses that linear combinations of the (conventional) lattice vectors,
+    n1*a1+n2*a2+n3*a3 in the hkl plane fulfill the diophantine equation
+    
+    n1*h + n2*k + n3*l = 0         (*)
+
+    Solution is dumb, brute force enumeration of the possible n-
+    values and selection of suitable ones based on that.    
+    """
+    suggestion = []
+    maxN = 5
+    # Generate tuples fulfilling (*) by brute force
+    possibleNs = []
+    impossibleNs = []
+    for n1 in range(maxN,-maxN,-1):
+        for n2 in range(maxN,-maxN,-1):
+            for n3 in range(-maxN,maxN):
+                lhs = hkl[0]*n1 + hkl[1]*n2 + hkl[2]*n3
+                if lhs == 0:
+                    possibleNs.append((n1,n2,n3))
+                else:
+                    impossibleNs.append((n1,n2,n3))
+    # Remove the trivial solution
+    possibleNs.remove((0,0,0))
+    lvs = cell.latticevectors
+    # Generate and sort in-plane lattice vectors
+    inplaneNs = []    # contains lists of [(n1,n2,n3),[corresponding lattice vector]]
+    for n in possibleNs:
+        vn = Vector([n[0],n[1],n[2]])
+        vec = lvs[0].scalmult(vn[0])+lvs[1].scalmult(vn[1])+lvs[2].scalmult(vn[2])
+        inplaneNs.append([n,vec])
+    inplaneNs.sort(key=lambda x: x[1].length())
+    # Generate and sort out-of-plane lattice vectors
+    outofplaneNs = []    # contains lists of [(n1,n2,n3),[corresponding lattice vector]]
+    for n in impossibleNs:
+        vn = Vector([n[0],n[1],n[2]])
+        vec = lvs[0].scalmult(vn[0])+lvs[1].scalmult(vn[1])+lvs[2].scalmult(vn[2])
+        outofplaneNs.append([n,vec])
+    outofplaneNs.sort(key=lambda x: x[1].length())
+
+    # First row in suggested map = first (i.e. shortest) vector in the hkl plane
+    suggestion.append(inplaneNs[0][0])
+    suggestedvs = [lvs[0].scalmult(inplaneNs[0][1][0])+lvs[1].scalmult(inplaneNs[0][1][1])+lvs[2].scalmult(inplaneNs[0][1][2])]
+    # Pick a second vector as the shortest vector not too parallel to the first
+    for n in inplaneNs[1:]:
+        v1 = n[1]
+        v2 = suggestedvs[0]
+        # Difference of angle to pi/2 radians
+        ang = abs(pi/2-acos(v1.dot(v2)/v1.length()/v2.length()))
+        # Select by arbitrary cutoff (within 45 degrees of orthogonal)
+        if ang < pi/4:
+            suggestion.append(list(n[0]))
+            suggestedvs.append(lvs[0].scalmult(n[1][0])+lvs[1].scalmult(n[1][1])+lvs[2].scalmult(n[1][2]))
+            break
+
+    # Insert the hkl index first in the list, to select that if close to orthogonal
+    vec = lvs[0].scalmult(hkl[0])+lvs[1].scalmult(hkl[1])+lvs[2].scalmult(hkl[2])
+    outofplaneNs.insert(0,[(hkl[0],hkl[1],hkl[2]),vec])
+    # Pick the third vector as the shortest vector sufficiently orthogonal to the two first
+    for n in outofplaneNs:
+        v1 = suggestedvs[0]
+        v2 = suggestedvs[1]
+        v3 = n[1]
+        # Difference of angle to pi/2 radians
+        ang1 = abs(pi/2-acos(v1.dot(v3)/v1.length()/v3.length()))
+        ang2 = abs(pi/2-acos(v2.dot(v3)/v2.length()/v3.length()))
+        # Select by arbitrary cutoff (within 15 degrees of orthogonal)
+        if ang1 < pi/12 and ang2 < pi/12:
+            suggestion.append(list(n[0]))
+            break
+
+    # Enforce righthanded system
+    vs = mmmult3(suggestion,lvs)
+    if det3(vs) < 0:
+        v = suggestion[0]
+        suggestion[0] = suggestion[1]
+        suggestion[1] = v
+    
+    return suggestion
