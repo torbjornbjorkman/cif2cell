@@ -9,33 +9,33 @@ the primitive cell or the conventional cell.
 
 ## CURRENTLY SUPPORTS
 
-               |  alloy  |
-code           | support |   output files
----------------|---------|-----------------------------------
-ASE                no      positions.py
-ATAT              yes      [compoundname].in
-VASP              VCA      POSCAR
-ABINIT             no      [compoundname].in
-Siesta             no      [compoundname].fdf
-CPMD               no      [compoundname].inp
-CASTEP            VCA      [compoundname].cell
-Crystal09          no      [compoundname].d12
-quantum espresso   no      [compoundname].in
-FHI-aims           no      geometry.in
-RSPt               no      symt.inp
-Fleur              no      inp_[compoundname]
-hutsepot           no      [compoundname].sys
-cellgen            no      cellgen.inp
-elk                no      GEOMETRY.OUT
-exciting           no      input.xml
-spacegroup         no      spacegroup.in
-ncol               no      [spacegroupname/compoundname].dat
-                           for bstr.
-emto               yes     [spacegroupname/compoundname].dat
-                           for kstr, bmdl, shape, kgrn and kfcd
-                           in separate directories.
-spr-kkr            yes     [compoundname].sys
-xyz                no      [compoundname].xyz
+|           | alloy |   |
+|code           | support |   output files|
+|---------------|---------|-----------------------------------|
+|ASE            |   no    | positions.py|
+|VASP           |  VCA    | POSCAR|
+|ABINIT         |   no    | [compoundname].in|
+|Siesta         |   no    | [compoundname].fdf|
+|CPMD           |   no    | [compoundname].inp|
+|CASTEP         |  VCA    | [compoundname].cell|
+|Crystal09      |   no    | [compoundname].d12|
+|quantum espresso|  no    | [compoundname].in|
+|FHI-aims       |   no    | geometry.in|
+|RSPt           |   no    | symt.inp|
+|Fleur          |   no    | inp_[compoundname]|
+|hutsepot       |   no    | [compoundname].sys|
+|cellgen        |   no    | cellgen.inp|
+|elk            |   no    | GEOMETRY.OUT|
+|exciting       |   no    | input.xml|
+|spacegroup     |   no    | spacegroup.in|
+|ncol           |   no    | [spacegroupname/compoundname].dat|
+|               |         | for bstr.|
+|emto           |   yes   | [spacegroupname/compoundname].dat|
+|               |         | for kstr, bmdl, shape, kgrn and kfcd|
+|               |         | in separate directories.|
+|spr-kkr        |   yes   | [compoundname].sys|
+|xyz            |   no    | [compoundname].xyz|
+
 
 ## CONTENTS
 
@@ -49,8 +49,6 @@ The distribution includes:
   as well as the crystal structures of the full periodic table
   from COD, the Crystallography Open Database <http://www.crystallography.net>
   and also a few from ICSD (with permission).
-* The file PyCifRW-3.3.tar.gz, containing the PyCifRW package needed for
-  parsing CIF files.
 
 
 ## INSTALLATION INSTRUCTIONS
@@ -80,9 +78,13 @@ $PREFIX/lib/cif2cell/docs directory.
 
 ## RUNNING
 
-Run 'cif2cell -h' to get a listing of the different options.
+Run `cif2cell -h` to get a listing of the different options.
 Example:
+
+```
 cif2cell Ni20Mn3P6.cif -p vasp --vasp-cartesian-positions
+```
+
 will generate a POSCAR file for VASP with the positions in cartesian format.
 
 
