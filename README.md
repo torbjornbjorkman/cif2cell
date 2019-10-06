@@ -9,8 +9,7 @@ the primitive cell or the conventional cell.
 
 ## CURRENTLY SUPPORTS
 
-|           | alloy |   |
-|code           | support |   output files|
+|code           | alloy support |   output files|
 |---------------|---------|-----------------------------------|
 |ASE            |   no    | positions.py|
 |VASP           |  VCA    | POSCAR|
