@@ -1,12 +1,14 @@
 language: python
 
 python:
-    - 3.4
-    - 3.5
     - 3.6
     - 3.7
     - 2.7
 
-script:
-    - pytest tests
+install:
+  - pip install -e .
 
+script:
+  - cif2cell --help
+  - .ci/test_script.sh
+  - pytest tests
