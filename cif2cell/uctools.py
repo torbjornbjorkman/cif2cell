@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with cif2cell.  If not, see <http://www.gnu.org/licenses/>.
 #
-#******************************************************************************************
+# ******************************************************************************************
 #  Description: A set of tools to generate the geometrical
 #               setup for various electronic structure codes.
 #               Contains some container classes for structural
@@ -26,7 +26,7 @@
 #  Author:      Torbjorn Bjorkman
 #  ORCID:       0000-0002-1154-9846
 #
-#******************************************************************************************
+# ******************************************************************************************
 from __future__ import division
 from __future__ import absolute_import
 import os
@@ -35,7 +35,7 @@ import string
 import copy
 import CifFile
 from types import *
-from math import sin,cos,pi,sqrt,pow,ceil,floor
+from math import sin, cos, pi, sqrt, pow, ceil, floor
 from cif2cell.utils import *
 from random import random, gauss
 from fractions import gcd
@@ -43,10 +43,12 @@ from cif2cell.spacegroupdata import *
 from cif2cell.elementdata import *
 import six
 from six.moves import range
-if sys.version_info >= (3,0):
+if sys.version_info >= (3, 0):
     from functools import reduce
 
 ################################################################################################
+
+
 class CellData(GeometryObject):
     """
     Class for a lot of stuff specifying a unit cell.
@@ -88,6 +90,7 @@ class CellData(GeometryObject):
                               matrix [[],[],[]]. The crystal structure must first have been initialized by
                               getCrystalStructure(), primitive() or conventional() methods).
     """
+
     def __init__(self):
         GeometryObject.__init__(self)
         self.initialized = False
@@ -143,7 +146,7 @@ class CellData(GeometryObject):
         # alternate settings for some space groups
         self.specialIsetting = 0
 
-    def newunit(self,newunit="angstrom"):
+    def newunit(self, newunit="angstrom"):
         """ Set new unit for the length scale. Valid choices are:
             * angstrom
             * bohr  (bohr radii, or a.u. (atomic unit))
@@ -174,7 +177,7 @@ class CellData(GeometryObject):
     def crystal_system(self):
         return crystal_system(self.spacegroupnr)
 
-    def is_spacegroup(self,type):
+    def is_spacegroup(self, type):
         if type == "rhombohedral":
             return self.HallSymbol in Hex2RhombHall
         else:
@@ -185,7 +188,7 @@ class CellData(GeometryObject):
         self.coa = self.c / self.a
         self.boa = self.b / self.a
         alphar = self.alpha*pi/180
-        betar  = self.beta*pi/180
+        betar = self.beta*pi/180
         gammar = self.gamma*pi/180
         if self.crystal_system() == 'cubic':
             latticevectors = LatticeMatrix([[one, zero, zero],
@@ -199,10 +202,10 @@ class CellData(GeometryObject):
             latticevectors = LatticeMatrix([[one, zero, zero],
                                             [zero, self.boa, zero],
                                             [zero, zero, self.coa]])
-        ## elif self.crystal_system() == 'monoclinic':
-        ##     latticevectors = LatticeMatrix([[one, zero, zero],
+        # elif self.crystal_system() == 'monoclinic':
+        # latticevectors = LatticeMatrix([[one, zero, zero],
         ##                                     [zero, self.boa, zero],
-        ##                                     [self.coa*cos(betar), zero, self.coa*sin(betar)]])
+        # [self.coa*cos(betar), zero, self.coa*sin(betar)]])
         elif self.crystal_system() == 'trigonal':
             # Hexagonal cell taken as conventional
             if not abs(self.gamma-120) < self.coordepsilon:
@@ -213,12 +216,14 @@ class CellData(GeometryObject):
         elif self.crystal_system() == 'triclinic' or self.crystal_system() == 'monoclinic' or self.crystal_system() == 'unknown':
             angfac1 = (cos(alphar) - cos(betar)*cos(gammar))/sin(gammar)
             angfac2 = sqrt(sin(gammar)**2 - cos(betar)**2 - cos(alphar)**2
-                       + 2*cos(alphar)*cos(betar)*cos(gammar))/sin(gammar)
+                           + 2*cos(alphar)*cos(betar)*cos(gammar))/sin(gammar)
             latticevectors = LatticeMatrix([[one, zero, zero],
-                                            [self.boa*cos(gammar), self.boa*sin(gammar), zero],
+                                            [self.boa*cos(gammar),
+                                             self.boa*sin(gammar), zero],
                                             [self.coa*cos(betar), self.coa*angfac1, self.coa*angfac2]])
         else:
-            raise SymmetryError("No support for "+self.crystal_system()+" crystal systems.")
+            raise SymmetryError("No support for " +
+                                self.crystal_system()+" crystal systems.")
         return latticevectors
 
     # The reciprocal lattice vectors corresponding to the lattice vectors of the structure
@@ -236,32 +241,32 @@ class CellData(GeometryObject):
     def poscomp(self, pos1, pos2):
         # Return True if two positions are the same
         if abs(pos1[0] - pos2[0]) < self.coordepsilon and \
-               abs(pos1[1] - pos2[1]) < self.coordepsilon and \
-               abs(pos1[2] - pos2[2]) < self.coordepsilon:
+                abs(pos1[1] - pos2[1]) < self.coordepsilon and \
+                abs(pos1[2] - pos2[2]) < self.coordepsilon:
             return True
         else:
             return False
 
-    def transveccomp(self, pos1,pos2):
+    def transveccomp(self, pos1, pos2):
         # Return True if two positions only differ by one
         # of the induced lattice translations
         match = False
         for tv in self.transvecs:
-            if (abs(pos1[0]-(pos2[0]-tv[0]))<self.coordepsilon and \
-                abs(pos1[1]-(pos2[1]-tv[1]))<self.coordepsilon and \
-                abs(pos1[2]-(pos2[2]-tv[2]))<self.coordepsilon):
+            if (abs(pos1[0]-(pos2[0]-tv[0])) < self.coordepsilon and
+                abs(pos1[1]-(pos2[1]-tv[1])) < self.coordepsilon and
+                    abs(pos1[2]-(pos2[2]-tv[2])) < self.coordepsilon):
                 match = True
         return match
 
-    def duplicates(self, poslist, compfunc = transveccomp):
+    def duplicates(self, poslist, compfunc=transveccomp):
         # Return list of indices of duplicates in a list,
         # sorted in reverse order to be easy to use for removing the duplicates.
         # Optionally supply a comparison function for when two coordinates
         # are the same, else use 'samecoords' function from above.
         removeindices = set([])
         for i in range(len(poslist)):
-            for j in range(len(poslist)-1,i,-1):
-                if compfunc(self,poslist[i],poslist[j]):
+            for j in range(len(poslist)-1, i, -1):
+                if compfunc(self, poslist[i], poslist[j]):
                     removeindices.add(j)
         removeindices = list(removeindices)
         removeindices.sort(reverse=True)
@@ -300,11 +305,11 @@ class CellData(GeometryObject):
 
     # Fill out sites that are not occupied to 100% with
     # empty spheres (optionally giving a label).
-    def fill_out_empty(self,label="Em"):
+    def fill_out_empty(self, label="Em"):
         for a in self.atomdata:
             # Check concentration
             t = 0.0
-            for sp,conc in a[0].species.items():
+            for sp, conc in a[0].species.items():
                 t += conc
             # Add vacuum spheres if partially empty
             if abs(1.0-t) > a[0].compeps:
@@ -324,7 +329,7 @@ class CellData(GeometryObject):
         for a in self.atomdata:
             for b in a:
                 if distribution == "gaussian":
-                    r = gauss(0.0,size)*size
+                    r = gauss(0.0, size)*size
                     theta = gauss(0.0, size)*pi
                     phi = gauss(0.0, size)*2*pi
                 elif distribution == "uniform":
@@ -332,9 +337,12 @@ class CellData(GeometryObject):
                     theta = random()*pi
                     phi = random()*2*pi
                 else:
-                    raise SetupError("Unknown distribution for random displacements.")
-                d = Vector([r*sin(theta)*cos(phi), r*sin(theta)*sin(phi), r*cos(theta)]).transform(invlatvecs)
-                b.position = LatticeVector([b.position[i] + d[i] for i in range(3)])
+                    raise SetupError(
+                        "Unknown distribution for random displacements.")
+                d = Vector([r*sin(theta)*cos(phi), r*sin(theta) *
+                            sin(phi), r*cos(theta)]).transform(invlatvecs)
+                b.position = LatticeVector(
+                    [b.position[i] + d[i] for i in range(3)])
                 tmp.append([b])
         # We need to reset implicit symmetry information here
         self.atomdata = tmp
@@ -357,18 +365,23 @@ class CellData(GeometryObject):
                     try:
                         self.HallSymbol = Number2Hall[self.spacegroupnr]
                     except:
-                        raise SymmetryError("Found neither Hall nor H-M symbol and space group %i does not have a unique setting."%self.spacegroupnr)
+                        raise SymmetryError(
+                            "Found neither Hall nor H-M symbol and space group %i does not have a unique setting." % self.spacegroupnr)
                 else:
                     if self.force:
-                        sys.stderr.write("***Warning: CIF file contains neither space group symbols nor space group number.\n")
-                        sys.stderr.write("            Defaulting to P 1. Check results carefully!\n")
+                        sys.stderr.write(
+                            "***Warning: CIF file contains neither space group symbols nor space group number.\n")
+                        sys.stderr.write(
+                            "            Defaulting to P 1. Check results carefully!\n")
                         self.HallSymbol = "P 1"
                     else:
-                        raise SymmetryError("CIF file contains neither space group symbols nor space group number.")
+                        raise SymmetryError(
+                            "CIF file contains neither space group symbols nor space group number.")
             try:
                 self.HallSymbol = HM2Hall[self.HMSymbol]
             except:
-                sys.stderr.write("***Warning: Cannot convert "+self.HMSymbol+" to Hall symbol.\n")
+                sys.stderr.write("***Warning: Cannot convert " +
+                                 self.HMSymbol+" to Hall symbol.\n")
 
         # Set space group number and H-M symbol if not set
         if not 0 < self.spacegroupnr <= 230:
@@ -399,15 +412,15 @@ class CellData(GeometryObject):
             except:
                 pass
         # Sanity test of lattice parameters
-        if self.a!=0 and self.b!=0 and self.c!=0 and self.alpha!=0 and self.beta!=0 and self.gamma!=0:
+        if self.a != 0 and self.b != 0 and self.c != 0 and self.alpha != 0 and self.beta != 0 and self.gamma != 0:
             if not 0 < self.spacegroupnr < 231:
                 if len(self.symops) >= 1:
                     if self.primcell == True:
                         if self.spacegroupsetting == 'P':
                             self.spacegroupnr = 0
                         else:
-                            raise SymmetryError("Insufficient symmetry information to reduce to primitive cell"+\
-                                                " (need space group number or Hermann-Mauguin symbol).\n"+\
+                            raise SymmetryError("Insufficient symmetry information to reduce to primitive cell" +
+                                                " (need space group number or Hermann-Mauguin symbol).\n" +
                                                 "  Run with --no-reduce to generate cell in the conventional setting.")
                     else:
                         self.spacegroupnr = 0
@@ -435,11 +448,12 @@ class CellData(GeometryObject):
             self.alpha = 90.0
             self.beta = 90.0
             self.gamma = 120.0
-            rhomb2hextrans= LatticeMatrix([[2*third, third, third],
-                                           [-third, third, third],
-                                           [-third, -2*third, third]])
+            rhomb2hextrans = LatticeMatrix([[2*third, third, third],
+                                            [-third, third, third],
+                                            [-third, -2*third, third]])
             for i in range(len(self.ineqsites)):
-                self.ineqsites[i] = Vector(mvmult3(rhomb2hextrans,self.ineqsites[i]))
+                self.ineqsites[i] = Vector(
+                    mvmult3(rhomb2hextrans, self.ineqsites[i]))
             # We also need the correct symmetry operations.
             eqsites = SymOpsHall[Rhomb2HexHall[self.HallSymbol]]
             self.symops = set([])
@@ -462,17 +476,20 @@ class CellData(GeometryObject):
                     for i in range(3):
                         t.append([])
                         for j in range(3):
-                            t[i].append(self.latticevectors[i][j] * self.lengthscale)
+                            t[i].append(self.latticevectors[i]
+                                        [j] * self.lengthscale)
                     trans_matrix = LatticeMatrix(minv3(t))
                 else:
-                    raise CellError("Failed to perform transformation from cartesian to lattice coordinates.")
+                    raise CellError(
+                        "Failed to perform transformation from cartesian to lattice coordinates.")
             try:
                 # Primarily use the transformation matrix/translation vector given as input.
                 for i in range(len(self.ineqsites)):
                     t = self.ineqsites[i] - self.cart_trans_vector
-                    self.ineqsites[i] = Vector(mvmult3(trans_matrix,t))
+                    self.ineqsites[i] = Vector(mvmult3(trans_matrix, t))
             except:
-                raise CellError("Failed to perform transformation from cartesian to lattice coordinates.")
+                raise CellError(
+                    "Failed to perform transformation from cartesian to lattice coordinates.")
 
         ###############################
         #     LATTICE TRANSLATIONS    #
@@ -507,8 +524,8 @@ class CellData(GeometryObject):
         if self.primcell:
             if self.spacegroupsetting == 'I':
                 # Body centered
-                self.transvecs = [LatticeVector([zero,zero,zero]),
-                                  LatticeVector([half,half,half])]
+                self.transvecs = [LatticeVector([zero, zero, zero]),
+                                  LatticeVector([half, half, half])]
                 if self.crystal_system() == 'cubic' or self.specialIsetting != 0:
                     self.lattrans = LatticeMatrix([[-half, half, half],
                                                    [half, -half, half],
@@ -519,31 +536,31 @@ class CellData(GeometryObject):
                                                    [half, half, half]])
             elif self.spacegroupsetting == 'F':
                 # face centered
-                self.transvecs = [LatticeVector([zero,zero,zero]),
-                                  LatticeVector([half,half,zero]),
-                                  LatticeVector([half,zero,half]),
-                                  LatticeVector([zero,half,half])]
+                self.transvecs = [LatticeVector([zero, zero, zero]),
+                                  LatticeVector([half, half, zero]),
+                                  LatticeVector([half, zero, half]),
+                                  LatticeVector([zero, half, half])]
                 self.lattrans = LatticeMatrix([[half, half, zero],
                                                [half, zero, half],
                                                [zero, half, half]])
             elif self.spacegroupsetting == 'A':
                 # A-centered
-                self.transvecs = [LatticeVector([zero,zero,zero]),
-                                  LatticeVector([zero,half,half])]
+                self.transvecs = [LatticeVector([zero, zero, zero]),
+                                  LatticeVector([zero, half, half])]
                 self.lattrans = LatticeMatrix([[one, zero, zero],
                                                [zero, half, -half],
                                                [zero, half, half]])
             elif self.spacegroupsetting == 'B':
                 # B-centered
-                self.transvecs = [LatticeVector([zero,zero,zero]),
-                                  LatticeVector([half,zero,half])]
+                self.transvecs = [LatticeVector([zero, zero, zero]),
+                                  LatticeVector([half, zero, half])]
                 self.lattrans = LatticeMatrix([[half, zero, -half],
                                                [zero, one, zero],
                                                [half, zero, half]])
             elif self.spacegroupsetting == 'C':
                 # C-centered
-                self.transvecs = [LatticeVector([zero,zero,zero]),
-                                  LatticeVector([half,half,zero])]
+                self.transvecs = [LatticeVector([zero, zero, zero]),
+                                  LatticeVector([half, half, zero])]
                 self.lattrans = LatticeMatrix([[half, -half, zero],
                                                [half, half, zero],
                                                [zero, zero, one]])
@@ -551,37 +568,38 @@ class CellData(GeometryObject):
                 if abs(self.gamma - 120) < self.coordepsilon:
                     # rhombohedral from hexagonal setting
                     self.rhombohedral = True
-                    self.transvecs = [LatticeVector([zero,zero,zero]),
+                    self.transvecs = [LatticeVector([zero, zero, zero]),
                                       LatticeVector([third, 2*third, 2*third]),
                                       LatticeVector([2*third, third, third])]
                     self.lattrans = LatticeMatrix([[2*third, third, third],
                                                    [-third, third, third],
                                                    [-third, -2*third, third]])
                 else:
-                    self.transvecs = [LatticeVector([zero,zero,zero])]
+                    self.transvecs = [LatticeVector([zero, zero, zero])]
                     self.lattrans = LatticeMatrix([[1, 0, 0],
                                                    [0, 1, 0],
                                                    [0, 0, 1]])
             else:
-                self.transvecs = [LatticeVector([zero,zero,zero])]
+                self.transvecs = [LatticeVector([zero, zero, zero])]
                 self.lattrans = LatticeMatrix([[1, 0, 0],
                                                [0, 1, 0],
                                                [0, 0, 1]])
             # Transform to primitive cell
             tmp = []
             for i in range(3):
-                tmp.append(mvmult3(self.latticevectors,self.lattrans[i]))
+                tmp.append(mvmult3(self.latticevectors, self.lattrans[i]))
             self.latticevectors = LatticeMatrix(tmp)
             # Improve precision again...
             for i in range(3):
                 for j in range(3):
-                    self.latticevectors[i][j] = improveprecision(self.latticevectors[i][j],self.coordepsilon)
+                    self.latticevectors[i][j] = improveprecision(
+                        self.latticevectors[i][j], self.coordepsilon)
         else:
             # If no reduction is to be done
-            self.transvecs = [LatticeVector([zero,zero,zero])]
+            self.transvecs = [LatticeVector([zero, zero, zero])]
             self.lattrans = LatticeMatrix([[1, 0, 0],
-                                          [0, 1, 0],
-                                          [0, 0, 1]])
+                                           [0, 1, 0],
+                                           [0, 0, 1]])
 
         # Find inverse lattice transformation matrix
         invlattrans = LatticeMatrix(minv3(self.lattrans))
@@ -618,8 +636,8 @@ class CellData(GeometryObject):
         if self.crystal_system() == 'hexagonal' or self.crystal_system() == 'trigonal':
             # Hexagonal and trigonal as a special case... check that the hexagonal planes are in the ab plane
             for op in self.symops:
-                if not (op.rotation[2] == Vector([0,0,1]) or op.rotation[2] == Vector([0,0,-1])):
-                    raise SymmetryError("Lattice vectors do not fulfil the given symmetries of the lattice!\n"+
+                if not (op.rotation[2] == Vector([0, 0, 1]) or op.rotation[2] == Vector([0, 0, -1])):
+                    raise SymmetryError("Lattice vectors do not fulfil the given symmetries of the lattice!\n" +
                                         "The cell is given in some non-standard setting presently not handled by the program.")
         else:
             for op in self.symops:
@@ -631,7 +649,7 @@ class CellData(GeometryObject):
                                 or transvec == -lv[0] or transvec == -lv[1] or transvec == -lv[2]):
                             fails = True
                     if fails:
-                        raise SymmetryError("Lattice vectors do not fulfil the given symmetries of the lattice!\n"\
+                        raise SymmetryError("Lattice vectors do not fulfil the given symmetries of the lattice!\n"
                                             "The cell is given in some non-standard setting presently not handled by the program.")
 
         #########################
@@ -641,12 +659,13 @@ class CellData(GeometryObject):
         for i in range(len(self.ineqsites)):
             # Set up atomdata
             self.atomdata.append([])
-            self.atomdata[i].append(AtomSite(position=self.ineqsites[i], label=self.sitelabels[i]))
+            self.atomdata[i].append(
+                AtomSite(position=self.ineqsites[i], label=self.sitelabels[i]))
             # Add species and occupations to atomdata
-            for k,v in self.occupations[i].items():
+            for k, v in self.occupations[i].items():
                 self.atomdata[i][0].species[k] = v
                 # Add charge state
-                for k2,v2 in self.chargedict.items():
+                for k2, v2 in self.chargedict.items():
                     if k2.strip(string.punctuation+string.digits) == k:
                         self.atomdata[i][0].charges[k] = v2
             ## self.atomdata[i][0].charge = self.charges[i]
@@ -660,7 +679,7 @@ class CellData(GeometryObject):
         removeindices = []
         # set up atomdata
         for i in range(len(self.atomdata)):
-            for j in range(len(self.atomdata)-1,i,-1):
+            for j in range(len(self.atomdata)-1, i, -1):
                 if self.atomdata[i][0].position == self.atomdata[j][0].position:
                     # Add the dictionary of site j to that of site i and schedule index j for
                     # removal. If there is already an instance of the species on this site and
@@ -670,14 +689,17 @@ class CellData(GeometryObject):
                     if self.atomdata[j][0].alloy:
                         for k in self.atomdata[j][0].species:
                             if k in self.atomdata[i][0].species:
-                                v = self.atomdata[j][0].species[k] + self.atomdata[i][0].species[k]
+                                v = self.atomdata[j][0].species[k] + \
+                                    self.atomdata[i][0].species[k]
                                 self.atomdata[i][0].species[k] = v
                             else:
                                 self.atomdata[i][0].species[k] = self.atomdata[j][0].species[k]
-                    self.atomdata[i][0].charges.update(self.atomdata[j][0].charges)
+                    self.atomdata[i][0].charges.update(
+                        self.atomdata[j][0].charges)
                     removeindices.append(j)
                     # ...also fix self.occupations
-                    self.occupations[i][list(self.occupations[j])[0]] = list(self.occupations[j].values())[0]
+                    self.occupations[i][list(self.occupations[j])[0]] = list(
+                        self.occupations[j].values())[0]
         # Remove duplicate elements
         removeindices = list(set(removeindices))
         removeindices.sort(reverse=True)
@@ -693,18 +715,20 @@ class CellData(GeometryObject):
                 posexpr = [s for s in op.eqsite]
                 for k in range(3):
                     # position expression string, replacing x,y,z with numbers
-                    posexpr[k] = posexpr[k].replace('x',str(a[0].position[0]))
-                    posexpr[k] = posexpr[k].replace('y',str(a[0].position[1]))
-                    posexpr[k] = posexpr[k].replace('z',str(a[0].position[2]))
-                position = LatticeVector([safe_matheval(pos) for pos in posexpr])
-                b = AtomSite(position=position,species=a[0].species,charges=a[0].charges,label=a[0].label)
+                    posexpr[k] = posexpr[k].replace('x', str(a[0].position[0]))
+                    posexpr[k] = posexpr[k].replace('y', str(a[0].position[1]))
+                    posexpr[k] = posexpr[k].replace('z', str(a[0].position[2]))
+                position = LatticeVector(
+                    [safe_matheval(pos) for pos in posexpr])
+                b = AtomSite(
+                    position=position, species=a[0].species, charges=a[0].charges, label=a[0].label)
                 self.atomset.add(b)
                 append = True
                 for site in a:
                     for vec in self.transvecs:
                         t = vec + b.position
                         if site.position == t:
-                            append=False
+                            append = False
                             break
                     if not append:
                         break
@@ -714,7 +738,7 @@ class CellData(GeometryObject):
         # so we only transform once.
         for a in self.atomdata:
             for b in a:
-                b.position = LatticeVector(mvmult3(invlattrans,b.position))
+                b.position = LatticeVector(mvmult3(invlattrans, b.position))
 
         # Weed out remaining duplicates. A weird special case that arises when
         # different symmetry equivalent sites where listed in the input file.
@@ -723,13 +747,13 @@ class CellData(GeometryObject):
         removeindices = set([])
         for i in range(len(self.atomdata)):
             for j in range(len(self.atomdata[i])):
-                for k in range(i+1,len(self.atomdata)):
+                for k in range(i+1, len(self.atomdata)):
                     for l in range(len(self.atomdata[k])):
                         if self.atomdata[i][j].position == self.atomdata[k][l].position:
-                            removeindices.add((k,l))
+                            removeindices.add((k, l))
         removeindices = list(removeindices)
         removeindices.sort(reverse=True)
-        for i,j in removeindices:
+        for i, j in removeindices:
             self.atomdata[i].pop(j)
         # Check if any type is now completely empty
         removeindices = []
@@ -746,8 +770,9 @@ class CellData(GeometryObject):
         # Chemical content dictionary
         for a in self.atomdata:
             for b in a:
-                for k,v in b.species.items():
-                    if k != 'Em' and k != 'Vc' and k != 'Va':    # Do not care about empty (vacuum) sites
+                for k, v in b.species.items():
+                    # Do not care about empty (vacuum) sites
+                    if k != 'Em' and k != 'Vc' and k != 'Va':
                         if k in self.ChemicalComposition:
                             n = self.ChemicalComposition[k]
                             self.ChemicalComposition[k] = v+n
@@ -755,8 +780,8 @@ class CellData(GeometryObject):
                             self.ChemicalComposition[k] = v
         if not self.alloy:
             L = list(self.ChemicalComposition.values())
-            divisor = reduce(gcd,L)
-            for k,v in self.ChemicalComposition.items():
+            divisor = reduce(gcd, L)
+            for k, v in self.ChemicalComposition.items():
                 self.ChemicalComposition[k] = v/divisor
         # Number of atoms
         self.numberOfAtoms = self.natoms()
@@ -770,43 +795,45 @@ class CellData(GeometryObject):
         Only transformations involving rotations and an overall rescaling of the cell are allowed.
         """
         r = LatticeMatrix(transformation)
-        fac = pow(abs(det3(r)),float(1)/3)
+        fac = pow(abs(det3(r)), float(1)/3)
         # Check that the transformation does not skew the cell.
         oldanglen = set([Vector([CellFloat(self.latticevectors[0].angle(self.latticevectors[1])),
-                         CellFloat(self.latticevectors[0].angle(self.latticevectors[2])),
-                         CellFloat(self.latticevectors[1].angle(self.latticevectors[2]))]),
+                                 CellFloat(self.latticevectors[0].angle(
+                                     self.latticevectors[2])),
+                                 CellFloat(self.latticevectors[1].angle(self.latticevectors[2]))]),
                          Vector([CellFloat(self.latticevectors[0].length()),
-                         CellFloat(self.latticevectors[1].length()),
-                         CellFloat(self.latticevectors[2].length())])])
-        t = LatticeMatrix(mmmult3(self.latticevectors,r))
+                                 CellFloat(self.latticevectors[1].length()),
+                                 CellFloat(self.latticevectors[2].length())])])
+        t = LatticeMatrix(mmmult3(self.latticevectors, r))
         newanglen = set([Vector([CellFloat(t[0].angle(t[1])),
-                         CellFloat(t[0].angle(t[2])),
-                         CellFloat(t[1].angle(t[2]))]),
+                                 CellFloat(t[0].angle(t[2])),
+                                 CellFloat(t[1].angle(t[2]))]),
                          Vector([CellFloat(t[0].length()/fac),
-                         CellFloat(t[1].length()/fac),
-                         CellFloat(t[2].length()/fac)])])
+                                 CellFloat(t[1].length()/fac),
+                                 CellFloat(t[2].length()/fac)])])
 #        print (oldanglen)
 #        print (newanglen)
 #        print (len(oldanglen), len(newanglen))
-        if oldanglen==newanglen or self.force:
+        if oldanglen == newanglen or self.force:
             self.latticevectors = t
             self.lengthscale /= fac
             # Transform symmetry operations
             newsymops = set([])
             for op in self.symops:
                 o = copy.copy(op)
-                o.rotation = LatticeMatrix(mmmult3(mmmult3(minv3(r),o.rotation),r))
+                o.rotation = LatticeMatrix(
+                    mmmult3(mmmult3(minv3(r), o.rotation), r))
                 o.improveprecision()
                 newsymops.add(o)
             self.symops = newsymops
-            if oldanglen!=newanglen and self.force:
-                sys.stderr.write("***Error: The transformation matrix skews the lattice. Only combinations of \n"+
+            if oldanglen != newanglen and self.force:
+                sys.stderr.write("***Error: The transformation matrix skews the lattice. Only combinations of \n" +
                                  "          rotations and rescaling of the whole cell are allowed.")
         else:
-            raise CellError("The transformation matrix skews the lattice. Only combinations of "+
+            raise CellError("The transformation matrix skews the lattice. Only combinations of " +
                             "rotations and rescaling of the whole cell are allowed.")
 
-    def getSuperCell(self, supercellmap, vacuum, prevactransvec, postvactransvec=[.0,.0,.0], sort="", realign=0):
+    def getSuperCell(self, supercellmap, vacuum, prevactransvec, postvactransvec=[.0, .0, .0], sort="", realign=0):
         """
         Returns a supercell based on the input supercell map, vacuum layers and translation vector.
         The cell must have been initialized prior to calling getSuperCell.
@@ -821,18 +848,23 @@ class CellData(GeometryObject):
 
         # Sanity checks
         if not self.initialized:
-            raise CellError("The unit cell must be initialized before a supercell can be generated.")
-        if len(vacuum) != 3: #or vacuum[0] < 0 or vacuum[1] < 0 or vacuum[2] < 0:
-            raise CellError("The vacuum padding must be an array of three numbers >= 0.")
+            raise CellError(
+                "The unit cell must be initialized before a supercell can be generated.")
+        # or vacuum[0] < 0 or vacuum[1] < 0 or vacuum[2] < 0:
+        if len(vacuum) != 3:
+            raise CellError(
+                "The vacuum padding must be an array of three numbers >= 0.")
 
         # Map matrix
         try:
-            mapmatrix = LatticeMatrix([[supercellmap[0],0,0],[0,supercellmap[1],0],[0,0,supercellmap[2]]])
+            mapmatrix = LatticeMatrix(
+                [[supercellmap[0], 0, 0], [0, supercellmap[1], 0], [0, 0, supercellmap[2]]])
         except:
             try:
                 mapmatrix = supercellmap
             except:
-                raise CellError("The supercell map must be a vector or a matrix.")
+                raise CellError(
+                    "The supercell map must be a vector or a matrix.")
         # Inverse of map matrix.
         try:
             invmapmatrix = LatticeMatrix(minv3(mapmatrix))
@@ -840,14 +872,15 @@ class CellData(GeometryObject):
             raise CellError("The supercell map must be invertible.")
         volratio = abs(det3(mapmatrix))
         # Volume ratio must be a non-zero integer.
-        if abs(volratio-round(volratio,0)) > self.compeps:
-            raise CellError("The determinant of the supercell map must be a non-zero integer.")
+        if abs(volratio-round(volratio, 0)) > self.compeps:
+            raise CellError(
+                "The determinant of the supercell map must be a non-zero integer.")
             ## sys.stderr.write("***Warning: The determinant of the supercell map is a non-integer.\n")
             ## sys.stderr.write("            If you did not expect this warning, immediately stop to\n")
             ## sys.stderr.write("            rethink what you are doing.\n")
 
         # New latticevectors from supercell map.
-        t = mmmult3(mapmatrix,self.latticevectors)
+        t = mmmult3(mapmatrix, self.latticevectors)
         self.latticevectors = LatticeMatrix(t)
         invlatvects = minv3(self.latticevectors)
 
@@ -870,24 +903,28 @@ class CellData(GeometryObject):
             sumset.add(int(M[i][0])-int(M[i][2]))
             sumset.add(int(M[i][1])-int(M[i][2]))
             sumset.add(int(M[i][0])-int(M[i][1])-int(M[i][2]))
-            lo.append(min(sumset)-1)  # Don't really understand why I need to add/subtract
-            up.append(max(sumset)+1)  # 1 here... but things sometimes fail if I don't.
+            # Don't really understand why I need to add/subtract
+            lo.append(min(sumset)-1)
+            # 1 here... but things sometimes fail if I don't.
+            up.append(max(sumset)+1)
         # Translation vector search
         newtranslations = set([])
         for k in range(lo[0], up[0]+1):
             for j in range(lo[1], up[1]+1):
                 for i in range(lo[2], up[2]+1):
-                    t = LatticeVector(mvmult3(invmapmatrix,[k,j,i])) # convert to new lattice coords
+                    # convert to new lattice coords
+                    t = LatticeVector(mvmult3(invmapmatrix, [k, j, i]))
                     newtranslations.add(t)
         # Remove identity translation.
-        newtranslations.remove(LatticeVector([0,0,0]))
+        newtranslations.remove(LatticeVector([0, 0, 0]))
 
         # Transform original coordinates to new basis.
         for a in self.atomdata:
             for b in a:
-                b.position = LatticeVector(mvmult3(invmapmatrix,b.position))
+                b.position = LatticeVector(mvmult3(invmapmatrix, b.position))
         for op in self.symops:
-            op.translation = LatticeVector(mvmult3(invmapmatrix,op.translation))
+            op.translation = LatticeVector(
+                mvmult3(invmapmatrix, op.translation))
 
         # Operate with new translation group on coordinates to generate all positions
         newsites = []
@@ -897,7 +934,8 @@ class CellData(GeometryObject):
             for b in a:
                 for translation in newtranslations:
                     position = LatticeVector(b.position + translation)
-                    t = AtomSite(position=b.position,species=b.species,charges=b.charges)
+                    t = AtomSite(position=b.position,
+                                 species=b.species, charges=b.charges)
                     t.position = position
                     newsites[i].append(t)
             i += 1
@@ -909,11 +947,12 @@ class CellData(GeometryObject):
             i += 1
 
         # Move all atoms by prevactransvec
-        if reduce(lambda x,y: x+y, prevactransvec) != 0:
+        if reduce(lambda x, y: x+y, prevactransvec) != 0:
             for i in range(len(self.atomdata)):
                 for j in range(len(self.atomdata[i])):
                     for k in range(3):
-                        self.atomdata[i][j].position[k] = self.atomdata[i][j].position[k] + prevactransvec[k]
+                        self.atomdata[i][j].position[k] = self.atomdata[i][j].position[k] + \
+                            prevactransvec[k]
 
         # Put stuff back in cell
         for a in self.atomdata:
@@ -923,14 +962,15 @@ class CellData(GeometryObject):
         # Put positions in cartesian coordinates for vacuum generation
         for a in self.atomdata:
             for b in a:
-                b.position = Vector(mvmult3(self.latticevectors,b.position))
+                b.position = Vector(mvmult3(self.latticevectors, b.position))
         # New latticevectors after vacuum padding
-        vacuummapmatrix = LatticeMatrix([[1,0,0],[0,1,0],[0,0,1]])
-        if reduce(lambda x,y: x+y, vacuum) > 0:
+        vacuummapmatrix = LatticeMatrix([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+        if reduce(lambda x, y: x+y, vacuum) > 0:
             # add the given number of unit cell units along the lattice vectors
             for j in range(len(vacuum)):
                 for i in range(len(self.latticevectors[j])):
-                    self.latticevectors[j][i] = self.latticevectors[j][i] + self.latticevectors[j][i]*vacuum[j]
+                    self.latticevectors[j][i] = self.latticevectors[j][i] + \
+                        self.latticevectors[j][i]*vacuum[j]
                 vacuummapmatrix[j][j] = vacuummapmatrix[j][j] + vacuum[j]
         # Remap coordinates after padding
         invlatvect = LatticeMatrix(minv3(self.latticevectors))
@@ -939,17 +979,19 @@ class CellData(GeometryObject):
                 b.position = LatticeVector(mvmult3(invlatvect, b.position))
 
         # Move all atoms by postvactransvec
-        if reduce(lambda x,y: x+y, postvactransvec) != 0:
+        if reduce(lambda x, y: x+y, postvactransvec) != 0:
             for i in range(len(self.atomdata)):
                 for j in range(len(self.atomdata[i])):
                     for k in range(3):
-                        self.atomdata[i][j].position[k] = self.atomdata[i][j].position[k] + postvactransvec[k]
+                        self.atomdata[i][j].position[k] = self.atomdata[i][j].position[k] + \
+                            postvactransvec[k]
 
         ############ New space group operations ############
         # Only sort out space group information for diagonal map matrix. !SHOULD BE FIXED GENERALLY!
         eps = self.compeps
         diagonal = abs(mapmatrix[0][1]) < eps and abs(mapmatrix[0][2]) < eps and abs(mapmatrix[1][2]) < eps and \
-                   abs(mapmatrix[1][0]) < eps and abs(mapmatrix[2][0]) < eps and abs(mapmatrix[2][1]) < eps
+            abs(mapmatrix[1][0]) < eps and abs(
+                mapmatrix[2][0]) < eps and abs(mapmatrix[2][1]) < eps
         if diagonal:
             # Multiply group by new translation group
             newops = []
@@ -968,28 +1010,28 @@ class CellData(GeometryObject):
             removeset = set([])
             # Ugly set of if's and special cases
             # THIS WILL NOT WORK WITH GENERAL SUPERCELL MAP MATRIX
-            if self.crystal_system()=="hexagonal" or (self.crystal_system()=="trigonal" and not self.primcell):
+            if self.crystal_system() == "hexagonal" or (self.crystal_system() == "trigonal" and not self.primcell):
                 if abs(lv[0].length()-lv[1].length()) < lv.compeps:
                     # if a and b are still the same, no rotation symmetry is broken
                     pass
                 else:
                     # if a and b are different, all rotation symmetries except inversion are broken
-                    e = SymmetryOperation(["x","y","z"])
-                    i = SymmetryOperation(["-x","-y","-z"])
+                    e = SymmetryOperation(["x", "y", "z"])
+                    i = SymmetryOperation(["-x", "-y", "-z"])
                     for op in self.symops:
                         if op.rotation == e.rotation or op.rotation == i.rotation:
                             pass
                         else:
                             removeset.add(op)
-            elif self.crystal_system()=="trigonal" and self.primcell:
+            elif self.crystal_system() == "trigonal" and self.primcell:
                 # if any latticevector has different length, all symmetries except inversion are broken
                 if abs(lv[0].length()-lv[1].length()) < lv.compeps and \
                    abs(lv[1].length()-lv[2].length()) < lv.compeps and \
                    abs(lv[0].length()-lv[2].length()) < lv.compeps:
                     pass
                 else:
-                    e = SymmetryOperation(["x","y","z"])
-                    i = SymmetryOperation(["-x","-y","-z"])
+                    e = SymmetryOperation(["x", "y", "z"])
+                    i = SymmetryOperation(["-x", "-y", "-z"])
                     for op in self.symops:
                         if op.rotation == e.rotation or op.rotation == i.rotation:
                             pass
@@ -998,11 +1040,11 @@ class CellData(GeometryObject):
             else:
                 for op in self.symops:
                     for vec in lv:
-                        t = Vector(mvmult3(op.rotation,vec))
+                        t = Vector(mvmult3(op.rotation, vec))
                         r = Vector([-u for u in t])
                         # Symmetry operation OK if it maps a lattice vector into one of the other lattice vectors
                         equivalent = t == lv[0] or t == lv[1] or t == lv[2] or \
-                                     r == lv[0] or r == lv[1] or r == lv[2]
+                            r == lv[0] or r == lv[1] or r == lv[2]
                         if not equivalent:
                             removeset.add(op)
                             continue
@@ -1016,11 +1058,10 @@ class CellData(GeometryObject):
             # Remove broken symmetries
             for op in self.symops:
                 for vec in lv:
-                    t = Vector(mvmult3(op.rotation,vec))
+                    t = Vector(mvmult3(op.rotation, vec))
         else:
             # Otherwise just keep identity
-            self.symops = set([SymmetryOperation(['x','y','z'])])
-
+            self.symops = set([SymmetryOperation(['x', 'y', 'z'])])
 
         # Sort the atomic positions if requested.
         if sort != "":
@@ -1036,24 +1077,30 @@ class CellData(GeometryObject):
             # Identify and sort by z-layers
             if sort == "zlayer":
                 # sort atoms by z-coordinate
-                self.atomdata.sort(key = lambda a: a[0].position.transform(self.latticevectors)[2])
+                self.atomdata.sort(
+                    key=lambda a: a[0].position.transform(self.latticevectors)[2])
                 #
             elif len(sort) == 3:
                 # check if the string contains only 'x', 'y' or 'z'
-                allbutxyz = string.printable.replace("x","").replace("y","").replace("z","")
+                allbutxyz = string.printable.replace(
+                    "x", "").replace("y", "").replace("z", "")
                 # check if the string contains only '1', '2' or '3'
-                allbut123 = string.printable.replace("1","").replace("2","").replace("3","")
+                allbut123 = string.printable.replace(
+                    "1", "").replace("2", "").replace("3", "")
                 # dummy table to work in python < 2.6
-                table = string.maketrans("a","a")
-                if len(string.translate(sort,table,allbutxyz)) == 3:
+                table = string.maketrans("a", "a")
+                if len(string.translate(sort, table, allbutxyz)) == 3:
                     # Sort atoms by cartesian coordinate
-                    sortnum = string.translate(sort,string.maketrans("xyz","012"))
+                    sortnum = string.translate(
+                        sort, string.maketrans("xyz", "012"))
                     for i in sortnum:
-                        self.atomdata.sort(key = lambda a: a[0].position.transform(self.latticevectors)[int(i)])
-                elif len(string.translate(sort,table,allbut123)) == 3:
+                        self.atomdata.sort(key=lambda a: a[0].position.transform(
+                            self.latticevectors)[int(i)])
+                elif len(string.translate(sort, table, allbut123)) == 3:
                     # sort atoms by lattice coordinates
                     for i in sort:
-                        self.atomdata.sort(key = lambda a: a[0].position[int(i)-1])
+                        self.atomdata.sort(
+                            key=lambda a: a[0].position[int(i)-1])
         self.supercell = True
         self.numberOfAtoms = self.natoms()
 
@@ -1071,10 +1118,11 @@ class CellData(GeometryObject):
             # new lattice vectors
             angfac1 = (cos(alpha) - cos(beta)*cos(gamma))/sin(gamma)
             angfac2 = sqrt(sin(gamma)**2 - cos(beta)**2 - cos(alpha)**2
-                       + 2*cos(alpha)*cos(beta)*cos(gamma))/sin(gamma)
+                           + 2*cos(alpha)*cos(beta)*cos(gamma))/sin(gamma)
             self.latticevectors = LatticeMatrix([[one, zero, zero],
-                                            [boa*cos(gamma), boa*sin(gamma), zero],
-                                            [coa*cos(beta), coa*angfac1, coa*angfac2]])
+                                                 [boa*cos(gamma), boa *
+                                                  sin(gamma), zero],
+                                                 [coa*cos(beta), coa*angfac1, coa*angfac2]])
 
         return self
 
@@ -1085,20 +1133,20 @@ class CellData(GeometryObject):
         ################################
         # _space_group is the primary choice, so if both _symmetry and _space_group
         # are present, _symmetry will be overwritten
-        for spgrnrid in ['_symmetry_Int_Tables_number','_space_group_IT_number']:
+        for spgrnrid in ['_symmetry_Int_Tables_number', '_space_group_IT_number']:
             try:
                 self.spacegroupnr = int(cifblock[spgrnrid])
             except:
                 pass
-        for hallid in ['_symmetry_space_group_name_Hall','_space_group_name_Hall']:
+        for hallid in ['_symmetry_space_group_name_Hall', '_space_group_name_Hall']:
             try:
-                self.HallSymbol=cifblock[hallid]
+                self.HallSymbol = cifblock[hallid]
             except:
                 pass
-        for HMid in ['_symmetry_space_group_name_H-M','_space_group_name_H-M_alt']:
+        for HMid in ['_symmetry_space_group_name_H-M', '_space_group_name_H-M_alt']:
             try:
                 #self.HMSymbol=cifblock[HMid].translate(string.maketrans("", ""),string.whitespace)
-                self.HMSymbol=cifblock[HMid].replace(" ","")
+                self.HMSymbol = cifblock[HMid].replace(" ", "")
             except:
                 pass
         # Force correct case for space group symbols
@@ -1122,20 +1170,22 @@ class CellData(GeometryObject):
                 self.HMSymbol = "".join(tmp)
         if self.HallSymbol != "":
             if self.HallSymbol[0] == "-":
-                self.HallSymbol = "-"+self.HallSymbol[1].upper()+self.HallSymbol[2:].lower()
+                self.HallSymbol = "-" + \
+                    self.HallSymbol[1].upper()+self.HallSymbol[2:].lower()
             else:
-                self.HallSymbol = self.HallSymbol[0].upper()+self.HallSymbol[1:].lower()
+                self.HallSymbol = self.HallSymbol[0].upper(
+                )+self.HallSymbol[1:].lower()
 
         # Get symmetry equivalent positions (space group operations).
         eqsites = None
-        for symopid in ['_symmetry_equiv_pos_as_xyz','_space_group_symop_operation_xyz']:
+        for symopid in ['_symmetry_equiv_pos_as_xyz', '_space_group_symop_operation_xyz']:
             try:
                 eqsitedata = cifblock.GetLoop(symopid)
                 try:
                     eqsitestrs = eqsitedata.get(symopid)
                     # This if fixes a funny exception that can occur for the P1 space group,
                     # if the single operation is just a string and not in a _loop
-                    if isinstance(eqsitestrs,six.string_types):
+                    if isinstance(eqsitestrs, six.string_types):
                         eqsitestrs = [eqsitestrs]
                     eqsites = []
                     for i in range(len(eqsitestrs)):
@@ -1155,14 +1205,18 @@ class CellData(GeometryObject):
                     try:
                         self.HallSymbol = Number2Hall[self.spacegroupnr]
                     except:
-                        raise SymmetryError("Found neither Hall nor H-M symbol and space group %i does not have a unique setting."%self.spacegroupnr)
+                        raise SymmetryError(
+                            "Found neither Hall nor H-M symbol and space group %i does not have a unique setting." % self.spacegroupnr)
                 else:
                     if self.force:
-                        sys.stderr.write("***Warning: CIF file contains neither space group symbols nor space group number.\n")
-                        sys.stderr.write("            Defaulting to P1. Check results carefully!\n")
+                        sys.stderr.write(
+                            "***Warning: CIF file contains neither space group symbols nor space group number.\n")
+                        sys.stderr.write(
+                            "            Defaulting to P1. Check results carefully!\n")
                         self.HallSymbol = "P 1"
                     else:
-                        raise SymmetryError("CIF file contains neither space group symbols nor space group number.")
+                        raise SymmetryError(
+                            "CIF file contains neither space group symbols nor space group number.")
             try:
                 self.HallSymbol = HM2Hall[self.HMSymbol]
             except:
@@ -1188,13 +1242,14 @@ class CellData(GeometryObject):
                 # Check if symmetry operations are consistent with current space group
                 if len(eqsites) != len(SymOpsHall[self.HallSymbol]):
                     if self.force:
-                        sys.stderr.write("***Warning: Number of space group operations (%3i) is inconsistent "%len(eqsites)\
-                                         +"with the given space group (%s).\n"%self.HMSymbol)
+                        sys.stderr.write("***Warning: Number of space group operations (%3i) is inconsistent " % len(eqsites)
+                                         + "with the given space group (%s).\n" % self.HMSymbol)
                     else:
-                        raise SymmetryError("Number of space group operations (%3i) is inconsistent "%len(eqsites)\
-                                            +"with the given space group (%s)."%self.HallSymbol)
+                        raise SymmetryError("Number of space group operations (%3i) is inconsistent " % len(eqsites)
+                                            + "with the given space group (%s)." % self.HallSymbol)
             except:
-                sys.stderr.write("***Warning: Space group operation check failed for Hall symbol %s (H-M symbol %s).\n"%(self.HallSymbol,self.HMSymbol))
+                sys.stderr.write(
+                    "***Warning: Space group operation check failed for Hall symbol %s (H-M symbol %s).\n" % (self.HallSymbol, self.HMSymbol))
         # Define the set of space group operations.
         self.symops = set([])
         for site in eqsites:
@@ -1205,11 +1260,11 @@ class CellData(GeometryObject):
         #######################
         try:
             # Set initial crystal parameters
-            self.ainit     = float(removeerror(cifblock['_cell_length_a']))
-            self.binit     = float(removeerror(cifblock['_cell_length_b']))
-            self.cinit     = float(removeerror(cifblock['_cell_length_c']))
+            self.ainit = float(removeerror(cifblock['_cell_length_a']))
+            self.binit = float(removeerror(cifblock['_cell_length_b']))
+            self.cinit = float(removeerror(cifblock['_cell_length_c']))
             self.alphainit = float(removeerror(cifblock['_cell_angle_alpha']))
-            self.betainit  = float(removeerror(cifblock['_cell_angle_beta']))
+            self.betainit = float(removeerror(cifblock['_cell_angle_beta']))
             self.gammainit = float(removeerror(cifblock['_cell_angle_gamma']))
             self.coainit = self.cinit / self.ainit
             self.boainit = self.binit / self.ainit
@@ -1226,7 +1281,7 @@ class CellData(GeometryObject):
         self.b = self.binit
         self.c = self.cinit
         self.alpha = self.alphainit
-        self.beta  = self.betainit
+        self.beta = self.betainit
         self.gamma = self.gammainit
         self.coa = self.c / self.a
         self.boa = self.b / self.a
@@ -1253,28 +1308,35 @@ class CellData(GeometryObject):
                 t31 = cifblock.get('_atom_sites_Cartn_tran_matrix_13')
                 t32 = cifblock.get('_atom_sites_Cartn_tran_matrix_23')
                 t33 = cifblock.get('_atom_sites_Cartn_tran_matrix_33')
-                self.cart_trans_matrix = [[float(t11),float(t12),float(t13)],
-                                          [float(t21),float(t22),float(t23)],
-                                          [float(t31),float(t32),float(t33)]]
+                self.cart_trans_matrix = [[float(t11), float(t12), float(t13)],
+                                          [float(t21), float(t22), float(t23)],
+                                          [float(t31), float(t32), float(t33)]]
             except:
                 if self.force:
-                    sys.stderr.write("***Warning: Cartesian coordinates in CIF, but no transformation matrix given.\n")
-                    sys.stderr.write("            Using choice implied by the default lattice vectors. Check results carefully!\n")
+                    sys.stderr.write(
+                        "***Warning: Cartesian coordinates in CIF, but no transformation matrix given.\n")
+                    sys.stderr.write(
+                        "            Using choice implied by the default lattice vectors. Check results carefully!\n")
                 else:
-                    raise PositionError("Cartesian coordinates in CIF, but no transformation matrix given.")
+                    raise PositionError(
+                        "Cartesian coordinates in CIF, but no transformation matrix given.")
             # Try to get transformation matrix to interpret cartesian positions
             try:
                 t1 = cifblock.get('_atom_sites_Cartn_tran_vector_1')
                 t2 = cifblock.get('_atom_sites_Cartn_tran_vector_2')
                 t3 = cifblock.get('_atom_sites_Cartn_tran_vector_3')
-                self.cart_trans_vector = Vector([float(t1),float(t2),float(t3)])
+                self.cart_trans_vector = Vector(
+                    [float(t1), float(t2), float(t3)])
             except:
                 if self.force:
-                    sys.stderr.write("***Warning: Cartesian coordinates in CIF, but no translation vector given.\n")
-                    sys.stderr.write("            Using [0,0,0]. Check results carefully!\n")
+                    sys.stderr.write(
+                        "***Warning: Cartesian coordinates in CIF, but no translation vector given.\n")
+                    sys.stderr.write(
+                        "            Using [0,0,0]. Check results carefully!\n")
                     self.cart_trans_vector = Vector([0., 0., 0.])
                 else:
-                    raise PositionError("Cartesian coordinates in CIF, but no translation vector given.")
+                    raise PositionError(
+                        "Cartesian coordinates in CIF, but no translation vector given.")
         # Positions
         removedefective = set([])
         try:
@@ -1286,18 +1348,20 @@ class CellData(GeometryObject):
                 sitexer = tmpdata.get('_atom_site_fract_x')
                 siteyer = tmpdata.get('_atom_site_fract_y')
                 sitezer = tmpdata.get('_atom_site_fract_z')
-            if (sitexer is None or siteyer is None or sitezer is None or \
-                '?' in sitexer or '?' in siteyer or '?' in sitezer or \
-                '.' in sitexer or '.' in siteyer or '.' in sitezer):
+            if (sitexer is None or siteyer is None or sitezer is None or
+                '?' in sitexer or '?' in siteyer or '?' in sitezer or
+                    '.' in sitexer or '.' in siteyer or '.' in sitezer):
                 if self.force:
-                    sys.stderr.write("***Warning: Positions are missing, generating cell with the remaining atoms anyway.\n")
+                    sys.stderr.write(
+                        "***Warning: Positions are missing, generating cell with the remaining atoms anyway.\n")
                     # Remove defective sites from arrays.
                     for i in range(len(sitexer)):
-                        if (sitexer[i] == '?' or siteyer[i] == '?' or sitezer[i] == '?' or \
-                            sitexer[i] == '.' or siteyer[i] == '.' or sitezer[i] == '.'):
+                        if (sitexer[i] == '?' or siteyer[i] == '?' or sitezer[i] == '?' or
+                                sitexer[i] == '.' or siteyer[i] == '.' or sitezer[i] == '.'):
                             removedefective.add(i)
                 else:
-                    raise PositionError("Positions not found for one or more species.")
+                    raise PositionError(
+                        "Positions not found for one or more species.")
         except KeyError:
             raise PositionError("Positions not found for one or more species.")
 
@@ -1332,7 +1396,7 @@ class CellData(GeometryObject):
                     if symb == element:
                         self.chargedict[element] = Charge(oxnums[i])
                         self.charges.append(Charge(oxnums[i]))
-                    i+=1
+                    i += 1
         except:
             # Try _atom_site_type_symbol
             try:
@@ -1341,9 +1405,11 @@ class CellData(GeometryObject):
                     if oxnums[i] == '':
                         raise ValueError("Empty string found.")
                     if oxnums[i].strip(string.digits) == '+':
-                        self.charges.append(Charge(float(oxnums[i].strip(string.punctuation))))
+                        self.charges.append(
+                            Charge(float(oxnums[i].strip(string.punctuation))))
                     elif oxnums[i].strip(string.digits) == '-':
-                        self.charges.append(Charge(-float(oxnums[i].strip(string.punctuation))))
+                        self.charges.append(
+                            Charge(-float(oxnums[i].strip(string.punctuation))))
                     self.chargedict[elementsymbs[i]] = self.charges[i]
             except:
                 # if all else fails, just fill up with zeros
@@ -1370,10 +1436,12 @@ class CellData(GeometryObject):
                 self.elements[i] = "??"
             i += 1
         # Make element name start with capital and then have lower case letters
-        self.elements[:] = [element[0].upper()+element[1:].lower() for element in self.elements]
+        self.elements[:] = [element[0].upper()+element[1:].lower()
+                            for element in self.elements]
         for element in self.elements:
             if not element in ElementData().elementnr:
-                sys.stderr.write("***Warning: "+element+" is not a chemical element.\n")
+                sys.stderr.write("***Warning: "+element +
+                                 " is not a chemical element.\n")
         # Find occupancies
         try:
             siteoccer = tmpdata.get('_atom_site_occupancy')
@@ -1381,7 +1449,8 @@ class CellData(GeometryObject):
             raise PositionError("Error reading site occupancies.")
         if siteoccer == None or '?' in siteoccer or '.' in siteoccer:
             if not self.quiet:
-                sys.stderr.write("***Warning : Site occupancies not found, assuming all occupancies = 1.\n")
+                sys.stderr.write(
+                    "***Warning : Site occupancies not found, assuming all occupancies = 1.\n")
             siteoccer = []
             for site in self.elements:
                 siteoccer.append("1.0")
@@ -1397,9 +1466,11 @@ class CellData(GeometryObject):
                 except:
                     if self.force:
                         removedefective.add(i)
-                        sys.stderr.write("***Warning : Invalid atomic position value : "+j+"\n")
+                        sys.stderr.write(
+                            "***Warning : Invalid atomic position value : "+j+"\n")
                     else:
-                        raise PositionError("Invalid atomic position value : "+j)
+                        raise PositionError(
+                            "Invalid atomic position value : "+j)
             # Improve precision
             self.ineqsites[i] = Vector(self.ineqsites[i])
             # dictionary of elements and occupancies
@@ -1410,7 +1481,7 @@ class CellData(GeometryObject):
                 v = 1.0
             if abs(v-1.0) > 1e-6:
                 self.alloy = True
-            self.occupations.append({ k : v })
+            self.occupations.append({k: v})
 
         # If there is a set of defective sites, remove them if forced.
         if removedefective and self.force:
@@ -1423,8 +1494,7 @@ class CellData(GeometryObject):
                 except:
                     pass
 
-
-    def printCell(self,printsym=False,printinput=False,printcart=False,printdigits=8,printcharges=False):
+    def printCell(self, printsym=False, printinput=False, printcart=False, printdigits=8, printcharges=False):
         # format string for outputting decimal numbers to screen
         decpos = printdigits + 3
         decform = "%"+str(decpos)+"."+str(decpos-4)+"f"
@@ -1445,19 +1515,19 @@ class CellData(GeometryObject):
                     tmpstring1 = ""
                     tmpstring2 = ""
                     tmpstring3 = ""
-                    for k,v in b.species.items():
+                    for k, v in b.species.items():
                         tmpstring1 += k+"/"
                         tmpstring2 += str(v).rstrip("0.")+"/"
                         # charge output
-                        for k2,v2 in self.chargedict.items():
+                        for k2, v2 in self.chargedict.items():
                             if k2.strip(string.punctuation+string.digits) == k:
                                 tmpstring3 += str(v2)+"/"
                     tmpstring1 = tmpstring1.rstrip("/")
                     tmpstring2 = tmpstring2.rstrip("/")
                     tmpstring3 = tmpstring3.rstrip("/")
-                    w1 = max(w1,len(tmpstring1))
-                    w3 = max(w3,len(tmpstring2))
-                    w4 = max(w4,len(tmpstring3))
+                    w1 = max(w1, len(tmpstring1))
+                    w3 = max(w3, len(tmpstring2))
+                    w4 = max(w4, len(tmpstring3))
             # small aesthetic adjustment
             w1 = w1 + 1
             w3 = w3 + 2
@@ -1472,7 +1542,7 @@ class CellData(GeometryObject):
             else:
                 w4 = 0
         # Start output
-        sys.stdout.write( "Bravais lattice vectors :\n")
+        sys.stdout.write("Bravais lattice vectors :\n")
         # Site header
         siteheader = "Atom".ljust(w1)+" "
         if printcart:
@@ -1482,13 +1552,13 @@ class CellData(GeometryObject):
                 for j in range(3):
                     transmtx[i].append(self.latticevectors[i][j]*self.a)
                 i += 1
-            for i in ["x","y","z"]:
+            for i in ["x", "y", "z"]:
                 siteheader += i.rjust(decpos)+" "
         else:
             transmtx = [[1, 0, 0],
                         [0, 1, 0],
                         [0, 0, 1]]
-            for i in ["a1","a2","a3"]:
+            for i in ["a1", "a2", "a3"]:
                 siteheader += i.rjust(decpos)+" "
         if self.alloy:
             if w3 > 13:
@@ -1506,7 +1576,8 @@ class CellData(GeometryObject):
         for i in range(3):
             formatstring = formatstring+decform+" "
         for i in range(3):
-            sys.stdout.write(formatstring % (self.latticevectors[i][0]*fact, self.latticevectors[i][1]*fact, self.latticevectors[i][2]*fact)+"\n")
+            sys.stdout.write(formatstring % (
+                self.latticevectors[i][0]*fact, self.latticevectors[i][1]*fact, self.latticevectors[i][2]*fact)+"\n")
         # Print out all sites
         tmpstring = "All sites, "
         if printcart:
@@ -1520,24 +1591,23 @@ class CellData(GeometryObject):
                 spcsstring = ""
                 occstring = ""
                 chargestring = ""
-                for k,v in b.species.items():
+                for k, v in b.species.items():
                     spcsstring += k+"/"
                     occstring += str(v).rstrip("0.")+"/"
                     # charge output
-                    for k2,v2 in self.chargedict.items():
+                    for k2, v2 in self.chargedict.items():
                         if k2.strip(string.punctuation+string.digits) == k:
                             chargestring += str(v2)+"/"
                 spcsstring = spcsstring.rstrip("/")
                 occstring = occstring.rstrip("/")
                 chargestring = chargestring.rstrip("/")
-                v = mvmult3(transmtx,b.position)
-                tmpstring = spcsstring.ljust(w1)+threedecs%(v[0],v[1],v[2])
+                v = mvmult3(transmtx, b.position)
+                tmpstring = spcsstring.ljust(w1)+threedecs % (v[0], v[1], v[2])
                 if self.alloy:
                     tmpstring += " "+occstring.rjust(w3)
                 if printcharges:
                     tmpstring += " "+chargestring.rjust(w4)
                 sys.stdout.write(tmpstring+"\n")
-
 
 
 ################################################################################################
@@ -1572,6 +1642,7 @@ class ReferenceData:
     an empty string is returned.
 
     """
+
     def __init__(self):
         self.database = ""
         self.databasecode = ""
@@ -1589,30 +1660,30 @@ class ReferenceData:
         self.year = ""
         # Some known databases
         self.databasenames = {
-            'CAS'  : 'Chemical Abstracts',
-            'CSD'  : 'Cambridge Structural Database',
-            'ICSD' : 'Inorganic Crystal Structure Database',
-            'MDF'  : 'Metals Data File (metal structures)',
-            'NBS'  : '(NIST) Crystal Data Database',
-            'PDB'  : 'Protein Data Bank',
-            'PDF'  : 'Powder Diffraction File (JCPDS/ICDD)',
-            'COD'  : 'Crystallography Open Database'
-            }
+            'CAS': 'Chemical Abstracts',
+            'CSD': 'Cambridge Structural Database',
+            'ICSD': 'Inorganic Crystal Structure Database',
+            'MDF': 'Metals Data File (metal structures)',
+            'NBS': '(NIST) Crystal Data Database',
+            'PDB': 'Protein Data Bank',
+            'PDF': 'Powder Diffraction File (JCPDS/ICDD)',
+            'COD': 'Crystallography Open Database'
+        }
         self.databaseabbr = {
-             'Chemical Abstracts'                   : 'CAS',
-             'Cambridge Structural Database'        : 'CSD',
-             'Inorganic Crystal Structure Database' : 'ICSD',
-             'Metals Data File (metal structures)'  : 'MDF',
-             '(NIST) Crystal Data Database'         : 'NBS',
-             'Protein Data Bank'                    : 'PDB',
-             'Powder Diffraction File (JCPDS/ICDD)' : 'PDF',
-             'Crystallography Open Database'        : 'COD'
-            }
+            'Chemical Abstracts': 'CAS',
+            'Cambridge Structural Database': 'CSD',
+            'Inorganic Crystal Structure Database': 'ICSD',
+            'Metals Data File (metal structures)': 'MDF',
+            '(NIST) Crystal Data Database': 'NBS',
+            'Protein Data Bank': 'PDB',
+            'Powder Diffraction File (JCPDS/ICDD)': 'PDF',
+            'Crystallography Open Database': 'COD'
+        }
 
     def bibtexref(self):
         string = "@article{"
         # Guess what is the first authors last name
-        tmp = self.authors[0].replace(" ","")
+        tmp = self.authors[0].replace(" ", "")
         tmp = tmp.split(',')
         deletelist = []
         for i in range(len(tmp)):
@@ -1652,7 +1723,7 @@ class ReferenceData:
 
     def journalstring(self):
         try:
-            if not (self.journal == "" and self.volume == "" and self.firstpage=="" and self.year==""):
+            if not (self.journal == "" and self.volume == "" and self.firstpage == "" and self.year == ""):
                 journalstring = self.journal
                 journalstring += " "+self.volume
                 journalstring += ", "+self.firstpage+"-"+self.lastpage
@@ -1707,7 +1778,7 @@ class ReferenceData:
             alloy = False
             for t in tmp:
                 e = t.strip(string.digits+string.punctuation)
-                n = max(t.strip(string.ascii_letters+string.punctuation),'1')
+                n = max(t.strip(string.ascii_letters+string.punctuation), '1')
                 try:
                     n = int(n)
                 except:
@@ -1723,8 +1794,8 @@ class ReferenceData:
                     self.ChemicalComposition[e] = n
             if not alloy:
                 L = list(self.ChemicalComposition.values())
-                divisor = reduce(gcd,L)
-                for k,v in self.ChemicalComposition.items():
+                divisor = reduce(gcd, L)
+                for k, v in self.ChemicalComposition.items():
                     self.ChemicalComposition[k] = v/divisor
         except:
             # If not found, then ignore, this is just to test internal consistency.
@@ -1737,8 +1808,8 @@ class ReferenceData:
                 if not tmp is None:
                     self.databasecode = tmp
                     self.database = self.databasenames[db]
-                    self.databasestring = "CIF file exported from "+self.database+\
-                                     ".\nDatabase reference code: "+self.databasecode+"."
+                    self.databasestring = "CIF file exported from "+self.database +\
+                        ".\nDatabase reference code: "+self.databasecode+"."
                     break
                 else:
                     pass
@@ -1757,7 +1828,7 @@ class ReferenceData:
                 if tmp is None:
                     self.databasecode = tmp
                     self.database = self.databasenames["COD"]
-                    self.databasestring = "CIF file exported from "+self.database+\
+                    self.databasestring = "CIF file exported from "+self.database +\
                                           ".\nDatabase reference code: "+self.databasecode+"."
             except:
                 pass
@@ -1765,10 +1836,11 @@ class ReferenceData:
         # Get bibliographic information
         #
         try:
-        # Authors
+            # Authors
             authorsloop = cifblock.GetLoop('_publ_author_name')
             self.authors = authorsloop.get('_publ_author_name')
-            if isinstance(self.authors,six.string_types):   # If just a string and not a list from a _loop
+            # If just a string and not a list from a _loop
+            if isinstance(self.authors, six.string_types):
                 self.authors = deletenewline(self.authors)
                 self.authorstring = self.authors
                 self.authors = self.authors.split(";")
@@ -1786,8 +1858,8 @@ class ReferenceData:
         # Title of the paper
         try:
             self.title = cifblock.get('_publ_section_title')
-            self.title = deletenewline(self.title,replace=" ")
-            self.title = self.title.replace("  "," ")
+            self.title = deletenewline(self.title, replace=" ")
+            self.title = self.title.replace("  ", " ")
             self.title = self.title.strip(" ")
         except:
             pass
@@ -1809,10 +1881,12 @@ class ReferenceData:
                 self.journal = references.get('_citation_journal_full')[i]
             else:
                 if not references.get('_citation_journal_abbrev') is None:
-                    self.journal = references.get('_citation_journal_abbrev')[i]
+                    self.journal = references.get(
+                        '_citation_journal_abbrev')[i]
                 else:
                     if not references.get('_citation_book_title') is None:
-                        self.journal = references.get('_citation_book_title')[i]
+                        self.journal = references.get(
+                            '_citation_book_title')[i]
                     else:
                         self.journal = ""
             # volume
@@ -1893,4 +1967,3 @@ class ReferenceData:
                 self.year = deletenewline(self.year)
             except:
                 self.year = "????"
-
