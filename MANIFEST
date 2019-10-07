@@ -1,7 +1,5 @@
-PyCifRW-3.3.tar.gz
 LICENSE
-README
-HOWTOCITE
+README.md
 cif2cell
 setup.py
 spacegroupdata.py

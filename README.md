@@ -1,6 +1,4 @@
-Copyright 2010, Torbjorn Bjorkman
-
-# CIF2CELL
+[![Build Status](https://travis-ci.com/torbjornbjorkman/cif2cell.svg?branch=master)](https://travis-ci.com/torbjornbjorkman/cif2cell)
 
 A tool to generate the geometrical setup for various electronic
 structure codes from a CIF (Crystallographic Information
@@ -12,6 +10,7 @@ the primitive cell or the conventional cell.
 |code           | alloy support |   output files|
 |---------------|---------|-----------------------------------|
 |ASE            |   no    | positions.py|
+|ATAT           |  yes    | [compoundname].in|
 |VASP           |  VCA    | POSCAR|
 |ABINIT         |   no    | [compoundname].in|
 |Siesta         |   no    | [compoundname].fdf|
@@ -38,7 +37,8 @@ the primitive cell or the conventional cell.
 
 ## CONTENTS
 
-The distribution includes:
+The repository includes:
+
 * This README file.
 * The file LICENSE with the GPLv3 license.
 * The python files cif2cell, uctools.py and spacegroupdata.py
@@ -52,14 +52,13 @@ The distribution includes:
 
 ## INSTALLATION INSTRUCTIONS
 
-Prerequisites: The program requires Python 2.4 or higher and the
-               PyCIFRW python package (which will be installed
-               automatically if not present, see below for manual
-   	       installation instructions). Note however that the output
-               may be slightly different (but formally equivalent)
-	       with Python 2.4 than with later versions.
+### Prerequisites
 
-To install the program in your systems standard location, simply type:
+The program requires Python 2.4 or higher and the PyCIFRW python package (which
+will be installed automatically if not present).
+Note however that the output may be slightly different (but formally
+equivalent) with Python 2.4 than with later Python versions.
+
 
 ```
 pip install cif2cell
@@ -101,6 +100,34 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with cif2cell.  If not, see <http://www.gnu.org/licenses/>.
+
+## HOW TO CITE
+
+Please use the following citation information:
+
+Torbjorn Bjorkman, "CIF2Cell: Generating geometries for electronic structure programs",
+Computer Physics Communications 182, 1183-1186 (2011)
+doi: 10.1016/j.cpc.2011.01.013
+
+My name is rendered in ascii above, bonus points for getting umlauts over both of the o's.
+See also below for a BibTeX entry for use with LaTeX, which should be readable
+for most scientific reference handling software.
+
+```
+@article{cif2cell,
+title = "CIF2Cell: Generating geometries for electronic structure programs",
+journal = "Computer Physics Communications",
+volume = "182",
+number = "5",
+pages = "1183 - 1186",
+year = "2011",
+issn = "0010-4655",
+doi = "10.1016/j.cpc.2011.01.013",
+url = "http://www.sciencedirect.com/science/article/pii/S0010465511000336",
+author = "Torbj\"orn Bj\"orkman"
+}
+```
+
 
 
 
