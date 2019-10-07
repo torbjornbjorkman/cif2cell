@@ -4,7 +4,9 @@ import os
 import pytest
 import subprocess
 
-CIF_FILES = glob.glob('cifs/*.cif')
+TEST_DIR = os.path.dirname(os.path.realpath(__file__))
+CIFS_DIR = os.path.join( os.path.join(TEST_DIR, os.path.pardir, 'cifs') )
+CIF_FILES = glob.glob(os.path.join(CIFS_DIR, '*.cif'))
 
 def run_cif2cell(args):
     return subprocess.check_output(['./binaries/cif2cell'] + args, stderr=subprocess.STDOUT).decode('utf8')
@@ -19,7 +21,7 @@ def test_parse(cif_file):
 
 def test_vasp():
     """Test VASP output."""
-    cif_file = "./cifs/Si.cif"
+    cif_file = os.path.join(CIFS_DIR, "Si.cif")
     result = run_cif2cell(["-p", "vasp", "-f", cif_file])
     assert not "***Warning: Space group operation check failed" in result
     assert not "Error" in result
@@ -27,7 +29,7 @@ def test_vasp():
 
 def test_castep():
     """Test CASTEP output."""
-    cif_file = "./cifs/Si.cif"
+    cif_file = os.path.join(CIFS_DIR, "Si.cif")
     result = run_cif2cell(["-p", "castep", "-f", cif_file])
 
     assert not "***Warning: Space group operation check failed" in result
