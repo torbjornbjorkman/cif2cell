@@ -26,7 +26,7 @@ ciffiles = glob('cifs/*.cif')
 periodiccifs = glob('cifs/periodic_table/*.cif')+['cifs/periodic_table/README']
 
 setup(name='cif2cell',
-      version='2.0.0',
+      version='2.0.0a1',
       description='Construct a unit cell from CIF data',
       long_description=open('README').read(),
       author='Torbjorn Bjorkman',
