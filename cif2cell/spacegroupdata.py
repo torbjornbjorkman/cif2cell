@@ -43,7 +43,7 @@
 # Convert Hermann-Mauguin symbol to Hall symbol
 # Just keep adding new HM string representations until we support everything.
 # The ICSD convention of denoting setting shifted from the origin with S and
-# the non-shifted with Z is fully supported. 
+# the non-shifted with Z is fully supported.
 HM2Hall = {
     #   1
     'P1' : 'P 1',
@@ -372,7 +372,7 @@ HM2Hall = {
     'C2/c:-b1' : '-A 2ya',
     'C2/c-b1' : '-A 2ya',
     'A12/a1' : '-A 2ya',
-    'A2/a' : '-A 2ya',    
+    'A2/a' : '-A 2ya',
     'C2/c:-b2' : '-C 2ybc',
     'C2/c-b2' : '-C 2ybc',
     'C12/n1' : '-C 2ybc',
@@ -686,7 +686,7 @@ HM2Hall = {
     #  61
     'Pbca' : '-P 2ac 2ab',
     'P21/b21/c21/a' : '-P 2ac 2ab',
-    'Pcab' : '-P 2bc 2ac',    
+    'Pcab' : '-P 2bc 2ac',
     #  62
     'Pnma' : '-P 2ac 2n',
     'Pmnb' : '-P 2bc 2a',
@@ -11543,5 +11543,5 @@ SymOpsHall = {
                    ['x+1/2', 'y', 'z+1/2'],
                    ['x+1/2', 'y+1/2', 'z']]
     }
-    
-    
+
+
