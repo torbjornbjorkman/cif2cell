@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.com/torbjornbjorkman/cif2cell.svg?branch=master)](https://travis-ci.com/torbjornbjorkman/cif2cell)
+[![Build Status](https://travis-ci.org/torbjornbjorkman/cif2cell.svg?branch=master)](https://travis-ci.org/torbjornbjorkman/cif2cell)
 
 A tool to generate the geometrical setup for various electronic
 structure codes from a CIF (Crystallographic Information
