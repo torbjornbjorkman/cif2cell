@@ -107,7 +107,7 @@ Please use the following citation information:
 
 Torbjorn Bjorkman, "CIF2Cell: Generating geometries for electronic structure programs",
 Computer Physics Communications 182, 1183-1186 (2011)
-doi: 10.1016/j.cpc.2011.01.013
+doi: [10.1016/j.cpc.2011.01.013](https://doi.org/10.1016/j.cpc.2011.01.013)
 
 My name is rendered in ascii above, bonus points for getting umlauts over both of the o's.
 See also below for a BibTeX entry for use with LaTeX, which should be readable
