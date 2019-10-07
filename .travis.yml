@@ -10,5 +10,4 @@ install:
 
 script:
   - cif2cell --help
-  - .ci/test_script.sh
-  - pytest tests
+  - pytest
