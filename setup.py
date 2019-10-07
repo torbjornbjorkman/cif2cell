@@ -28,7 +28,8 @@ periodiccifs = glob('cifs/periodic_table/*.cif')+['cifs/periodic_table/README']
 setup(name='cif2cell',
       version='2.0.0a1',
       description='Construct a unit cell from CIF data',
-      long_description=open('README').read(),
+      long_description=open('README.md').read(),
+      long_description_content_type='text/markdown',
       author='Torbjorn Bjorkman',
       author_email='torbjornb@gmail.com',
       url='http://cif2cell.sourceforge.net/',
@@ -43,5 +44,8 @@ setup(name='cif2cell',
                   ('lib/cif2cell/sample_cifs', ciffiles),
                   ('lib/cif2cell/sample_cifs/periodic_table', periodiccifs),
                   ('lib/cif2cell/docs',docfiles)],
-      license='GNU General Public License version 3'
+      license='GNU General Public License version 3',
+      extras_require={
+          'tests': [ 'pytest' ]
+      },
       )
