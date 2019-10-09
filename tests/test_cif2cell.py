@@ -12,12 +12,11 @@ CIF_FILES = glob.glob(os.path.join(CIFS_DIR, '*.cif'))
 def run_cif2cell(args):
     return subprocess.check_output(['./binaries/cif2cell'] + args, stderr=subprocess.STDOUT).decode('utf8')
 
-@pytest.mark.skipif(sys.version_info < (3, 6), reason="requires python3.6 or higher")
 @pytest.mark.parametrize("cif_file", CIF_FILES)
 def test_parse(cif_file):
     """Test running cif2cell on each CIF file in /cifs."""
     if sys.version_info < (3,0) and 'SiC.cif' in cif_file:
-        pytest.skip(reason='skip test for files with unicode content under python 2.7.' +
+        pytest.skip(msg='skip test for files with unicode content under python 2.7.' +
            'see https://github.com/torbjornbjorkman/cif2cell/issues/7')
 
     result = run_cif2cell([cif_file])
