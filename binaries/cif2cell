@@ -61,7 +61,7 @@ vcaprograms = set(["castep","vasp"])
 #
 setupallprogs = set(["vasp","pwscf","quantum-espresso","rspt","mopac"])
 setupallstring = ""
-for p in setupallprogs:
+for p in sorted(list(setupallprogs)):
     setupallstring += p+", "
 setupallstring = setupallstring.rstrip(", ")
 #
