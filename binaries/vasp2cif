@@ -51,7 +51,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 import os
 import sys
-import commands
+import subprocess
 import math
 import re
 from math import copysign
@@ -403,7 +403,7 @@ for input_file, filename in input_files:
                         "ERROR: Cannot find POTCAR. Please supply atom labels with the -e flag.\n")
                     sys.exit(1)
 
-                potcar_lines = commands.getoutput(
+                potcar_lines = subprocess.getoutput(
                     "grep TITEL POTCAR").split("\n")
                 if len(potcar_lines) == 0:
                     sys.stderr.write(
@@ -480,7 +480,7 @@ for input_file, filename in input_files:
         # Check for VCA calculation
         if not options.occupancies:
             if os.path.exists("INCAR"):
-                incar_lines = commands.getoutput("grep VCA INCAR").split("\n")
+                incar_lines = subprocess.getoutput("grep VCA INCAR").split("\n")
                 for line in incar_lines:
                     if re.search("VCA[ ]*=", line.split('#')[0]):
                         occupancies = [float(x) for x in line.split('#')[
@@ -548,7 +548,7 @@ for input_file, filename in input_files:
         # First find elements and how many of each.
         atoms = []
         try:
-            titellines = commands.getoutput(
+            titellines = subprocess.getoutput(
                 "grep TITEL " + filename).split("\n")
             if len(titellines) == 0:
                 sys.stderr.write(
@@ -566,7 +566,7 @@ for input_file, filename in input_files:
                     "ERROR: Cannot find POTCAR. Please supply atom labels with the -e flag.\n")
                 sys.exit(1)
 
-            potcar_lines = commands.getoutput("grep TITEL POTCAR").split("\n")
+            potcar_lines = subprocess.getoutput("grep TITEL POTCAR").split("\n")
             if len(potcar_lines) == 0:
                 sys.stderr.write(
                     "ERROR: POTCAR file exists, but is empty? Supply atom labels with the -e flag.\n")
@@ -581,14 +581,14 @@ for input_file, filename in input_files:
 
         # How many of each?
         natoms = [
-            int(s) for s in commands.getoutput(
+            int(s) for s in subprocess.getoutput(
                 "grep 'ions per type =' " +
                 filename).split()[
                 4:]]
 
         # Check for VCA calculation
         if not options.occupancies:
-            vcalines = commands.getoutput(
+            vcalines = subprocess.getoutput(
                 "grep '   VCA    =' " + filename).split("\n")
             for line in vcalines:
                 if re.search("VCA[ ]*=", line.split('#')[0]):
@@ -711,7 +711,7 @@ for input_file, filename in input_files:
                         "ERROR: Cannot find POTCAR. Please supply atom labels with the -e flag.\n")
                     sys.exit(1)
 
-                potcar_lines = commands.getoutput(
+                potcar_lines = subprocess.getoutput(
                     "grep TITEL POTCAR").split("\n")
                 if len(potcar_lines) == 0:
                     sys.stderr.write(
