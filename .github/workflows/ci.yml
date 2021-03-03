@@ -32,3 +32,31 @@ jobs:
     - name: Run test suite
       run: pytest
 
+  cross-platform:
+
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 5
+
+    strategy:
+      matrix:
+        python-version: [3.9]
+        os: ['macos-10.15', 'windows-2019']
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install cif2cell
+      run: |
+        pip install -e .[tests]
+        pip freeze
+
+    - name: Check cli
+      run: cif2cell --help
+
+    - name: Run test suite
+      run: pytest
