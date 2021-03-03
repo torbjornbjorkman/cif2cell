@@ -22,16 +22,20 @@
 #  Author:      Torbjorn Bjorkman
 #  ORCID:       0000-0002-1154-9846
 #************************************************************************************
+import sys
+import os
+import string
 import copy
 from datetime import datetime
 from optparse import OptionParser, OptionGroup
 import warnings
-from math import acos
+from math import acos, pi
 
 import CifFile
 from cif2cell.ESPInterfaces import *
 from cif2cell.elementdata import ElementData
-from cif2cell.utils import safe_matheval, PositionError, SymmetryError, CellError, SurfaceWizard, angtobohr, codename, uperautogpercm
+from cif2cell.utils import safe_matheval, PositionError, SymmetryError, CellError, SurfaceWizard, angtobohr, codename, \
+    uperautogpercm, SetupError, LatticeMatrix, minv3, Vector, mmmult3
 from cif2cell.uctools import ReferenceData, CellData, SymmetryOperation
 
 # Name and version
