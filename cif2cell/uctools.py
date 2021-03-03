@@ -27,20 +27,16 @@
 #  ORCID:       0000-0002-1154-9846
 #
 # ******************************************************************************************
-import os
 import sys
 import string
 import copy
-import CifFile
-from types import *
-from math import sin, cos, pi, sqrt, pow, ceil, floor
-from cif2cell.utils import *
+from math import sin, cos, pow, gcd
 from random import random, gauss
-from math import gcd
-from cif2cell.spacegroupdata import *
-from cif2cell.elementdata import *
-if sys.version_info >= (3, 0):
-    from functools import reduce
+from functools import reduce
+
+from cif2cell.utils import *
+from cif2cell.spacegroupdata import Hex2RhombHall, Number2Hall, HM2Hall, Hall2Number, Rhomb2HexHall, Hall2HM, SymOpsHall
+from cif2cell.elementdata import ElementData
 
 ################################################################################################
 

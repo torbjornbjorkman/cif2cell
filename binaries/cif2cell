@@ -22,26 +22,23 @@
 #  Author:      Torbjorn Bjorkman
 #  ORCID:       0000-0002-1154-9846
 #************************************************************************************
-import os
-import sys
-import string
 import copy
-from math import *
 from datetime import datetime
 from optparse import OptionParser, OptionGroup
 import warnings
+from math import acos
+
 import CifFile
-import subprocess
-from cif2cell.utils import *
-from cif2cell.uctools import *
 from cif2cell.ESPInterfaces import *
-from cif2cell.elementdata import *
+from cif2cell.elementdata import ElementData
+from cif2cell.utils import safe_matheval, PositionError, SymmetryError, CellError, SurfaceWizard, angtobohr, codename, uperautogpercm
+from cif2cell.uctools import ReferenceData, CellData, SymmetryOperation
 
 # Name and version
 programname = "cif2cell"
 version = "2.0.0"
 
-# Turn of warnings about deprecated stuff
+# Turn off warnings about deprecated stuff
 warnings.simplefilter("ignore",DeprecationWarning)
 
 # All supported output formats
