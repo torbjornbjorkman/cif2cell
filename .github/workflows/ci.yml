@@ -1,0 +1,34 @@
+name: ci
+
+on: [push, pull_request]
+
+jobs:
+
+  test:
+
+    runs-on: ubuntu-20.04
+    timeout-minutes: 5
+
+    strategy:
+      matrix:
+        python-version: [3.5, 3.9]
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install cif2cell
+      run: |
+        pip install -e .[tests]
+        pip freeze
+
+    - name: Check cli
+      run: cif2cell --help
+
+    - name: Run test suite
+      run: pytest
+
