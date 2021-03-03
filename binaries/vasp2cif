@@ -46,9 +46,6 @@
 #      2006-10-24  Peter Larsson
 #        - Original version in Ruby.
 # ***********************************************************
-
-from __future__ import absolute_import
-from __future__ import print_function
 import os
 import sys
 import subprocess
@@ -57,8 +54,6 @@ import re
 from math import copysign
 from subprocess import Popen, call, PIPE
 from optparse import OptionParser
-from six.moves import map
-from six.moves import range
 
 # Input parser
 parser = OptionParser()
