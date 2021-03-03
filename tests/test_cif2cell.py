@@ -1,13 +1,21 @@
 import pytest
 import subprocess
 from pathlib import Path
+import platform
 
 TEST_DIR = Path(__file__).resolve().parent
 CIFS_DIR = TEST_DIR.parent / 'cifs'
 CIF_FILES = CIFS_DIR.glob('*.cif')
+CIF2CELL_SCRIPT = TEST_DIR.parent / 'binaries' / 'cif2cell'
 
 def run_cif2cell(args):
-    return subprocess.check_output(["cif2cell"] + args, stderr=subprocess.STDOUT).decode('utf8')
+    if platform.system() == 'Windows':
+        # windows does not understand the shebang
+        cmd = ["python.exe", CIF2CELL_SCRIPT] + args
+    else:
+        cmd = [ CIF2CELL_SCRIPT ] + args
+
+    return subprocess.check_output(cmd, stderr=subprocess.STDOUT).decode('utf8')
 
 @pytest.mark.parametrize("cif_file", CIF_FILES)
 def test_parse(cif_file):
