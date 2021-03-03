@@ -31,7 +31,6 @@ from cif2cell.utils import *
 from cif2cell.elementdata import *
 from cif2cell.uctools import *
 from re import search
-from six.moves import range
 
 
 ################################################################################################

@@ -39,8 +39,6 @@ from random import random, gauss
 from math import gcd
 from cif2cell.spacegroupdata import *
 from cif2cell.elementdata import *
-import six
-from six.moves import range
 if sys.version_info >= (3, 0):
     from functools import reduce
 
@@ -1183,7 +1181,7 @@ class CellData(GeometryObject):
                     eqsitestrs = eqsitedata.get(symopid)
                     # This if fixes a funny exception that can occur for the P1 space group,
                     # if the single operation is just a string and not in a _loop
-                    if isinstance(eqsitestrs, six.string_types):
+                    if isinstance(eqsitestrs, str):
                         eqsitestrs = [eqsitestrs]
                     eqsites = []
                     for i in range(len(eqsitestrs)):
@@ -1838,7 +1836,7 @@ class ReferenceData:
             authorsloop = cifblock.GetLoop('_publ_author_name')
             self.authors = authorsloop.get('_publ_author_name')
             # If just a string and not a list from a _loop
-            if isinstance(self.authors, six.string_types):
+            if isinstance(self.authors, str):
                 self.authors = deletenewline(self.authors)
                 self.authorstring = self.authors
                 self.authors = self.authors.split(";")

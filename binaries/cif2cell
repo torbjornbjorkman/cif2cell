@@ -36,7 +36,6 @@ from cif2cell.utils import *
 from cif2cell.uctools import *
 from cif2cell.ESPInterfaces import *
 from cif2cell.elementdata import *
-from six.moves import range
 
 # Name and version
 programname = "cif2cell"

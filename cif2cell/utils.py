@@ -23,7 +23,6 @@
 #******************************************************************************************
 from math import sqrt,acos,pi
 from cif2cell.elementdata import *
-from six.moves import range
 ################################################################################################
 # Miscellaneous
 zero = 0.0

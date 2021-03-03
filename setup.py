@@ -35,7 +35,6 @@ setup(name='cif2cell',
       scripts=['binaries/cif2cell', 'binaries/vasp2cif'],
       python_requires=">=3.6",
       install_requires=[
-          "six",
           "PyCifRW==4.4",
       ],
       packages=find_packages(),

@@ -54,8 +54,6 @@ import re
 from math import copysign
 from subprocess import Popen, call, PIPE
 from optparse import OptionParser
-from six.moves import map
-from six.moves import range
 
 # Input parser
 parser = OptionParser()
