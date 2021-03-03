@@ -22,7 +22,7 @@
 #
 #******************************************************************************************
 from math import sqrt,acos,pi
-from cif2cell.elementdata import *
+from cif2cell.elementdata import ElementData
 ################################################################################################
 # Miscellaneous
 zero = 0.0
@@ -216,7 +216,7 @@ class Vector(list,GeometryObject):
             t += self[i]*a[i]
         return t
     # triple product
-    def triple(self,a,b):
+    def triple(self,a,b,c):
         t = [a,b,c]
         return det3(t)
     # coordinate transformation

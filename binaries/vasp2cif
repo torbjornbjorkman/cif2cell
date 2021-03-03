@@ -51,7 +51,6 @@ import sys
 import subprocess
 import math
 import re
-from math import copysign
 from subprocess import Popen, call, PIPE
 from optparse import OptionParser
 
