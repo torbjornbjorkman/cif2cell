@@ -15,7 +15,12 @@ def run_cif2cell(args):
     else:
         cmd = [ CIF2CELL_SCRIPT ] + args
 
-    return subprocess.check_output(cmd, stderr=subprocess.STDOUT).decode('utf8')
+    try:
+        result = subprocess.check_output(cmd, stderr=subprocess.STDOUT).decode('utf8')
+        return result
+    except subprocess.CalledProcessError as e:
+        raise EnvironmentError(result) from e
+
 
 @pytest.mark.parametrize("cif_file", CIF_FILES)
 def test_parse(cif_file):
