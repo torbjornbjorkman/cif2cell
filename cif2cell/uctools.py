@@ -38,7 +38,7 @@ from types import *
 from math import sin, cos, pi, sqrt, pow, ceil, floor
 from cif2cell.utils import *
 from random import random, gauss
-from fractions import gcd
+from math import gcd
 from cif2cell.spacegroupdata import *
 from cif2cell.elementdata import *
 import six
@@ -780,7 +780,7 @@ class CellData(GeometryObject):
                             self.ChemicalComposition[k] = v
         if not self.alloy:
             L = list(self.ChemicalComposition.values())
-            divisor = reduce(gcd, L)
+            divisor = reduce(gcd, map(int, L))
             for k, v in self.ChemicalComposition.items():
                 self.ChemicalComposition[k] = v/divisor
         # Number of atoms
@@ -1794,7 +1794,7 @@ class ReferenceData:
                     self.ChemicalComposition[e] = n
             if not alloy:
                 L = list(self.ChemicalComposition.values())
-                divisor = reduce(gcd, L)
+                divisor = reduce(gcd, map(int, L))
                 for k, v in self.ChemicalComposition.items():
                     self.ChemicalComposition[k] = v/divisor
         except:
