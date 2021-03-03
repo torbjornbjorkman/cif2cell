@@ -14,7 +14,6 @@
 # You should have received a copy of the GNU General Public License
 # along with cif2cell.  If not, see <http://www.gnu.org/licenses/>.
 #
-from __future__ import absolute_import
 from setuptools import setup, find_packages
 from glob import glob
 
@@ -26,7 +25,7 @@ ciffiles = glob('cifs/*.cif')
 periodiccifs = glob('cifs/periodic_table/*.cif')+['cifs/periodic_table/README']
 
 setup(name='cif2cell',
-      version='2.0.0a2',
+      version='2.0.0a3',
       description='Construct a unit cell from CIF data',
       long_description=open('README.md').read(),
       long_description_content_type='text/markdown',
@@ -34,10 +33,10 @@ setup(name='cif2cell',
       author_email='torbjornb@gmail.com',
       url='http://cif2cell.sourceforge.net/',
       scripts=['binaries/cif2cell', 'binaries/vasp2cif'],
+      python_requires=">=3.6",
       install_requires=[
           "six",
-          "PyCifRW<4.3; python_version < '3'",
-          "PyCifRW==4.4; python_version >= '3'",
+          "PyCifRW==4.4",
       ],
       packages=find_packages(),
       data_files=[('lib/cif2cell', ['LICENSE']),
@@ -48,4 +47,16 @@ setup(name='cif2cell',
       extras_require={
           'tests': [ 'pytest' ]
       },
-      )
+      classifiers= [
+        "License :: OSI Approved :: GNU General Public License v3 (GPLv3)"
+        "Operating System :: POSIX :: Linux",
+        "Operating System :: MacOS :: MacOS X",
+        "Operating System :: Microsoft :: Windows",
+        "Programming Language :: Python",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Topic :: Scientific/Engineering"
+    ],
+)

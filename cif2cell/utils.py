@@ -21,8 +21,6 @@
 #  ORCID:       0000-0002-1154-9846
 #
 #******************************************************************************************
-from __future__ import division
-from __future__ import absolute_import
 from math import sqrt,acos,pi
 from cif2cell.elementdata import *
 from six.moves import range

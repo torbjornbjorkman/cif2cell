@@ -27,8 +27,6 @@
 #  ORCID:       0000-0002-1154-9846
 #
 # ******************************************************************************************
-from __future__ import division
-from __future__ import absolute_import
 import os
 import sys
 import string
