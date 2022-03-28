@@ -46,7 +46,7 @@ version = "2.0.0"
 warnings.simplefilter("ignore",DeprecationWarning)
 
 # All supported output formats
-outputprograms = set(['abinit','atat','castep','cfg','coo','cpmd','cp2k','crystal09','elk','emto','exciting','fhi-aims',
+outputprograms = set(['abinit','atat','castep','cfg','coo','cpmd','cp2k','crymol','crystal09','elk','emto','exciting','fhi-aims',
                       ## 'fleur','ncol','mcsqs','rspt','siesta','sprkkr','vasp', # mcsqs not ready
                       'fleur','hutsepot','lammps','mopac','ncol', 'pwscf', 'quantum-espresso', 'rspt','siesta','sprkkr','vasp',
                       'ase','bmdl','cellgen','cif','kgrn','kfcd','kstr','shape','spacegroup',
@@ -945,6 +945,8 @@ else:
             outputfile = outputfile+".xyz"
         elif outputprogram == "lammps":
         	outputfile = outputfile+".data"
+        elif outputprogram == "crymol":
+                outputfile = outputfile+"_cry.in"
         else:
             pass
 
@@ -1811,4 +1813,16 @@ if outputprogram == 'lammps':
     f.close()
     sys.exit(0)
 
-
+################################################################################################
+# Output for crymol file
+if outputprogram == 'crymol':
+    # The second comment line with info from the CIF file
+    docstring = StandardDocstring()
+    # for simplicity, conversion is done using only conventional cell input
+    cd.conventional()
+    # Initialize the CrymolFile structure
+    sysfile = CRYMOLFile(cd, docstring)
+    f = open(outputfile, outmode)
+    f.write(str(sysfile))
+    f.close()
+    sys.exit(0)
