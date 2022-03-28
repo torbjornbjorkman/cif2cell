@@ -73,7 +73,7 @@ __all__ = (
     'XBandSysFile',
     'SPCFile',
     'MOPACFile',
-    'CRYMOLFile'
+    'CRYMOLFile',
 )
 
 ################################################################################################
@@ -562,7 +562,7 @@ class XYZFile(GeometryOutputFile):
     and the method __str__ that outputs the contents of the .xyz file as a string.
     """
 
-    def __init__(self, crystalstructure, string)
+    def __init__(self, crystalstructure, string):
         GeometryOutputFile.__init__(self, crystalstructure, string)
         # To be put on the second line
         self.programdoc = ""
