@@ -3412,18 +3412,18 @@ class CRYMOLFile(GeometryOutputFile):
                 index += 1
         filestring += "NNY\n"
         filestring += "1\n"
-        filestring += "'*' '*' 2.2\n"
+        filestring += "'*' '*' [cut-off distance for first neighbors]\n"
         filestring += "7.0\n"
-        filestring += "out   ! 3 letters name for output file\n"
-        filestring += "1,1\n"
+        filestring += "[3 letters name for output files]\n"
+        filestring += "1,[index of photo-absorbing atom]\n"
         filestring += "0.10\n"
+        filestring += "[photo-absorption process: 1 for K-edge, 2 for L1-edge, etc.]\n"
         filestring += "1\n"
-        filestring += "1\n"
-        filestring += "CIP,0. [insert Core ionization energy in Ry!]\n"
+        filestring += "[Core ionization energy in Ry],0.\n"
         filestring += "3,-0.2,120.0,0.04\n"
         filestring += "5,-1\n"
         filestring += "'S',1,50.,15.,'S',' ','S'\n\n"
         filestring += self.docstring
-        filestring += "!cif2cell only convert the geometrical structure, remember to change the other parameters!"
+        filestring += "! Remember to insert missing parameters (indicated by []) !"
 
         return filestring
