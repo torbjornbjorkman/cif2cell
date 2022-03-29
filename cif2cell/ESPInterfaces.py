@@ -3373,14 +3373,15 @@ class CRYMOLFile(GeometryOutputFile):
     the contents of the file as a string.
     """
 
-    def __init__(self, crystalstructure, string):
+    def __init__(self, crystalstructure, string, compound):
         GeometryOutputFile.__init__(self, crystalstructure, string)
         # Document string on last line after
         self.programdoc = ""
+        self.compound = compound
 
     def __str__(self):
         filestring = "CRY\n"
-        filestring += "\n"
+        filestring += self.compound+"\n"
         if self.cell.crystal_system() == 'cubic':
             filestring += "C\n"+str(self.cell.a)+"\n"
         elif self.cell.crystal_system() == 'hexagonal':
@@ -3392,9 +3393,11 @@ class CRYMOLFile(GeometryOutputFile):
         elif self.cell.crystal_system() == 'trigonal':
             filestring += "R\n"+str(self.cell.a)+"\n"+str(self.cell.alpha)+"\n"
         elif self.cell.crystal_system() == 'monoclinic':
-            filestring += "M\n"+str(self.cell.a)+", "+str(self.cell.b)+", "+str(self.cell.c)+"\n"+str(self.cell.beta)+"\n"
+            filestring += "M\n"+str(self.cell.a)+", "+str(self.cell.b)+", " \
+                          +str(self.cell.c)+"\n"+str(self.cell.beta)+"\n"
         elif self.cell.crystal_system() == 'triclinic':
-            filestring += "T\n"+str(self.cell.a)+", "+str(self.cell.b)+", "+str(self.cell.c)+"\n"+str(self.cell.alpha)+", "+str(self.cell.beta)+", "+str(self.cell.gamma)+"\n"
+            filestring += "T\n"+str(self.cell.a)+", "+str(self.cell.b)+", "+str(self.cell.c)+"\n"\
+                          +str(self.cell.alpha)+", "+str(self.cell.beta)+", "+str(self.cell.gamma)+"\n"
         else:
             raise SetupError("No support for " +
                   self.crystal_system()+" crystal systems in crymol.")
@@ -3404,5 +3407,23 @@ class CRYMOLFile(GeometryOutputFile):
         width = 2
         for a in self.cell.atomdata:
             for b in a:
-                filestring += "'"+b.spcstring().rjust(width)+"'  "+str(b.position)+" 12 0.0 0.0\n"
+                filestring += str(index).rjust(width)+"  '"+b.spcstring().rjust(width)\
+                             +"'  "+str(b.position)+" 12 0.0 0.0\n"
+                index += 1
+        filestring += "NNY\n"
+        filestring += "1\n"
+        filestring += "'*' '*' 2.2\n"
+        filestring += "7.0\n"
+        filestring += "out   ! 3 letters name for output file\n"
+        filestring += "1,1\n"
+        filestring += "0.10\n"
+        filestring += "1\n"
+        filestring += "1\n"
+        filestring += "CIP,0. [insert Core ionization energy in Ry!]\n"
+        filestring += "3,-0.2,120.0,0.04\n"
+        filestring += "5,-1\n"
+        filestring += "'S',1,50.,15.,'S',' ','S'\n\n"
+        filestring += self.docstring
+        filestring += "!cif2cell only convert the geometrical structure, remember to change the other parameters!"
+
         return filestring
