@@ -33,7 +33,7 @@ the primitive cell or the conventional cell.
 |               |         | in separate directories.|
 |spr-kkr        |   yes   | [compoundname].sys|
 |xyz            |   no    | [compoundname].xyz|
-
+|crymol (gnxas) |   no    | [compoundname]\_cry.in|
 
 ## CONTENTS
 
