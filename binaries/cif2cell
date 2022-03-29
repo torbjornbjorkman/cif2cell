@@ -31,8 +31,6 @@ from optparse import OptionParser, OptionGroup
 import warnings
 from math import acos, pi
 
-# for testing, remove before pushing
-sys.path.append( '../' )
 
 import CifFile
 from cif2cell.ESPInterfaces import *
