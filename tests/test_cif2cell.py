@@ -1,8 +1,8 @@
+"""Tests for cif2cell."""
 from pathlib import Path
 import subprocess
 import platform
 import os
-import sys
 import pytest
 
 TEST_DIR = Path(__file__).resolve().parent
@@ -18,7 +18,12 @@ def run_cif2cell(args):
         cmd = [ CIF2CELL_SCRIPT ] + args
 
     try:
-        result = subprocess.check_output(cmd, stderr=subprocess.STDOUT, env=dict(os.environ, PYTHONIOENCODING='utf8'), encoding='utf8')
+        # Setting the PYTHONIOENCODING was necessary for windows runners on GitHub action
+        result = subprocess.check_output(
+            cmd,
+            stderr=subprocess.STDOUT,
+            env=dict(os.environ, PYTHONIOENCODING='utf8'),
+            encoding='utf8')
         return result
     except subprocess.CalledProcessError as exc:
         raise EnvironmentError(result) from exc
