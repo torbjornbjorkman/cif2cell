@@ -14,8 +14,8 @@
 # You should have received a copy of the GNU General Public License
 # along with cif2cell.  If not, see <http://www.gnu.org/licenses/>.
 #
-from setuptools import setup, find_packages
 from glob import glob
+from setuptools import setup, find_packages
 
 # Set up documentation
 docfiles = ['docs/cif2cell.pdf']
@@ -25,7 +25,7 @@ ciffiles = glob('cifs/*.cif')
 periodiccifs = glob('cifs/periodic_table/*.cif')+['cifs/periodic_table/README']
 
 setup(name='cif2cell',
-      version='2.0.0a3',
+      version='2.0.0a5',
       description='Construct a unit cell from CIF data',
       long_description=open('README.md').read(),
       long_description_content_type='text/markdown',
@@ -35,7 +35,7 @@ setup(name='cif2cell',
       scripts=['binaries/cif2cell', 'binaries/vasp2cif'],
       python_requires=">=3.6",
       install_requires=[
-          "PyCifRW~=4.4",
+          "PyCifRW~=4.4.0",
       ],
       packages=find_packages(),
       data_files=[('lib/cif2cell', ['LICENSE']),
