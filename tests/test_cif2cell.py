@@ -16,7 +16,7 @@ def run_cif2cell(args):
         cmd = [ CIF2CELL_SCRIPT ] + args
 
     try:
-        result = subprocess.check_output(cmd, stderr=subprocess.STDOUT, encoding='utf8').decode('utf8')
+        result = subprocess.check_output(cmd, stderr=subprocess.STDOUT, encoding='utf8')
         return result
     except subprocess.CalledProcessError as e:
         raise EnvironmentError(result) from e
