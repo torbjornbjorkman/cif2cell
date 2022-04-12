@@ -31,6 +31,7 @@ from optparse import OptionParser, OptionGroup
 import warnings
 from math import acos, pi
 
+
 import CifFile
 from cif2cell.ESPInterfaces import *
 from cif2cell.elementdata import ElementData
@@ -46,7 +47,7 @@ version = "2.0.0"
 warnings.simplefilter("ignore",DeprecationWarning)
 
 # All supported output formats
-outputprograms = set(['abinit','atat','castep','cfg','coo','cpmd','cp2k','crystal09','elk','emto','exciting','fhi-aims',
+outputprograms = set(['abinit','atat','castep','cfg','coo','cpmd','cp2k','crymol','crystal09','elk','emto','exciting','fhi-aims',
                       ## 'fleur','ncol','mcsqs','rspt','siesta','sprkkr','vasp', # mcsqs not ready
                       'fleur','hutsepot','lammps','mopac','ncol', 'pwscf', 'quantum-espresso', 'rspt','siesta','sprkkr','vasp',
                       'ase','bmdl','cellgen','cif','kgrn','kfcd','kstr','shape','spacegroup',
@@ -212,7 +213,7 @@ if options.supercellmap and options.supercelldims:
     sys.stderr.write("***Error: cannot use both --supercell and --supercell-dimensions.\n")
     sys.exit(1)
 
-    
+
 #############################################################
 # INITIAL PARSING OF VARIOUS INPUT DATA
 # Electronic structure program
@@ -341,7 +342,7 @@ if cif_file:
     else:
         cif_grammar = '1.1'
     # Skip validation... it causes too much trouble.
-    ## cdic = CifFile.CifDic("cif_core.dic",grammar='1.1')     
+    ## cdic = CifFile.CifDic("cif_core.dic",grammar='1.1')
     ## val_results = CifFile.validate(cif_file,dic=cdic)
     ## print(validate_report(val_results))
     ## val_report = CifFile.ValidationResult(val_results)
@@ -365,7 +366,7 @@ if cif_file:
                         datamissing = True
                     counter += 1
             if datamissing:
-                tmpname = cif_file.replace('.cif','_tmp.cif') 
+                tmpname = cif_file.replace('.cif','_tmp.cif')
                 f = open(tmpname,'w')
                 f.write("data_default\n")
                 for line in lines:
@@ -426,7 +427,7 @@ if makesupercell:
         supercellpostvactransvec = safe_matheval(options.supercellpostvactransvec)
     else:
         supercellpostvactransvec = [0,0,0]
-    # 
+    #
     if options.supercellsort:
         supercellsort = options.supercellsort.lower()
     else:
@@ -509,7 +510,7 @@ if options.surfacewizardhkl:
     wizardstr = wizardstr.rstrip(',')+"]\n"
     sys.stdout.write(wizardstr)
     sys.exit()
-        
+
 ##############################################
 # Test if generated cell agrees with given chemical formula.
 # Too difficult for alloys (no universally agreed-upon way to write the formula into cifs).
@@ -640,7 +641,7 @@ if verbose or not options.program and not options.quiet:
                 w1 = max(w1,len(tmpstring1))
                 w3 = max(w3,len(tmpstring2))
                 w4 = max(w4,len(tmpstring3))
-        # small aesthetic adjustment 
+        # small aesthetic adjustment
         w1 = w1 + 1
         w3 = w3 + 2
         w4 = max(w4 + 2, 8)
@@ -757,7 +758,7 @@ if transformcell:
             if not force:
                 sys.stderr.write("          Use --force to go ahead anyway.\n")
                 sys.exit(1)
-            
+
     if options.rhombdiag:
         # Put z direction along pseudocubic [111]. Kind of the opposite of the cubediagz.
         t = 1/cd.latticevectors[0].length()   # Normalization to 1
@@ -816,12 +817,12 @@ if makesupercell:
             sys.stderr.write("***Error: random displacements: "+e.value+"\n")
             sys.exit(3)
         cd.symops = set([SymmetryOperation(['x','y','z'])])
-    
+
     # Print supercell
     if verbose or not options.program and not options.quiet:
         sys.stdout.write("\n SUPERCELL INFORMATION\n")
         cd.printCell(printcart=options.printcart, printdigits=printdigits, printcharges=options.printcharges)
-        
+
 if printsymops or printseitz or verbose:
     # Print symmetry operations. Need to make list of it to control order.
     symoplist = sorted(list(cd.symops))
@@ -846,7 +847,7 @@ if printsymops or printseitz or verbose:
                 tmpstring += fourdecs%(op.rotation[j][0],op.rotation[j][1],op.rotation[j][2],op.translation[j])+"\n"
             tmpstring += fourdecs%(0,0,0,1)
             sys.stdout.write(tmpstring)
-            i += 1    
+            i += 1
 
 # Remind that the result may be junk when using --force
 if force:
@@ -945,6 +946,8 @@ else:
             outputfile = outputfile+".xyz"
         elif outputprogram == "lammps":
         	outputfile = outputfile+".data"
+        elif outputprogram == "crymol":
+                outputfile = outputfile+"_cry.in"
         else:
             pass
 
@@ -962,7 +965,7 @@ if cd.alloy and forcealloy and options.program and not verbose:
     else:
         tmpstring += "Warning! The file(s) will be incomplete!"
         sys.stdout.write(tmpstring+"\n")
-    
+
 ################################################################################################
 # Stop here if no specific output was requested
 if not options.program:
@@ -997,7 +1000,7 @@ if options.vca:
         sys.stderr.write("Warning: You are setting up a VCA calculation for an alloy with more than two components.\n         Make sure that you know what you are doing!\n")
     elif vcawarning2:
         sys.stderr.write("Warning: You are setting up a VCA calculation but not all alloy sites are occupied by species\n         from neighbouring groups in the periodic table. Make sure that you know what you are doing!\n")
-        
+
 # Function for printing a standard docstring
 def StandardDocstring():
     cif2cellstring = ' T. Bjorkman, Comp. Phys. Commun. 182, 1183-1186 (2011). Please cite generously.'
@@ -1106,7 +1109,7 @@ if outputprogram == 'abinit':
     f = open(outputfile, outmode)
     f.write(str(abinitinput))
     f.close()
-    
+
 ################################################################################################
 # Output for ATAT
 if outputprogram == 'atat':
@@ -1115,11 +1118,11 @@ if outputprogram == 'atat':
     f = open(outputfile, outmode)
     f.write(str(abinitinput))
     f.close()
-    
+
 ################################################################################################
 # Output for ASE file (python script)
 if outputprogram == 'ase':
-    # The second comment line with info from the CIF file 
+    # The second comment line with info from the CIF file
     docstring = StandardDocstring()
     # Initialize the ASEFile structure
     sysfile = ASEFile(cd, docstring)
@@ -1144,7 +1147,7 @@ if outputprogram == 'castep':
     f = open(outputfile, outmode)
     f.write(str(castepinput))
     f.close()
-    
+
 ################################################################################################
 # Output to cfg file
 if outputprogram == 'cfg':
@@ -1176,7 +1179,7 @@ if outputprogram == 'cp2k':
     f = open(outputfile, outmode)
     f.write(str(cp2kinput))
     f.close()
-    
+
 ################################################################################################
 # Output for CPMD
 if outputprogram == 'cpmd':
@@ -1185,7 +1188,7 @@ if outputprogram == 'cpmd':
     f = open(outputfile, outmode)
     f.write(str(cpmdinput))
     f.close()
-    
+
 ################################################################################################
 # Output for Crystal09
 if outputprogram == 'crystal09':
@@ -1194,7 +1197,7 @@ if outputprogram == 'crystal09':
     # Crystal09 wants conventional cell input, unless specifically asked to for possible
     # rhombohedral settings.
     if cd.is_spacegroup("rhombohedral") and options.crystal09rhombohedral:
-        cd.primitive()            
+        cd.primitive()
     else:
         cd.conventional()
     # Get output file object
@@ -1390,7 +1393,7 @@ if outputprogram == 'kfcd' or outputprogram == 'emto':
     f.write(str(kfcdfile))
     f.close()
     if outputprogram == "kfcd":
-        sys.exit(0)        
+        sys.exit(0)
 if outputprogram == "emto":
     sys.exit(0)
 
@@ -1472,7 +1475,7 @@ if outputprogram == 'fleur':
     f = open(outputfile, outmode)
     f.write(str(fleurinput))
     f.close()
-    
+
 ################################################################################################
 # Output for mcsqs
 if outputprogram == 'mcsqs':
@@ -1514,11 +1517,11 @@ if outputprogram == 'mopac':
     f = open(outputfile, outmode)
     f.write(str(mopacinput))
     f.close()
-    
+
 ################################################################################################
 # Output for TB-LMTO program ncol
 if outputprogram == 'ncol' or outputprogram == 'bstr':
-    # Set up names for files. 
+    # Set up names for files.
     if cd.HMSymbol == "":
         bstrjobnam = ref.cpd.replace(" ", "").replace("(","").replace(")","")
     else:
@@ -1536,7 +1539,7 @@ if outputprogram == 'ncol' or outputprogram == 'bstr':
     docstring = ref.compound+", "+ref.referencestring()
     # Document details of creation
     programdoc = "Generated by "+programname+" "+version+" "+datestring
-        
+
 # Output for TB-LMTO structure constant program bstr
 if outputprogram == 'bstr' or outputprogram == 'ncol':
     # Initialize BSTRFile
@@ -1588,7 +1591,7 @@ if outputprogram == 'pwscf':
     f = open(outputfile, outmode)
     f.write(str(pwscfinput))
     f.close()
-    
+
 ################################################################################################
 # Output for VASP
 if outputprogram == 'vasp':
@@ -1661,7 +1664,7 @@ if outputprogram == 'vasp':
         f.write(str(incarfile))
         f.close()
     sys.exit(0)
-    
+
 ################################################################################################
 # Output for RSPt
 if outputprogram == 'rspt':
@@ -1684,7 +1687,7 @@ if outputprogram == 'rspt':
             symtfile.forcenospin = True
     else:
         symtfile = SymtFile(cd, docstring)
-    # spin axis 
+    # spin axis
     if options.rsptspinaxis:
         symtfile.spinaxis = Vector(safe_matheval(options.rsptspinaxis))
     if options.rsptpasswyckoff:
@@ -1698,7 +1701,7 @@ if outputprogram == 'rspt':
     f.write(str(symtfile))
     f.close()
     sys.exit(0)
-    
+
 # Output for RSPt supercell generator cellgen
 if outputprogram == 'cellgen':
     # Construct documentation string
@@ -1733,11 +1736,11 @@ if outputprogram == 'siesta':
     f = open(outputfile, outmode)
     f.write(str(siestainput))
     f.close()
-    
+
 ################################################################################################
 # Output for SPC file
 if outputprogram == 'spc':
-    # The second comment line with info from the CIF file 
+    # The second comment line with info from the CIF file
     docstring = StandardDocstring()
     # Initialize the SPCFile structure
     sysfile = SPCFile(cd, docstring)
@@ -1768,11 +1771,11 @@ if outputprogram == 'xband' or outputprogram == 'sprkkr':
     f.write(str(sysfile))
     f.close()
     sys.exit(0)
-    
+
 ################################################################################################
 # Output for xyz file
 if outputprogram == 'xyz':
-    # The second comment line with info from the CIF file 
+    # The second comment line with info from the CIF file
     docstring =  "Generated by "+programname+" "+version
     if ref.database != "" and ref.databasecode != "" and ref.databasecode is not None:
         docstring += " from "+ref.databaseabbr[ref.database]+" reference: "+ref.databasecode
@@ -1794,7 +1797,7 @@ if outputprogram == 'xyz':
 ################################################################################################
 # Output for LAMMPS file
 if outputprogram == 'lammps':
-    # The second comment line with info from the CIF file 
+    # The second comment line with info from the CIF file
     docstring =  "Generated by "+programname+" "+version
     if ref.database != "" and ref.databasecode != "" and ref.databasecode is not None:
         docstring += " from "+ref.databaseabbr[ref.database]+" reference: "+ref.databasecode
@@ -1811,4 +1814,16 @@ if outputprogram == 'lammps':
     f.close()
     sys.exit(0)
 
-
+################################################################################################
+# Output for crymol file
+if outputprogram == 'crymol':
+    # The second comment line with info from the CIF file
+    docstring = StandardDocstring()
+    # for simplicity, conversion is done using only conventional cell input
+    cd.conventional()
+    # Initialize the CrymolFile structure
+    sysfile = CRYMOLFile(cd, docstring, ref.compound)
+    f = open(outputfile, outmode)
+    f.write(str(sysfile))
+    f.close()
+    sys.exit(0)

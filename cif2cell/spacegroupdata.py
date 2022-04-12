@@ -131,7 +131,7 @@ HM2Hall = {
     'Pcc1': 'P -2a',
     'P11a': 'P -2a',
     'Pc:c2': 'P -2ab',
-    'Pcc2': 'P -2ab',
+    'Pcc2': 'P -2ab',#BEWARE: duplicate key with different value (#1), python will always use the later inserted one, the other one
     'P11n': 'P -2ab',
     'Pc:c3': 'P -2b',
     'Pcc3': 'P -2b',
@@ -458,7 +458,7 @@ HM2Hall = {
     'Pb21m': 'P -2 -2b',
     'Pm21b': 'P -2b -2',
     #  27
-    'Pcc2': 'P 2 -2c',
+    'Pcc2': 'P 2 -2c',#BEWARE: duplicate key with different value (#1), python will always use the later inserted one, this one
     'P2aa': 'P -2a 2',
     'Pb2b': 'P -2b -2b',
     #  28
@@ -774,10 +774,10 @@ HM2Hall = {
     'Fmmm': '-F 2 2',
     'F2/m2/m2/m': '-F 2 2',
     #  70
-    'Fddd': 'F 2 2 -1d',
-    'Fddd:1': 'F 2 2 -1d',
-    'Fddd1': 'F 2 2 -1d',
-    'FdddS': 'F 2 2 -1d',
+    'Fddd': 'F 2 2 -1d',#BEWARE: duplicate key with different value (#2), python will always use the later inserted one, the other one
+    'Fddd:1': 'F 2 2 -1d',#BEWARE: duplicate key with different value (#3), python will always use the later inserted one, the other one
+    'Fddd1': 'F 2 2 -1d',#BEWARE: duplicate key with different value (#4), python will always use the later inserted one, the other one
+    'FdddS': 'F 2 2 -1d',#BEWARE: duplicate key with different value (#5), python will always use the later inserted one, the other one
     'Fddd:2': '-F 2uv 2vw',
     'Fddd2': '-F 2uv 2vw',
     'FdddZ': '-F 2uv 2vw',
@@ -1323,13 +1323,10 @@ HM2Hall = {
     # 15
     'F12/d1': 'F 2ycuw -1c',
     # 70
-    'Fddd': '-F 2 2 -1d',
-    'Fddd:1': '-F 2 2 -1d',
-    'Fddd1': '-F 2 2 -1d',
-    'FdddS': '-F 2 2 -1d',
-    'Fddd:2': '-F 2uv 2vw',
-    'Fddd2': '-F 2uv 2vw',
-    'FdddZ': '-F 2uv 2vw',
+    'Fddd': '-F 2 2 -1d',#BEWARE: duplicate key with different value (#2), python will always use the later inserted one, this one
+    'Fddd:1': '-F 2 2 -1d',#BEWARE: duplicate key with different value (#3), python will always use the later inserted one, this one
+    'Fddd1': '-F 2 2 -1d',#BEWARE: duplicate key with different value (#4), python will always use the later inserted one, this one
+    'FdddS': '-F 2 2 -1d',#BEWARE: duplicate key with different value (#5), python will always use the later inserted one, this one
     # 139
     'F4/m2/m2/m': '-F 4 2',
     'F4/mmm': '-F 4 2'
@@ -1729,15 +1726,12 @@ Hall2Number = {
     #  68
     'C 2 2 -1bc': 68,
     '-C 2b 2bc': 68,
-    'C 2 2 -1bc': 68,
     '-C 2b 2c': 68,
     'A 2 2 -1ac': 68,
     '-A 2a 2c': 68,
-    'A 2 2 -1ac': 68,
     '-A 2ac 2c': 68,
     'B 2 2 -1bc': 68,
     '-B 2bc 2b': 68,
-    'B 2 2 -1bc': 68,
     '-B 2b 2bc': 68,
     #  69
     '-F 2 2': 69,
@@ -2132,7 +2126,6 @@ Hall2Number = {
     'F 2ycuw -1c': 15,
     # 70
     '-F 2 2 -1d': 70,
-    '-F 2uv 2vw': 70,
     # 139
     '-F 4 2': 139
 }
@@ -2671,17 +2664,17 @@ Hall2HM = {
     '-B 2 2c': 'Bmcm',
     '-B 2c 2': 'Bmam',
     #  68
-    'C 2 2 -1bc': 'Ccca:1',
+    'C 2 2 -1bc': 'Ccca:1',#BEWARE: duplicate key with different value (#6), python will always use the later inserted one, the other one
     '-C 2b 2bc': 'Ccca:2',
-    'C 2 2 -1bc': 'Cccb:1',
+    'C 2 2 -1bc': 'Cccb:1',#BEWARE: duplicate key with different value (#6), python will always use the later inserted one, this one
     '-C 2b 2c': 'Cccb:2',
-    'A 2 2 -1ac': 'Abaa:1',
+    'A 2 2 -1ac': 'Abaa:1',#BEWARE: duplicate key with different value (#7), python will always use the later inserted one, the other one
     '-A 2a 2c': 'Abaa:2',
-    'A 2 2 -1ac': 'Acaa:1',
+    'A 2 2 -1ac': 'Acaa:1',#BEWARE: duplicate key with different value (#7), python will always use the later inserted one, this one
     '-A 2ac 2c': 'Acaa:2',
-    'B 2 2 -1bc': 'Bbcb:1',
+    'B 2 2 -1bc': 'Bbcb:1',#BEWARE: duplicate key with different value (#8), python will always use the later inserted one, the other one
     '-B 2bc 2b': 'Bbcb:2',
-    'B 2 2 -1bc': 'Bbab:1',
+    'B 2 2 -1bc': 'Bbab:1',#BEWARE: duplicate key with different value (#8), python will always use the later inserted one, this one
     '-B 2b 2bc': 'Bbab:2',
     #  69
     '-F 2 2': 'Fmmm',
@@ -3076,7 +3069,6 @@ Hall2HM = {
     'F 2ycuw -1c': 'F12/d1',
     # 70
     '-F 2 2 -1d': 'Fddd:1',
-    '-F 2uv 2vw': 'Fddd:2',
     # 139
     '-F 4 2': 'F4/mmm'
 }
@@ -6100,22 +6092,6 @@ SymOpsHall = {
                   ['x+1/2', ' y', ' -z'],
                   ['-x+1/2', ' y', ' z+1/2'],
                   ['x+1/2', ' -y+1/2', ' z+1/2']],
-    'C 2 2 -1bc': [['x', ' y', ' z'],
-                   ['-x', ' -y+1/2', ' -z+1/2'],
-                   ['-x', ' -y', ' z'],
-                   ['x', ' -y', ' -z'],
-                   ['-x', ' y', ' -z'],
-                   ['x', ' y+1/2', ' -z+1/2'],
-                   ['-x', ' y+1/2', ' z+1/2'],
-                   ['x', ' -y+1/2', ' z+1/2'],
-                   ['x+1/2', ' y+1/2', ' z'],
-                   ['-x+1/2', ' -y', ' -z+1/2'],
-                   ['-x+1/2', ' -y+1/2', ' z'],
-                   ['x+1/2', ' -y+1/2', ' -z'],
-                   ['-x+1/2', ' y+1/2', ' -z'],
-                   ['x+1/2', ' y', ' -z+1/2'],
-                   ['-x+1/2', ' y', ' z+1/2'],
-                   ['x+1/2', ' -y', ' z+1/2']],
     '-C 2b 2c': [['x', ' y', ' z'],
                  ['-x', ' -y+1/2', ' z'],
                  ['x', ' -y', ' -z+1/2'],
@@ -6164,22 +6140,6 @@ SymOpsHall = {
                  ['x+1/2', ' y+1/2', ' -z+1/2'],
                  ['-x', ' y+1/2', ' z'],
                  ['x+1/2', ' -y+1/2', ' z']],
-    'A 2 2 -1ac': [['x', ' y', ' z'],
-                   ['-x+1/2', ' -y', ' -z+1/2'],
-                   ['-x', ' -y', ' z'],
-                   ['x', ' -y', ' -z'],
-                   ['-x', ' y', ' -z'],
-                   ['x+1/2', ' y', ' -z+1/2'],
-                   ['-x+1/2', ' y', ' z+1/2'],
-                   ['x+1/2', ' -y', ' z+1/2'],
-                   ['x', ' y+1/2', ' z+1/2'],
-                   ['-x+1/2', ' -y+1/2', ' -z'],
-                   ['-x', ' -y+1/2', ' z+1/2'],
-                   ['x', ' -y+1/2', ' -z+1/2'],
-                   ['-x', ' y+1/2', ' -z+1/2'],
-                   ['x+1/2', ' y+1/2', ' -z'],
-                   ['-x+1/2', ' y+1/2', ' z'],
-                   ['x+1/2', ' -y+1/2', ' z']],
     '-A 2ac 2c': [['x', ' y', ' z'],
                   ['-x+1/2', ' -y', ' z+1/2'],
                   ['x', ' -y', ' -z+1/2'],
@@ -6228,22 +6188,6 @@ SymOpsHall = {
                   ['x+1/2', ' y+1/2', ' -z'],
                   ['-x+1/2', ' y+1/2', ' z+1/2'],
                   ['x+1/2', ' -y', ' z']],
-    'B 2 2 -1bc': [['x', ' y', ' z'],
-                   ['-x', ' -y+1/2', ' -z+1/2'],
-                   ['-x', ' -y', ' z'],
-                   ['x', ' -y', ' -z'],
-                   ['-x', ' y', ' -z'],
-                   ['x', ' y+1/2', ' -z+1/2'],
-                   ['-x', ' y+1/2', ' z+1/2'],
-                   ['x', ' -y+1/2', ' z+1/2'],
-                   ['x+1/2', ' y', ' z+1/2'],
-                   ['-x+1/2', ' -y+1/2', ' -z'],
-                   ['-x+1/2', ' -y', ' z+1/2'],
-                   ['x+1/2', ' -y', ' -z+1/2'],
-                   ['-x+1/2', ' y', ' -z+1/2'],
-                   ['x+1/2', ' y+1/2', ' -z'],
-                   ['-x+1/2', ' y+1/2', ' z'],
-                   ['x+1/2', ' -y+1/2', ' z']],
     '-B 2b 2bc': [['x', ' y', ' z'],
                   ['-x', ' -y+1/2', ' z'],
                   ['x', ' -y+1/2', ' -z+1/2'],
@@ -6324,7 +6268,7 @@ SymOpsHall = {
                   ['x-1/4', ' y-1/4', ' -z+1/4'],
                   ['-x-1/4', ' y-1/4', ' z+1/4'],
                   ['x-1/4', ' -y-1/4', ' z+1/4']],
-    '-F 2uv 2vw': [['x', ' y', ' z'],
+    '-F 2uv 2vw': [['x', ' y', ' z'],#BEWARE: duplicate key with different value (#9), python will always use the later inserted one, the other one
                    ['-x+1/4', ' -y+1/4', ' z'],
                    ['x', ' -y+1/4', ' -z+1/4'],
                    ['-x+1/4', ' y', ' -z+1/4'],
@@ -11445,7 +11389,7 @@ SymOpsHall = {
                    ['x+1/4', 'y+1/4', '-z'],
                    ['-x+1/2', 'y+1/4', 'z-1/4'],
                    ['x+1/4', '-y+1/2', 'z-1/4']],
-    '-F 2uv 2vw': [['x', 'y', 'z'],
+    '-F 2uv 2vw': [['x', 'y', 'z'],#BEWARE: duplicate key with different value (#9), python will always use the later inserted one, this one
                    ['-x+1/4', '-y+1/4', '-z+1/4'],
                    ['-x', '-y', 'z'],
                    ['x', '-y', '-z'],

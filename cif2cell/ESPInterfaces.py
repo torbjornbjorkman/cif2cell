@@ -73,6 +73,7 @@ __all__ = (
     'XBandSysFile',
     'SPCFile',
     'MOPACFile',
+    'CRYMOLFile',
 )
 
 ################################################################################################
@@ -3360,4 +3361,69 @@ class MOPACFile(GeometryOutputFile):
         # Print lattice vectors
         for l in lv:
             filestring += "Tv  "+str(l)+"\n"
+        return filestring
+
+################################################################################################
+# GNXAS CRYMOL FILE
+
+class CRYMOLFile(GeometryOutputFile):
+    """
+    Class for storing the geometrical data needed for outputting an input file
+    for crymol program of the GNXAS package and the method __str__ that outputs
+    the contents of the file as a string.
+    """
+
+    def __init__(self, crystalstructure, string, compound):
+        GeometryOutputFile.__init__(self, crystalstructure, string)
+        # Document string on last line after
+        self.programdoc = ""
+        self.compound = compound
+
+    def __str__(self):
+        filestring = "CRY\n"
+        filestring += self.compound+"\n"
+        if self.cell.crystal_system() == 'cubic':
+            filestring += "C\n"+str(self.cell.a)+"\n"
+        elif self.cell.crystal_system() == 'hexagonal':
+            filestring += "H\n"+str(self.cell.a)+", "+str(self.cell.c)+"\n"
+        elif self.cell.crystal_system() == 'tetragonal':
+            filestring += "E\n"+str(self.cell.a)+", "+str(self.cell.c)+"\n"
+        elif self.cell.crystal_system() == 'orthorhombic':
+            filestring += "O\n"+str(self.cell.a)+", "+str(self.cell.b)+", "+str(self.cell.c)+"\n"
+        elif self.cell.crystal_system() == 'trigonal':
+            filestring += "R\n"+str(self.cell.a)+"\n"+str(self.cell.alpha)+"\n"
+        elif self.cell.crystal_system() == 'monoclinic':
+            filestring += "M\n"+str(self.cell.a)+", "+str(self.cell.b)+", " \
+                          +str(self.cell.c)+"\n"+str(self.cell.beta)+"\n"
+        elif self.cell.crystal_system() == 'triclinic':
+            filestring += "T\n"+str(self.cell.a)+", "+str(self.cell.b)+", "+str(self.cell.c)+"\n"\
+                          +str(self.cell.alpha)+", "+str(self.cell.beta)+", "+str(self.cell.gamma)+"\n"
+        else:
+            raise SetupError("No support for " +
+                  self.crystal_system()+" crystal systems in crymol.")
+
+        filestring += "%i\n" % (self.cell.natoms())
+        index = 1
+        width = 2
+        for a in self.cell.atomdata:
+            for b in a:
+                filestring += str(index).rjust(width)+"  '"+b.spcstring().rjust(width)\
+                             +"'  "+str(b.position)+" 12 0.0 0.0\n"
+                index += 1
+        filestring += "NNY\n"
+        filestring += "1\n"
+        filestring += "'*' '*' [cut-off distance for first neighbors]\n"
+        filestring += "7.0\n"
+        filestring += "[3 letters name for output files]\n"
+        filestring += "1,[index of photo-absorbing atom]\n"
+        filestring += "0.10\n"
+        filestring += "[photo-absorption process: 1 for K-edge, 2 for L1-edge, etc.]\n"
+        filestring += "1\n"
+        filestring += "[Core ionization energy in Ry],0.\n"
+        filestring += "3,-0.2,120.0,0.04\n"
+        filestring += "5,-1\n"
+        filestring += "'S',1,50.,15.,'S',' ','S'\n\n"
+        filestring += self.docstring
+        filestring += "! Remember to insert missing parameters (indicated by []) !"
+
         return filestring
