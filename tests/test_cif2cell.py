@@ -1,7 +1,7 @@
-import pytest
-import subprocess
 from pathlib import Path
+import subprocess
 import platform
+import pytest
 
 TEST_DIR = Path(__file__).resolve().parent
 CIFS_DIR = TEST_DIR.parent / 'cifs'
@@ -16,7 +16,7 @@ def run_cif2cell(args):
         cmd = [ CIF2CELL_SCRIPT ] + args
 
     try:
-        result = subprocess.check_output(cmd, stderr=subprocess.STDOUT).decode('utf8')
+        result = subprocess.check_output(cmd, stderr=subprocess.STDOUT, encoding='utf8').decode('utf8')
         return result
     except subprocess.CalledProcessError as e:
         raise EnvironmentError(result) from e
