@@ -1145,10 +1145,10 @@ class Crystal09File(GeometryOutputFile):
         self.docstring = self.docstring.rstrip("\n")
         tmpstrings = self.docstring.split("\n")
         self.docstring = ""
-        for string in tmpstrings:
-            string = string.lstrip("!")
-            string = "!"+string+"\n"
-            self.docstring += string
+        # for string in tmpstrings:
+        #     string = string.lstrip("!")
+        #     string = "!"+string+"\n"
+        #     self.docstring += string
 
     def __str__(self):
         # Initialize element data
