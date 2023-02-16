@@ -1144,7 +1144,7 @@ class Crystal09File(GeometryOutputFile):
         # Make sure the docstring has the form of a f90 comment
         self.docstring = self.docstring.rstrip("\n")
         tmpstrings = self.docstring.split("\n")
-        self.docstring = ""
+        self.docstring = string
         # for string in tmpstrings:
         #     string = string.lstrip("!")
         #     string = "!"+string+"\n"
