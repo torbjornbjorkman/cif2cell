@@ -1154,7 +1154,7 @@ class Crystal09File(GeometryOutputFile):
         # Initialize element data
         ed = ElementData()
         # Add docstring
-        # filestring = self.docstring
+        filestring = self.docstring
         filestring += "CRYSTAL\n"
         # Space group setting and crystal parameters
         if self.cell.is_spacegroup("triclinic"):
