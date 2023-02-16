@@ -1204,7 +1204,7 @@ class Crystal09File(GeometryOutputFile):
             else:
                 return "***Error: Could not determine crystal system corresponding to space group "+str(self.spacegroupnr)+"."
         # Number of atoms
-        filestring += str(len(self.cell.ineqsites))+"\n"
+        filestring += str(len(self.cell.atomdata))+"\n"
         # Atomic numbers and representative positions
         for a in self.cell.atomdata:
             if len(a[0].species) > 1:
