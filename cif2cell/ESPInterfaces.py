@@ -74,6 +74,9 @@ __all__ = (
     'SPCFile',
     'MOPACFile',
     'CRYMOLFile',
+    'UppASDinpFile',
+    'UppASDposFile',
+    'UppASDmomFile',
 )
 
 ################################################################################################
@@ -3426,4 +3429,135 @@ class CRYMOLFile(GeometryOutputFile):
         filestring += self.docstring
         filestring += "! Remember to insert missing parameters (indicated by []) !"
 
+        return filestring
+
+class UppASDinpFile(GeometryOutputFile):
+    """
+    Class for storing the lattice and auxiliary data needed in an inpsd.dat file  and the method
+    __str__ that outputs the contents of the inpsd.dat file as a string.
+    If you want posfile to be printed with the atomic positions in Cartesian form,
+    then run cif2cell with `--cartesian'
+    """
+
+    def __init__(self, crystalstructure, string):
+        GeometryOutputFile.__init__(self, crystalstructure, string)
+        self.printcartpos = False
+        # self.cell.newunit("angstrom")
+        # set up species list
+
+    def __str__(self):
+        # Assign some local variables
+        lattice = self.cell.latticevectors
+
+        # For output of atomic positions
+        a = self.cell.lengthscale
+
+        # The first line with info from input docstring
+        filestring = self.docstring
+        filestring += "\n"
+        filestring += "alat    %8.3g\n" % (a*1.0e-10)
+        latticestring = ''
+        for i in range(3):
+            latticestring += "%19.15f %19.15f %19.15f\n" % (
+                lattice[i][0], lattice[i][1], lattice[i][2])
+        filestring += "BC      P  P  P"
+        filestring += "\n"
+        filestring += "ncell   10 10 10"
+        filestring += "\n"
+        filestring += "cell"
+        filestring += "\n"
+        filestring += latticestring
+        filestring += "\n"
+        filestring += "posfile ./posfile"
+        filestring += "\n"
+        filestring += "momfile ./momfile"
+        filestring += "\n"
+        if self.printcartpos:
+            filestring += "posfiletype C"
+        else:
+            filestring += "posfiletype D"
+        filestring += "\n"
+        filestring += "\n"
+
+        return filestring
+
+class UppASDposFile(GeometryOutputFile):
+    """
+    Class for storing the position data needed in an posfile file  and the method
+    __str__ that outputs the contents of the posfile file as a string.
+    If you want posfile to be printed with the atomic positions in Cartesian form,
+    then run cif2cell with `--cartesian'
+    """
+
+    def __init__(self, crystalstructure):
+        GeometryOutputFile.__init__(self, crystalstructure, string)
+        # set up species list
+        self.printcartpos = False
+        tmp = set([])
+        for a in self.cell.atomdata:
+            for b in a:
+                tmp.add(b.spcstring())
+        self.species = list(tmp)
+
+    def __str__(self):
+        lattice = self.cell.latticevectors
+        # positions and number of species
+        positionstring = ""
+        if self.printcartpos:
+            coordmat = []
+            for i in range(3):
+                coordmat.append([])
+                for j in range(3):
+                    coordmat[i].append(lattice[i][j])
+        else:
+            coordmat = [[1, 0, 0],
+                        [0, 1, 0],
+                        [0, 0, 1]]
+        iat = 0
+        for nsp, sp in enumerate(self.species):
+            nspstring = (" "+str(nsp+1)).rjust(4)
+            for a in self.cell.atomdata:
+                for b in a:
+                    if b.spcstring() == sp:
+                        iat += 1
+                        iatstring = (" "+str(iat)).rjust(4)
+                        p = Vector(
+                            mvmult3(coordmat, b.position))
+                        positionstring += iatstring + nspstring + str(p)
+                        positionstring += "\n"
+        filestring = positionstring
+        return filestring
+
+
+class UppASDmomFile(GeometryOutputFile):
+    """
+    Class for storing the magnetic data needed in a momfile file  and the method
+    __str__ that outputs the contents of the momfile file as a string.
+    NOTE: Here unit moments alligned ferromagnetically are assumed.
+    """
+
+    def __init__(self, crystalstructure):
+        GeometryOutputFile.__init__(self, crystalstructure, string)
+        tmp = set([])
+        for a in self.cell.atomdata:
+            for b in a:
+                tmp.add(b.spcstring())
+        self.species = list(tmp)
+
+    def __str__(self):
+        # positions and number of species
+        positionstring = ""
+        onestring = (" "+str(1.000)).rjust(6)
+        zerostring = (" "+str(0.00)).rjust(6)
+        iat = 0
+        for sp in self.species:
+            for a in self.cell.atomdata:
+                for b in a:
+                    if b.spcstring() == sp:
+                        iat += 1
+                        iatstring = (" "+str(iat)).rjust(4)
+                        positionstring += iatstring + "  1   " + onestring + \
+                            "  " + zerostring + zerostring + onestring
+                        positionstring += "\n"
+        filestring = positionstring
         return filestring
