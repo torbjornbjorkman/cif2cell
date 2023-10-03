@@ -398,11 +398,12 @@ class CellData(GeometryObject):
                     self.spacegroupsetting = self.HMSymbol[0]
                 except:
                     pass
-        if self.spacegroupsetting == "":
-            try:
-                self.spacegroupsetting = SGnrtoHM[str(self.spacegroupnr)][0]
-            except:
-                pass
+        # SGnrtoHM is not defined
+#        if self.spacegroupsetting == "":
+#            try:
+#                self.spacegroupsetting = SGnrtoHM[str(self.spacegroupnr)][0]
+#            except:
+#                pass
         # Sanity test of lattice parameters
         if self.a != 0 and self.b != 0 and self.c != 0 and self.alpha != 0 and self.beta != 0 and self.gamma != 0:
             if not 0 < self.spacegroupnr < 231:
@@ -1209,10 +1210,13 @@ class CellData(GeometryObject):
                     else:
                         raise SymmetryError(
                             "CIF file contains neither space group symbols nor space group number.")
-            try:
-                self.HallSymbol = HM2Hall[self.HMSymbol]
-            except:
-                self.HallSymbol = "Unknown"
+            else:
+                try:
+                    self.HallSymbol = HM2Hall[self.HMSymbol]
+                except:
+#                    self.HallSymbol = "Unknown"
+                    raise SymmetryError(
+                        "Unknown H-M symbol.")
 
         # space group setting
         if self.HallSymbol[0] == "-":
