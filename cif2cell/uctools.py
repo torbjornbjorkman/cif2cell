@@ -1214,9 +1214,9 @@ class CellData(GeometryObject):
                 try:
                     self.HallSymbol = HM2Hall[self.HMSymbol]
                 except:
-#                    self.HallSymbol = "Unknown"
-                    raise SymmetryError(
-                        "Unknown H-M symbol.")
+                    self.HallSymbol = "Unknown"
+#                    raise SymmetryError(
+#                        "Unknown H-M symbol.")
 
         # space group setting
         if self.HallSymbol[0] == "-":
