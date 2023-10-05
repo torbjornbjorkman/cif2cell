@@ -1,0 +1,100 @@
+#------------------------------------------------------------------------------
+#$Date: 2015-01-27 21:58:39 +0200 (Tue, 27 Jan 2015) $
+#$Revision: 130149 $
+#$URL: svn://www.crystallography.net/cod/cif/1/00/90/1009012.cif $
+#------------------------------------------------------------------------------
+#
+# This file is available in the Crystallography Open Database (COD),
+# http://www.crystallography.net/
+#
+# All data on this site have been placed in the public domain by the
+# contributors.
+#
+data_1009012
+loop_
+_publ_author_name
+'Smith, P L'
+'Ortega, R'
+'Brennan, B'
+_publ_section_title
+;
+Pseudo-C11b phase formation of titanium disilicide during the C49 to
+C54 transition
+;
+_journal_coden_ASTM              MRSPDH
+_journal_name_full
+;
+Materials Research Society Symposia Proceedings
+;
+_journal_page_first              605
+_journal_page_last               610
+_journal_paper_doi               10.1557/PROC-481-605
+_journal_volume                  481
+_journal_year                    1998
+_chemical_formula_structural     'Ti Si2'
+_chemical_formula_sum            'Si2 Ti'
+_chemical_name_systematic        'Titanium silicide (1/2) - pseudo-C11b'
+_space_group_IT_number           69
+_symmetry_cell_setting           orthorhombic
+_symmetry_Int_Tables_number      69
+_cell_angle_alpha                90
+_cell_angle_beta                 90
+_cell_angle_gamma                90
+_cell_formula_units_Z            4
+_cell_length_a                   4.428
+_cell_length_b                   4.779
+_cell_length_c                   9.078
+_cell_volume                     192.1
+_cod_database_code               1009012
+loop_
+_symmetry_equiv_pos_as_xyz
+x,y,z
+x,-y,-z
+-x,y,-z
+-x,-y,z
+-x,-y,-z
+-x,y,z
+x,-y,z
+x,y,-z
+x,1/2+y,1/2+z
+1/2+x,y,1/2+z
+1/2+x,1/2+y,z
+x,1/2-y,1/2-z
+1/2+x,-y,1/2-z
+1/2+x,1/2-y,-z
+-x,1/2+y,1/2-z
+1/2-x,y,1/2-z
+1/2-x,1/2+y,-z
+-x,1/2-y,1/2+z
+1/2-x,-y,1/2+z
+1/2-x,1/2-y,z
+-x,1/2-y,1/2-z
+1/2-x,-y,1/2-z
+1/2-x,1/2-y,-z
+-x,1/2+y,1/2+z
+1/2-x,y,1/2+z
+1/2-x,1/2+y,z
+x,1/2-y,1/2+z
+1/2+x,-y,1/2+z
+1/2+x,1/2-y,z
+x,1/2+y,1/2-z
+1/2+x,y,1/2-z
+1/2+x,1/2+y,-z
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_symmetry_multiplicity
+_atom_site_Wyckoff_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+_atom_site_occupancy
+_atom_site_attached_hydrogens
+_atom_site_calc_flag
+Ti1 Ti0 4 a 0. 0. 0. 1. 0 d
+Si1 Si0 8 i 0. 0. 0.322 1. 0 d
+loop_
+_atom_type_symbol
+_atom_type_oxidation_number
+Ti0 0.000
+Si0 0.000
