@@ -1489,7 +1489,7 @@ class FleurFile(GeometryOutputFile):
     def __str__(self):
         ed = ElementData()
         filestring = self.docstring+"\n"
-        filestring += "&input cartesian=f oldfleur=f\n\n"
+        filestring += "&input cartesian=f oldfleur=f /\n\n"
         # Lattice vectors
         tmpstring = ""
         n = 1
