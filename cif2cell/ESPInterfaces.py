@@ -1144,11 +1144,11 @@ class Crystal09File(GeometryOutputFile):
         # Make sure the docstring has the form of a f90 comment
         self.docstring = self.docstring.rstrip("\n")
         tmpstrings = self.docstring.split("\n")
-        self.docstring = ""
-        for string in tmpstrings:
-            string = string.lstrip("!")
-            string = "!"+string+"\n"
-            self.docstring += string
+        self.docstring = string
+        # for string in tmpstrings:
+        #     string = string.lstrip("!")
+        #     string = "!"+string+"\n"
+        #     self.docstring += string
 
     def __str__(self):
         # Initialize element data
@@ -1204,7 +1204,7 @@ class Crystal09File(GeometryOutputFile):
             else:
                 return "***Error: Could not determine crystal system corresponding to space group "+str(self.spacegroupnr)+"."
         # Number of atoms
-        filestring += str(len(self.cell.ineqsites))+"\n"
+        filestring += str(len(self.cell.atomdata))+"\n"
         # Atomic numbers and representative positions
         for a in self.cell.atomdata:
             if len(a[0].species) > 1:
