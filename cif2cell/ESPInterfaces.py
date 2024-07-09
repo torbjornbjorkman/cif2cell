@@ -1609,7 +1609,7 @@ class CASTEPFile(GeometryOutputFile):
                 else:
                     filestring += b.spcstring().ljust(2)+" "+str(pos)
                 if self.printlabels and b.label != "":
-                    filestring += " ID="+b.label
+                    filestring += " LABEL="+b.label
                 filestring += "\n"
         if self.cartesian:
             filestring += "%ENDBLOCK POSITIONS_ABS\n"
