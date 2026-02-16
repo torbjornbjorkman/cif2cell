@@ -2962,9 +2962,9 @@ class XBandSysFile(GeometryOutputFile):
         self.beta = 90
         self.gamma = 90
         self.minangmom = None
-        self.sws_mode = 0 # 0 - average (same for all)
-                          # 1 - xband default
-                          # 2 - scalled xband default
+        self.rws_mode = 0 # 0 : average (same for all)
+                          # (-)1 : xband default (biggest per site)
+                          # (-)2 : scalled xband default (biggest per site)
         self.filename = ""
         # To be put on the first line
         self.programdoc = ""
@@ -3069,26 +3069,42 @@ class XBandSysFile(GeometryOutputFile):
                   1.0/3.0)*self.cell.lengthscale
         
         # Volume calculated with default RWS
-        vol_rws = 0
+        vol_default = 0
         rws_default = []
+
+        # Default but using biggest RWS on site with multiple species
+        vol_default_big = 0 
+        rws_default_big = []
+
         for a in self.cell.atomdata: # Loop sites
-            rws_biggest = 0
-            for sp in a[0].species: # Loop species in site
+            rws_site_avg = 0
+            rws_big = 0
+            for sp, conc in a[0].species.items(): # Loop species in site
                 try:
-                    rws_sp = ed.rws[sp]
+                    rws = ed.rws[sp]
                 # Safeguard for when sp does not have default RWS defined
                 except:
-                    rws_sp = rws_avg
+                    rws = rws_avg
 
-                if rws_sp > rws_biggest:
-                    rws_biggest =  ed.rws[sp]
-            # Use the biggest default RWS for the site
-            rws_default.append(rws_biggest)
-            vol_rws += (4./3.)*pi*(rws_biggest)**3.
+                rws_site_avg+=rws*conc
+                # Use the biggest default RWS for the site
+                if rws > rws_big:
+                    rws_big = rws
+    
+
+            rws_default.append(rws_site_avg)
+            vol_default += (4./3.)*pi*(rws_site_avg)**3.
+
+            rws_default_big.append(rws_big)
+            vol_default_big += (4./3.)*pi*(rws_big)**3.
+           
 
         # Scalling factor to adjust Xband default RWS
         rws_scaling = self.cell.lengthscale*\
-            (self.cell.volume()/vol_rws)**(1./3.)
+            (self.cell.volume()/vol_default)**(1./3.)
+
+        rws_scaling_big = self.cell.lengthscale*\
+            (self.cell.volume()/vol_default_big)**(1./3.)
 
         iq = 0
         icl = 0
@@ -3109,17 +3125,24 @@ class XBandSysFile(GeometryOutputFile):
                                   for spcs in b.species])+1
                 v = mvmult3(self.cell.latticevectors, b.position)
                 
-                match self.sws_mode:
+                match self.rws_mode:
                     case 0 :
                     # Average scheme of same RWS for all sites
                         rws = rws_avg
                     case 1:
-                    # Use XBand default, for sites with multiple species
-                    # uses the biggest RWS 
+                    # Use XBand default, with the weighted average RWS for sites with
+                    # multiple species
                         rws = rws_default[iq-1]
+                    case -1:
+                    # Uses Xband default, with the biggest RWS for sites with
+                    # multiples species
+                        rws = rws_default_big[iq-1]
                     case 2:
                     # Use the defaults RWs scalled to the cell volume
                         rws = rws_default[iq-1]*rws_scaling
+                    case -2:
+                    # Use the defaults RWs (biggest) scalled to the cell volume
+                        rws = rws_default_big[iq-1]*rws_scaling_big
 
                 filestring += "%3i%4i%18.12f%18.12f%18.12f  %18.12f%4i%5i " % (
                     iq, icl, v[0], v[1], v[2], rws, angmom, len(a[0].species))
