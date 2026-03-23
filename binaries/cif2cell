@@ -169,6 +169,7 @@ progspec.add_option("--rspt-cartesian-latticevectors", dest="rsptcartlatvects", 
 progspec.add_option("--rspt-pass-wyckoff", dest="rsptpasswyckoff", help="Pass wyckoff labels from CIF file to the symt/rspt.inp file.", action="store_true")
 # SPRKKR/xband
 progspec.add_option("--sprkkr-minangmom",dest="sprkkrminangmom",help="Enforce minimum onsite angular momentum (=l+1, so that 3 will be d-states).")
+progspec.add_option("--sprkkr-rws-mode",dest="sprkkrrwsmode",help="Choose RWS scheme: 0 - average RWS for all sites (default); 1 - xband default RWS; 2 - xband default, scaled to cell volume. For multiple species, default RWS is averaged by species concentrations. Use -1 or -2 to use the maximum RWS per site.")
 # spacegroup
 progspec.add_option("--spacegroup-supercell",dest="spacegroupsupercell",help="Three integers separated with commas and enclosed in square brackets that specify the dimensions of a supercell to be output to the elk input generator 'spacegroup'.",metavar="[k,l,m]")
 # VASP
@@ -1785,6 +1786,8 @@ if outputprogram == 'xband' or outputprogram == 'sprkkr':
     sysfile.filename = outputfile
     if options.sprkkrminangmom:
         sysfile.minangmom=int(options.sprkkrminangmom)
+    if options.sprkkrrwsmode:
+        sysfile.rws_mode=int(options.sprkkrrwsmode)
     f = open(outputfile, outmode)
     f.write(str(sysfile))
     f.close()
