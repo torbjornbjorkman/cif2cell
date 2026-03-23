@@ -60,6 +60,7 @@ __all__ = (
     'SiestaFile',
     'ABINITFile',
     'AIMSFile',
+    'DFTBFile',
     'MCSQSFile',
     'POSCARFile',
     'POTCARFile',
@@ -2131,6 +2132,64 @@ class AIMSFile(GeometryOutputFile):
                 else:
                     filestring += "atom_frac  " + \
                         str(b.position)+" "+b.spcstring()+"\n"
+        return filestring
+
+################################################################################################
+
+
+class DFTBFile(GeometryOutputFile):
+    """
+    Class for storing the geometrical data needed in a DFTB run and the method
+    __str__ that outputs to a .gen file as a string.
+    """
+
+    def __init__(self, crystalstructure, string):
+        GeometryOutputFile.__init__(self, crystalstructure, string)
+        self.cell.newunit("angstrom")
+        self.cartesian = False
+        # Make sure the docstring has comment form
+        self.docstring = self.docstring.rstrip("\n")
+        tmpstrings = self.docstring.split("\n")
+        self.docstring = ""
+        for string in tmpstrings:
+            string = string.lstrip("#")
+            string = "#"+string+"\n"
+            self.docstring += string
+
+    def __str__(self):
+        filestring = self.docstring
+        if self.cartesian:
+            filestring += "%i S\n" % sum([len(v) for v in self.cell.atomdata])
+        else:
+            filestring += "%i F\n" % sum([len(v) for v in self.cell.atomdata])
+        species = set([])
+        for a in self.cell.atomdata:
+            for b in a:
+                species.add(b.spcstring())
+        for sp in species:
+            filestring += sp+" "
+        filestring += "\n"
+        latvecs = self.cell.latticevectors
+        iAt = 1
+        iSp = 1
+        for sp in species:
+            for a in self.cell.atomdata:
+                for b in a:
+                    if b.spcstring() == sp:
+                        filestring += "%i %i " % (iAt,iSp)
+                        if self.cartesian:
+                            filestring += str(Vector(mvmult3(latvecs, b.position))) +"\n"
+                        else:
+                            filestring += str(b.position)+"\n"
+                        iAt += 1
+            iSp += 1
+        filestring += "%19.15f %19.15f %19.15f\n" % (0.0, 0.0, 0.0)
+        for i in range(3):
+            for j in range(3):
+                latvecs[i][j] = latvecs[i][j] * self.cell.lengthscale
+        for vec in latvecs:
+            filestring += str(vec)+"\n"
+
         return filestring
 
 ################################################################################################

@@ -50,7 +50,7 @@ warnings.simplefilter("ignore",DeprecationWarning)
 outputprograms = set(['abinit','atat','castep','cfg','coo','cpmd','cp2k','crymol','crystal09','elk','emto','exciting','fhi-aims',
                       ## 'fleur','ncol','mcsqs','rspt','siesta','sprkkr','vasp', # mcsqs not ready
                       'fleur','hutsepot','lammps','mopac','ncol', 'pwscf', 'quantum-espresso', 'rspt','siesta','sprkkr','vasp',
-                      'ase','bmdl','cellgen','cif','kgrn','kfcd','kstr','shape','spacegroup',
+                      'ase','bmdl','cellgen','cif', 'dftb','kgrn','kfcd','kstr','shape','spacegroup',
                        'spc','xband','xyz'])
 
 # Programs that can deal with alloys
@@ -144,6 +144,8 @@ progspec.add_option("--crystal09-rhombohedral-setting",dest="crystal09rhombohedr
 progspec.add_option("--emto-hard-sphere-radii",dest="hardsphereradii",help="Set hard spheres in KSTR to something other than the default (=0.67).")
 # FHI-AIMS
 progspec.add_option("--fhi-aims-cartesian", dest="aimscartesian", help="Store the coordinates for FHI-AIMS in cartesian format.", action="store_true")
+# DFTB+
+progspec.add_option("--dftb-cartesian", dest="dftbcartesian", help="Store the coordinates for DFTB+ in cartesian format.", action="store_true")
 # MOPAC
 progspec.add_option("--mopac-first-line", dest="mopacfirstline", help="String to be used for the first line (the run commands) of the MOPAC input.",metavar='"string"')
 progspec.add_option("--mopac-second-line", dest="mopacsecondline", help="String to be used for the second line (documentation) of the MOPAC input.",metavar='"string"')
@@ -252,6 +254,7 @@ if options.cartesian:
     options.printcart = True
     options.vaspcart = True
     options.aimscartesian = True
+    options.dftbcartesian = True
 # Output reference in specific format?
 if options.bibtexref:
     bibtexref = True
@@ -928,6 +931,8 @@ else:
             outputfile = outputfile+".d12"
         elif outputprogram == "fhi-aims":
             outputfile = "geometry.in"
+        elif outputprogram == "dftb":
+            outputfile = "geometry.gen"
         elif outputprogram == "fleur":
             outputfile = "inp_"+outputfile
         elif outputprogram == "hutsepot":
@@ -1464,6 +1469,19 @@ if outputprogram == 'fhi-aims':
         aimsinput.cartesian = True
     f = open(outputfile,outmode)
     f.write(str(aimsinput))
+    f.close()
+
+################################################################################################
+# Output for DFTB+
+if outputprogram == 'dftb':
+    # Get documentation string
+    docstring = StandardDocstring()
+    # Get output file object
+    dftbinput = DFTBFile(cd, docstring)
+    if options.aimscartesian:
+        dftbinput.cartesian = True
+    f = open(outputfile,outmode)
+    f.write(str(dftbinput))
     f.close()
 
 ################################################################################################

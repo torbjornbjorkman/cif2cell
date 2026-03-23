@@ -34,6 +34,7 @@ the primitive cell or the conventional cell.
 |spr-kkr        |   yes   | [compoundname].sys|
 |xyz            |   no    | [compoundname].xyz|
 |crymol (gnxas) |   no    | [compoundname]\_cry.in|
+|DFTB+          |   no    | [compoundname].gen|
 
 ## CONTENTS
 
